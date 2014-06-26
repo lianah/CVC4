@@ -419,6 +419,25 @@ Node RewriteRule<EvalEquals>::apply(TNode node) {
 
 }
 
+template<> inline
+bool RewriteRule<EvalBitOf>::applies(TNode node) {
+  return (node.getKind() == kind::BITVECTOR_BITOF &&
+          node[0].isConst()); 
+}
+
+template<> inline
+Node RewriteRule<EvalBitOf>::apply(TNode node) {
+  Debug("bv-rewrite") << "RewriteRule<EvalBitOf>(" << node << ")" << std::endl;
+  BitVector c = node[0].getConst<BitVector>();
+  unsigned index = node.getOperator().getConst<BitVectorBitOf>().bitIndex;
+  BitVector bit = c.extract(index, index);
+  if (bit == BitVector(1, 0u))
+    return utils::mkFalse();
+
+  return utils::mkTrue(); 
+}
+
+
 
 }
 }

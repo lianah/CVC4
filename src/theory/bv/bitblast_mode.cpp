@@ -26,6 +26,9 @@ std::ostream& operator<<(std::ostream& out, theory::bv::BitblastMode mode) {
   case theory::bv::BITBLAST_MODE_EAGER:
     out << "BITBLAST_MODE_EAGER";
     break;
+  case theory::bv::BITBLAST_MODE_HYBRID:
+    out << "BITBLAST_MODE_HYBRID";
+    break;
   default:
     out << "BitblastMode:UNKNOWN![" << unsigned(mode) << "]";
   }

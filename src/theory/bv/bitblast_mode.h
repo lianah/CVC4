@@ -33,11 +33,14 @@ enum BitblastMode {
    * from term reasoning.
    */
   BITBLAST_MODE_LAZY,
-
   /**
    * Bit-blast eagerly to the bit-vector SAT solver.
    */
-  BITBLAST_MODE_EAGER
+  BITBLAST_MODE_EAGER,
+  /** 
+   * Bit-blast eagerly to main SAT solver but use algebraic reasoning.
+   */
+  BITBLAST_MODE_HYBRID
 };/* enum BitblastMode */
 
 /** Enumeration of bit-vector equality slicer mode */

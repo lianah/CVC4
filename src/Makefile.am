@@ -182,6 +182,8 @@ libcvc4_la_SOURCES = \
 	theory/bv/bv_subtheory_core.cpp \
 	theory/bv/bv_subtheory_bitblast.h \
 	theory/bv/bv_subtheory_bitblast.cpp \
+	theory/bv/bv_subtheory_bitblast_hybrid.h \
+	theory/bv/bv_subtheory_bitblast_hybrid.cpp \
 	theory/bv/bv_subtheory_inequality.h \
 	theory/bv/bv_subtheory_inequality.cpp \
 	theory/bv/bv_inequality_graph.h \
@@ -191,6 +193,7 @@ libcvc4_la_SOURCES = \
 	theory/bv/lazy_bitblaster.cpp \
 	theory/bv/eager_bitblaster.cpp \
 	theory/bv/aig_bitblaster.cpp \
+	theory/bv/hybrid_bitblaster.cpp \
 	theory/bv/bv_eager_solver.h \
 	theory/bv/bv_eager_solver.cpp \
 	theory/bv/slicer.h \

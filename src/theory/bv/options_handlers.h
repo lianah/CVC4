@@ -100,6 +100,23 @@ inline BitblastMode stringToBitblastMode(std::string option, std::string optarg,
       options::skolemizeArguments.set(true); 
     }
     return BITBLAST_MODE_EAGER;
+  } else if (optarg =="hybrid") { 
+
+    if (!options::bitvectorEqualitySolver.wasSetByUser()) {
+      options::bitvectorEqualitySolver.set(true);
+    }
+    if (!options::bitvectorEqualitySlicer.wasSetByUser()) {
+      options::bitvectorEqualitySlicer.set(BITVECTOR_SLICER_OFF);
+    }
+    
+    if (!options::bitvectorInequalitySolver.wasSetByUser()) {
+      options::bitvectorInequalitySolver.set(true);
+    }
+    if (!options::bitvectorAlgebraicSolver.wasSetByUser()) {
+      options::bitvectorAlgebraicSolver.set(true);
+    }
+    return BITBLAST_MODE_HYBRID;
+    
   } else if(optarg == "help") {
     puts(bitblastingModeHelp.c_str());
     exit(1);

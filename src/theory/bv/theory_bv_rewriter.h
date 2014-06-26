@@ -78,6 +78,8 @@ class TheoryBVRewriter {
   static RewriteResponse RewriteRotateRight(TNode node, bool prerewrite = false);
   static RewriteResponse RewriteRotateLeft(TNode node, bool prerewrite = false);
 
+  static RewriteResponse RewriteBitOf(TNode node, bool prerewrite = false);
+
   static RewriteResponse RewriteBVToNat(TNode node, bool prerewrite = false);
   static RewriteResponse RewriteIntToBV(TNode node, bool prerewrite = false);
 

@@ -25,6 +25,7 @@
 #include "theory/bv/bv_subtheory_inequality.h"
 #include "theory/bv/bv_subtheory_algebraic.h"
 #include "theory/bv/bv_subtheory_bitblast.h"
+#include "theory/bv/bv_subtheory_bitblast_hybrid.h"
 #include "theory/bv/bv_eager_solver.h"
 #include "theory/bv/theory_bv_rewriter.h"
 #include "theory/theory_model.h"
@@ -81,12 +82,18 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
     d_subtheoryMap[SUB_ALGEBRAIC] = alg_solver;
   }
 
-  BitblastSolver* bb_solver = new BitblastSolver(c, this);
-  if (options::bvAbstraction()) {
-    bb_solver->setAbstraction(d_abstractionModule);
+  if (options::bitblastMode() == theory::bv::BITBLAST_MODE_HYBRID) {
+    BitblastHybridSolver* hybrid_bb_solver = new BitblastHybridSolver(c, this);
+    d_subtheories.push_back(hybrid_bb_solver); 
+    d_subtheoryMap[SUB_BITBLAST_HYBRID] = hybrid_bb_solver;
+  } else {
+    BitblastSolver* bb_solver = new BitblastSolver(c, this);
+    if (options::bvAbstraction()) {
+      bb_solver->setAbstraction(d_abstractionModule);
+    }
+    d_subtheories.push_back(bb_solver);
+    d_subtheoryMap[SUB_BITBLAST] = bb_solver;
   }
-  d_subtheories.push_back(bb_solver);
-  d_subtheoryMap[SUB_BITBLAST] = bb_solver;
 }
 
 
@@ -402,6 +409,10 @@ void TheoryBV::check(Effort e)
 
   while (!done()) {
     TNode fact = get().assertion;
+    // skip bit assignments
+    TNode atom = fact.getKind() == kind::NOT? fact[0] : fact; 
+    if (atom.getKind() == kind::BITVECTOR_BITOF)
+      continue;
 
     checkForLemma(fact);
 
@@ -707,7 +718,8 @@ void TheoryBV::addSharedTerm(TNode t) {
 
 EqualityStatus TheoryBV::getEqualityStatus(TNode a, TNode b)
 {
-  Assert (options::bitblastMode() == theory::bv::BITBLAST_MODE_LAZY); 
+  Assert (options::bitblastMode() == theory::bv::BITBLAST_MODE_LAZY ||
+          options::bitblastMode() == theory::bv::BITBLAST_MODE_HYBRID); 
   for (unsigned i = 0; i < d_subtheories.size(); ++i) {
     EqualityStatus status = d_subtheories[i]->getEqualityStatus(a, b);
     if (status != EQUALITY_UNKNOWN) {

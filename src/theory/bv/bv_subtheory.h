@@ -34,7 +34,8 @@ enum SubTheory {
   SUB_CORE = 1,
   SUB_BITBLAST = 2,
   SUB_INEQUALITY = 3,
-  SUB_ALGEBRAIC = 4
+  SUB_ALGEBRAIC = 4,
+  SUB_BITBLAST_HYBRID = 5
 };
 
 inline std::ostream& operator << (std::ostream& out, SubTheory subtheory) {
@@ -42,6 +43,8 @@ inline std::ostream& operator << (std::ostream& out, SubTheory subtheory) {
   case SUB_BITBLAST:
     out << "BITBLASTER";
     break;
+  case SUB_BITBLAST_HYBRID:
+    out << "BITBLASTER_HYBRID";
   case SUB_CORE:
     out << "BV_CORE_SUBTHEORY";
     break;

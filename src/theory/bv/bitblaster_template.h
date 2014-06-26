@@ -328,6 +328,33 @@ private:
 
 };
 
+class HybridBitblaster : public TBitblaster<Node> {
+  typedef __gnu_cxx::hash_set<TNode, TNodeHashFunction> TNodeSet;
+  // sat solver used for bitblasting and associated CnfStream
+  context::Context*                  d_nullContext;
+  prop::CnfStream*                   d_cnfStream;
+
+  theory::bv::TheoryBV* d_bv;
+  TNodeSet d_bbAtoms;
+  TNodeSet d_variables;
+
+
+  bool isSharedTerm(TNode node); 
+public:
+  void addAtom(TNode atom);
+  void makeVariable(TNode node, Bits& bits);
+  void bbTerm(TNode node, Bits&  bits);
+  void bbAtom(TNode node);
+  Node getBBAtom(TNode node) const;
+  bool hasBBAtom(TNode atom) const; 
+  void bbFormula(TNode formula);
+  void storeBBAtom(TNode atom, Node atom_bb);
+  HybridBitblaster(theory::bv::TheoryBV* theory_bv); 
+  ~HybridBitblaster();
+  void collectModelInfo(TheoryModel* m, bool fullModel);
+  Node getVarValue(TNode a, bool fullModel=true);
+};
+
 
 // Bitblaster implementation
 

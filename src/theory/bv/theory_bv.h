@@ -210,11 +210,13 @@ private:
   friend class LazyBitblaster;
   friend class TLazyBitblaster;
   friend class EagerBitblaster;
+  friend class HybridBitblaster;
   friend class BitblastSolver;
   friend class EqualitySolver;
   friend class CoreSolver;
   friend class InequalitySolver;
   friend class AlgebraicSolver;
+  friend class BitblastHybridSolver;
 };/* class TheoryBV */
 
 }/* CVC4::theory::bv namespace */

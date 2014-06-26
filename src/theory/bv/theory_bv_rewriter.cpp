@@ -566,6 +566,15 @@ RewriteResponse TheoryBVRewriter::RewriteIntToBV(TNode node, bool prerewrite) {
   return RewriteResponse(REWRITE_AGAIN_FULL, resultNode);
 }
 
+RewriteResponse TheoryBVRewriter::RewriteBitOf(TNode node, bool prerewrite) {
+  Node resultNode = LinearRewriteStrategy
+    < RewriteRule<EvalBitOf>
+    >::apply(node);
+
+  return RewriteResponse(REWRITE_DONE, resultNode);
+}
+
+
 RewriteResponse TheoryBVRewriter::RewriteEqual(TNode node, bool prerewrite) {
   if (prerewrite) {
     Node resultNode = LinearRewriteStrategy
@@ -648,6 +657,8 @@ void TheoryBVRewriter::initializeRewrites() {
   d_rewriteTable [ kind::BITVECTOR_SIGN_EXTEND ] = RewriteSignExtend;
   d_rewriteTable [ kind::BITVECTOR_ROTATE_RIGHT ] = RewriteRotateRight;
   d_rewriteTable [ kind::BITVECTOR_ROTATE_LEFT ] = RewriteRotateLeft;
+
+  d_rewriteTable [ kind::BITVECTOR_BITOF ] = RewriteBitOf;
 
   d_rewriteTable [ kind::BITVECTOR_TO_NAT ] = RewriteBVToNat;
   d_rewriteTable [ kind::INT_TO_BITVECTOR ] = RewriteIntToBV;

@@ -92,6 +92,7 @@ enum RewriteRuleId {
   EvalNeg,
   EvalSlt,
   EvalSle,
+  EvalBitOf,
 
   /// simplification rules
   /// all of these rules decrease formula size
@@ -214,7 +215,8 @@ inline std::ostream& operator << (std::ostream& out, RewriteRuleId ruleId) {
   case EvalUlt :            out << "EvalUlt";             return out;
   case EvalUle :            out << "EvalUle";             return out;
   case EvalSlt :            out << "EvalSlt";             return out;
-  case EvalSle :            out << "EvalSle";             return out; 
+  case EvalSle :            out << "EvalSle";             return out;
+  case EvalBitOf:           out << "EvalBitOf";           return out; 
   case EvalExtract :        out << "EvalExtract";         return out;
   case EvalSignExtend :     out << "EvalSignExtend";      return out;
   case EvalRotateLeft :     out << "EvalRotateLeft";      return out;
@@ -444,6 +446,7 @@ struct AllRewriteRules {
   RewriteRule<EvalUlt>              rule39;
   RewriteRule<EvalUle>              rule40;
   RewriteRule<EvalSle>              rule41;
+  RewriteRule<EvalBitOf>            rule42;
   RewriteRule<EvalExtract>          rule43;
   RewriteRule<EvalSignExtend>       rule44;
   RewriteRule<EvalRotateLeft>       rule45;
