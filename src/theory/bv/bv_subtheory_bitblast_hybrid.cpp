@@ -69,25 +69,25 @@ bool BitblastHybridSolver::check(Theory::Effort e) {
       continue;
 
     d_bitblastQueue.push(fact);
-    d_bitblaster->bbAtom(atom);
+    //    d_bitblaster->bbAtom(atom);
     d_validModelCache = false;
     Debug("bv-bitblast-hybrid") << "  fact " << fact << ")\n";
   }
   
-  // if (e == Theory::EFFORT_FULL) {
-  //   if (options::bitvectorLazyHybrid()) {
-  //     // extra lazy and only bit-blast one atom
-  //     TNode atom = d_bitblastQueue.front();
-  //     d_bitblastQueue.pop();
-  //     d_bitblaster->bbAtom(atom);
-  //     return true; 
-  //   }
-  //   while (!d_bitblastQueue.empty()) {
-  //     TNode atom = d_bitblastQueue.front();
-  //     d_bitblastQueue.pop();
-  //     d_bitblaster->bbAtom(atom);
-  //   }
-  // }
+  if (e == Theory::EFFORT_FULL) {
+    if (options::bitvectorLazyHybrid()) {
+      // extra lazy and only bit-blast one atom
+      TNode atom = d_bitblastQueue.front();
+      d_bitblastQueue.pop();
+      d_bitblaster->bbAtom(atom);
+      return true; 
+    }
+    while (!d_bitblastQueue.empty()) {
+      TNode atom = d_bitblastQueue.front();
+      d_bitblastQueue.pop();
+      d_bitblaster->bbAtom(atom);
+    }
+  }
 
   return true;
 }
