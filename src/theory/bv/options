@@ -63,5 +63,8 @@ expert-option bitvectorQuickXplain --bv-quick-xplain bool :default false
  
 expert-option bvIntroducePow2 --bv-intro-pow2 bool :default false
  introduce bitvector powers of two as a preprocessing pass
+
+expert-option bitvectorLazyHybrid --bv-lazy-hybrid bool :default false :read-write :link --bitblast=hybrid
+ be extra lazy when bit-blasting in hybrid mode
  
 endmodule

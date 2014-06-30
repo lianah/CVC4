@@ -1694,6 +1694,11 @@ void TheoryEngine::checkTheoryAssertionsWithModel() {
           it != it_end;
           ++it) {
         Node assertion = (*it).assertion;
+        
+        if (assertion.getKind() == kind::BITVECTOR_BITOF ||
+            (assertion.getKind() == kind::NOT && assertion[0].getKind() == kind::BITVECTOR_BITOF))
+          continue;
+
         Node val = getModel()->getValue(assertion);
         if(val != d_true) {
           stringstream ss;

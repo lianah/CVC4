@@ -33,6 +33,7 @@ BitblastHybridSolver::BitblastHybridSolver(context::Context* c, TheoryBV* bv)
   , d_bitblaster(new HybridBitblaster(bv))
   , d_modelCache()
   , d_validModelCache(c, true)
+  , d_bitblastQueue(c)
   , d_statistics()
 {}
 
@@ -63,13 +64,30 @@ bool BitblastHybridSolver::check(Theory::Effort e) {
     Assert(!d_bv->inConflict());
     
     TNode fact = get();
+    TNode atom = fact.getKind() == kind::NOT? fact[0] : fact;
     if (fact.getKind() == kind::BITVECTOR_BITOF)
       continue;
 
+    d_bitblastQueue.push(fact);
+    d_bitblaster->bbAtom(atom);
     d_validModelCache = false;
     Debug("bv-bitblast-hybrid") << "  fact " << fact << ")\n";
-    d_bitblaster->bbAtom(fact);
   }
+  
+  // if (e == Theory::EFFORT_FULL) {
+  //   if (options::bitvectorLazyHybrid()) {
+  //     // extra lazy and only bit-blast one atom
+  //     TNode atom = d_bitblastQueue.front();
+  //     d_bitblastQueue.pop();
+  //     d_bitblaster->bbAtom(atom);
+  //     return true; 
+  //   }
+  //   while (!d_bitblastQueue.empty()) {
+  //     TNode atom = d_bitblastQueue.front();
+  //     d_bitblastQueue.pop();
+  //     d_bitblaster->bbAtom(atom);
+  //   }
+  // }
 
   return true;
 }

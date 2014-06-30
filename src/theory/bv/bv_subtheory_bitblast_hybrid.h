@@ -40,6 +40,8 @@ class BitblastHybridSolver : public SubtheorySolver {
   typedef std::hash_map<Node, Node, NodeHashFunction> NodeMap;
   NodeMap d_modelCache;
   context::CDO<bool> d_validModelCache;
+  context::CDQueue<TNode> d_bitblastQueue;
+
   Statistics d_statistics;
   
   Node getModelValueRec(TNode node);

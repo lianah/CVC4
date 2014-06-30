@@ -138,7 +138,7 @@ void HybridBitblaster::collectModelInfo(TheoryModel* m, bool fullModel) {
     if (Theory::theoryOf(var) == theory::THEORY_BV || isSharedTerm(var))  {
       Node const_value = getVarValue(var, fullModel);
       Assert (!const_value.isNull()); 
-      Debug("bitvector-model") << "TLazyBitblaster::collectModelInfo (assert (= "
+      Debug("bitvector-model") << "HybridBitblaster::collectModelInfo (assert (= "
                                << var << " "
                                << const_value << "))\n";
       m->assertEquality(var, const_value, true);

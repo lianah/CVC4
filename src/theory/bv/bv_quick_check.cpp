@@ -49,7 +49,7 @@ void BVQuickCheck::setConflict() {
 
 prop::SatValue BVQuickCheck::checkSat(std::vector<Node>& assumptions, unsigned long budget) {
   Node conflict; 
-
+  Debug("bv-quick-check") << "BVQuickCheck::checkSat with budget " << budget <<"\n"; 
   for (unsigned i = 0; i < assumptions.size(); ++i) {
     TNode a = assumptions[i];
     Assert (a.getType().isBoolean());
@@ -89,6 +89,7 @@ prop::SatValue BVQuickCheck::checkSat(unsigned long budget) {
 
 bool BVQuickCheck::addAssertion(TNode assertion) {
   Assert (assertion.getType().isBoolean());
+  Debug("bv-quick-check") << "BVQuickCheck::addAssertion " << assertion <<"\n"; 
   d_bitblaster->bbAtom(assertion);
   // assert to sat solver and run bcp to detect easy conflicts
   bool ok = d_bitblaster->assertToSat(assertion, true);
