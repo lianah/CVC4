@@ -69,7 +69,7 @@ bool BitblastHybridSolver::check(Theory::Effort e) {
       continue;
 
     d_bitblastQueue.push(fact);
-    //    d_bitblaster->bbAtom(atom);
+    //  d_bitblaster->bbAtom(atom);
     d_validModelCache = false;
     Debug("bv-bitblast-hybrid") << "  fact " << fact << ")\n";
   }

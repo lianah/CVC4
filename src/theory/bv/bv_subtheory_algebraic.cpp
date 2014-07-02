@@ -246,9 +246,11 @@ bool AlgebraicSolver::check(Theory::Effort e) {
     d_inputAssertions.insert(assertion); 
     storeExplanation(assertion);
 
-    uint64_t assertion_size = d_quickSolver->computeAtomWeight(assertion, seen_assertions);
-    Assert (original_bb_cost <= original_bb_cost + assertion_size);
-    original_bb_cost+= assertion_size; 
+    if (options::bitvectorAlgebraicBudget()) {
+      uint64_t assertion_size = d_quickSolver->computeAtomWeight(assertion, seen_assertions);
+      Assert (original_bb_cost <= original_bb_cost + assertion_size);
+      original_bb_cost+= assertion_size;
+    }
   }
 
   for (unsigned i = 0; i < worklist.size(); ++i) {
@@ -321,8 +323,9 @@ bool AlgebraicSolver::check(Theory::Effort e) {
       ++(d_numSolved);
       return false;
     }
-
-    subst_bb_cost+= d_quickSolver->computeAtomWeight(fact, subst_seen);
+    if (options::bitvectorAlgebraicBudget()) {
+      subst_bb_cost+= d_quickSolver->computeAtomWeight(fact, subst_seen);
+    }
     worklist[w] = WorklistElement(fact, id);
     Node expl =  BooleanSimplification::simplify(d_explanations[id]);
     storeExplanation(id, expl);
@@ -349,6 +352,11 @@ bool AlgebraicSolver::check(Theory::Effort e) {
     return true;
   }
 
+  if (options::bitvectorAlgebraicBudget() == 0) {
+    d_isComplete.set(false);
+    return true; 
+  }
+  
   double ratio = ((double)subst_bb_cost)/original_bb_cost;
   if (ratio > 0.5 ||
       !d_isDifficult.get()) {
