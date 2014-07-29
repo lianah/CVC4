@@ -33,23 +33,33 @@ bool AbstractionModule::applyAbstraction(const std::vector<Node>& assertions, st
   TimerStat::CodeTimer abstractionTimer(d_statistics.d_abstractionTime);
     
   for (unsigned i = 0; i < assertions.size(); ++i) {
-    if (assertions[i].getKind() == kind::OR) {
+    if (assertions[i].getKind() == kind::EQUAL) {
+        Node signature = computeSignature(assertions[i]);
+        storeSignature(signature, assertions[i]); 
+        Debug("bv-abstraction-dbg") << "   assertion: " << assertions[i] <<"\n";
+        Debug("bv-abstraction-dbg") << "   signature: " << signature <<"\n";
+
+    } else if (assertions[i].getKind() == kind::OR) {
       for (unsigned j = 0; j < assertions[i].getNumChildren(); ++j) {
         if (!isConjunctionOfAtoms(assertions[i][j])) {
           continue;
         }
         Node signature = computeSignature(assertions[i][j]);
         storeSignature(signature, assertions[i][j]); 
-        Debug("bv-abstraction") << "   assertion: " << assertions[i][j] <<"\n";
-        Debug("bv-abstraction") << "   signature: " << signature <<"\n";
+        Debug("bv-abstraction-dbg") << "   assertion: " << assertions[i][j] <<"\n";
+        Debug("bv-abstraction-dbg") << "   signature: " << signature <<"\n";
       }
     }
   }
   finalizeSignatures();
 
   for (unsigned i = 0; i < assertions.size(); ++i) {
-    if (assertions[i].getKind() == kind::OR &&
-        assertions[i][0].getKind() == kind::AND) {
+
+    if (assertions[i].getKind() == kind::EQUAL) {
+      Node new_assertion = hasSignature(assertions[i]) ? abstractSignatures(assertions[i]) : assertions[i];
+      new_assertions.push_back(new_assertion); 
+    } else if (assertions[i].getKind() == kind::OR &&
+               assertions[i][0].getKind() == kind::AND) {
       std::vector<Node> new_children; 
       for (unsigned j = 0; j < assertions[i].getNumChildren(); ++j) {
         if (hasSignature(assertions[i][j])) {
@@ -510,11 +520,11 @@ void AbstractionModule::collectArguments(TNode node, TNode signature, std::vecto
 
 
 Node AbstractionModule::abstractSignatures(TNode assertion) {
-  Debug("bv-abstraction") << "AbstractionModule::abstractSignatures "<< assertion <<"\n"; 
+  Debug("bv-abstraction-dbg") << "AbstractionModule::abstractSignatures "<< assertion <<"\n"; 
   // assume the assertion has been fully abstracted
   Node signature = getGeneralizedSignature(assertion);
   
-  Debug("bv-abstraction") << "   with sig "<< signature <<"\n"; 
+  Debug("bv-abstraction-dbg") << "   with sig "<< signature <<"\n"; 
   NodeNodeMap::iterator it = d_signatureToFunc.find(signature);
   if (it!= d_signatureToFunc.end()) {
     std::vector<Node> args;
@@ -530,7 +540,7 @@ Node AbstractionModule::abstractSignatures(TNode assertion) {
     d_argsTable.addEntry(func, real_args); 
     Node result = utils::mkNode(kind::EQUAL, utils::mkNode(kind::APPLY_UF, args), 
                                 utils::mkConst(1, 1u));
-    Debug("bv-abstraction") << "=>   "<< result << "\n"; 
+    Debug("bv-abstraction-dbg") << "=>   "<< result << "\n"; 
     Assert (result.getType() == assertion.getType()); 
     return result; 
   }

@@ -585,8 +585,32 @@ Node RewriteRule<UltOne>::apply(TNode node) {
   return utils::mkNode(kind::EQUAL, node[0], utils::mkConst(BitVector(utils::getSize(node[0]), 0u))); 
 }
 
+
 /**
- * 
+ * UltMax
+ *
+ * MAX < a ==> false
+ * where MAX is 2^n - 1
+ */
+
+template<> inline
+bool RewriteRule<UltMax>::applies(TNode node) {
+  if (node.getKind() != kind::BITVECTOR_ULT) return false;
+  if (!node[0].isConst()) return false;
+  unsigned size = utils::getSize(node[0]); 
+  Node max = utils::mkOnes(size); 
+  return max == node[0]; 
+}
+
+template<> inline
+Node RewriteRule<UltMax>::apply(TNode node) {
+  Debug("bv-rewrite") << "RewriteRule<UltMax>(" << node << ")" << std::endl;
+  return utils::mkFalse(); 
+}
+
+
+/**
+ * x < 0 ==> x[n-1:n-1] = 1
  */
 template<> inline
 bool RewriteRule<SltZero>::applies(TNode node) {
@@ -603,6 +627,53 @@ Node RewriteRule<SltZero>::apply(TNode node) {
   
   return utils::mkNode(kind::EQUAL, most_significant_bit, one); 
 }
+
+/**
+ * SltMax
+ *
+ * MAX < a ==> false
+ * where MAX is 2^{n-1} - 1
+ */
+
+template<> inline
+bool RewriteRule<SltMax>::applies(TNode node) {
+  if (node.getKind() != kind::BITVECTOR_SLT) return false;
+  if (!node[0].isConst()) return false;
+  unsigned size = utils::getSize(node[0]); 
+  Integer max_int = Integer(2).pow(size - 1) - 1;
+  Node max = utils::mkConst(BitVector(size, max_int));
+  return max == node[0];
+}
+
+template<> inline
+Node RewriteRule<SltMax>::apply(TNode node) {
+  Debug("bv-rewrite") << "RewriteRule<SltMax>(" << node << ")" << std::endl;
+  return utils::mkFalse(); 
+}
+
+/**
+ * SltMin
+ *
+ * a < MIN ==> false
+ * where MIN is 2^{n-1}
+ */
+
+template<> inline
+bool RewriteRule<SltMin>::applies(TNode node) {
+  if (node.getKind() != kind::BITVECTOR_SLT) return false;
+  if (!node[1].isConst()) return false;
+  unsigned size = utils::getSize(node[0]); 
+  Integer min_int = Integer(2).pow(size - 1);
+  Node min = utils::mkConst(BitVector(size, min_int));
+  return min == node[1];
+}
+
+template<> inline
+Node RewriteRule<SltMin>::apply(TNode node) {
+  Debug("bv-rewrite") << "RewriteRule<SltMin>(" << node << ")" << std::endl;
+  return utils::mkFalse(); 
+}
+
 
 
 /**

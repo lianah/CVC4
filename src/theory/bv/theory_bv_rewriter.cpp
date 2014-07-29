@@ -69,8 +69,10 @@ RewriteResponse TheoryBVRewriter::RewriteUlt(TNode node, bool prerewrite) {
   Node resultNode = LinearRewriteStrategy
     < RewriteRule<EvalUlt>,
       // if both arguments are constants evaluates
-      RewriteRule<UltZero>
+      RewriteRule<UltZero>,
       // a < 0 rewrites to false
+      RewriteRule<UltMax>
+      // MAX < x rewrites to false
        >::apply(node);
   
   return RewriteResponse(REWRITE_DONE, resultNode); 
@@ -78,7 +80,9 @@ RewriteResponse TheoryBVRewriter::RewriteUlt(TNode node, bool prerewrite) {
 
 RewriteResponse TheoryBVRewriter::RewriteSlt(TNode node, bool prerewrite){
   Node resultNode = LinearRewriteStrategy
-    < RewriteRule < EvalSlt >
+    < RewriteRule <EvalSlt>,
+      RewriteRule <SltMax>,
+      RewriteRule <SltMin>
        >::apply(node);
 
   return RewriteResponse(REWRITE_DONE, resultNode); 

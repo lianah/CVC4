@@ -115,6 +115,9 @@ enum RewriteRuleId {
   LteSelf,
   UltZero,
   UltSelf,
+  UltMax,
+  SltMax,
+  SltMin,
   UleZero,
   UleSelf,
   ZeroUle,
@@ -243,6 +246,9 @@ inline std::ostream& operator << (std::ostream& out, RewriteRuleId ruleId) {
   case LteSelf :            out << "LteSelf";             return out;
   case UltZero :            out << "UltZero";             return out;
   case UleZero :            out << "UleZero";             return out;
+  case UltMax :             out << "UltMax";              return out;
+  case SltMax :             out << "SltMax";              return out;
+  case SltMin :             out << "SltMin";              return out;
   case ZeroUle :            out << "ZeroUle";             return out;
   case NotUlt :             out << "NotUlt";              return out;
   case NotUle :             out << "NotUle";              return out;
@@ -522,6 +528,9 @@ struct AllRewriteRules {
   RewriteRule<UltPlusOne> rule119;
   RewriteRule<ConcatToMult> rule120;
   RewriteRule<IsPowerOfTwo> rule121;
+  RewriteRule<UltMax> rule122;
+  RewriteRule<SltMax> rule123;
+  RewriteRule<SltMin> rule124;
 };
 
 template<> inline
