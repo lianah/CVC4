@@ -21,6 +21,7 @@
 #include "expr/node.h"
 #include "theory/bv/bitblast_utils.h"
 #include "theory/bv/theory_bv_utils.h"
+#include "theory/bv/encoding_manager.h"
 #include <ostream>
 #include <cmath>
 namespace CVC4 {
@@ -360,7 +361,8 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Debug("bitvector") << "theory::bv:: DefaultMultBB bitblasting "<< node << "\n";
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
-
+  EncodingManager::currentEM()->registerMultiplier(node);
+  
   // if (node.getNumChildren() == 2) {
   //   std::vector<T> a;
   //   std::vector<T> b;

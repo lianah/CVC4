@@ -26,6 +26,8 @@
 #include "theory/theory_model.h"
 #include "theory/bv/abstraction.h"
 
+#include "theory/bv/encoding_manager.h"
+
 using namespace CVC4;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv; 
@@ -56,6 +58,10 @@ TLazyBitblaster::TLazyBitblaster(context::Context* c, bv::TheoryBV* bv, const st
     (prop::BVSatSolverInterface::Notify*) new MinisatNotify(d_cnfStream, bv, this);
 
   d_satSolver->setNotify(notify);
+
+  EncodingManager::currentEM()->setCnfStream(d_cnfStream);
+  EncodingManager::currentEM()->setSatSolver(d_satSolver);
+  EncodingManager::currentEM()->setBitblaster(this);
 }
 
 void TLazyBitblaster::setAbstraction(AbstractionModule* abs) {
@@ -120,9 +126,15 @@ void TLazyBitblaster::bbAtom(TNode node) {
 
   // the bitblasted definition of the atom
   Node normalized = Rewriter::rewrite(node);
+
+  // Node atom_bb = normalized.getKind() != kind::CONST_BOOLEAN ?
+  //   Rewriter::rewrite(d_atomBBStrategies[normalized.getKind()](normalized, this)) :
+  //   normalized;
+  // NO REWRITE FOR ENCODING
   Node atom_bb = normalized.getKind() != kind::CONST_BOOLEAN ?
-    Rewriter::rewrite(d_atomBBStrategies[normalized.getKind()](normalized, this)) :
+    d_atomBBStrategies[normalized.getKind()](normalized, this) :
     normalized;
+
   // asserting that the atom is true iff the definition holds
   Node atom_definition = utils::mkNode(kind::IFF, node, atom_bb);
   storeBBAtom(node, atom_bb);
@@ -150,7 +162,8 @@ void TLazyBitblaster::makeVariable(TNode var, Bits& bits) {
 uint64_t TLazyBitblaster::computeAtomWeight(TNode node, NodeSet& seen) {
   node = node.getKind() == kind::NOT?  node[0] : node;
 
-  Node atom_bb = Rewriter::rewrite(d_atomBBStrategies[node.getKind()](node, this));
+  //  Node atom_bb = Rewriter::rewrite(d_atomBBStrategies[node.getKind()](node, this));
+  Node atom_bb = d_atomBBStrategies[node.getKind()](node, this);
   uint64_t size = utils::numNodes(atom_bb, seen);
   return size;
 }

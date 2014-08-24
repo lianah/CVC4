@@ -18,6 +18,7 @@
 
 #include "prop/bvminisat/bvminisat.h"
 #include "prop/bvminisat/simp/SimpSolver.h"
+#include "theory/bv/encoding_manager.h"
 
 using namespace CVC4;
 using namespace prop;
@@ -107,7 +108,9 @@ void BVMinisatSatSolver::interrupt(){
 
 SatValue BVMinisatSatSolver::solve(){
   ++d_statistics.d_statCallsToSolve;
-  return toSatLiteralValue(d_minisat->solve());
+  SatValue res = toSatLiteralValue(d_minisat->solve());
+  EncodingManager::currentEM()->printResult();
+  return res;
 }
 
 SatValue BVMinisatSatSolver::solve(long unsigned int& resource){
@@ -213,6 +216,9 @@ void BVMinisatSatSolver::toSatClause(BVMinisat::vec<BVMinisat::Lit>& clause,
   Assert((unsigned)clause.size() == sat_clause.size());
 }
 
+void BVMinisatSatSolver::markLiteral(SatLiteral lit, unsigned id) {
+  d_minisat->markLiteral(toMinisatLit(lit), id);
+}
 
 // Satistics for BVMinisatSatSolver
 

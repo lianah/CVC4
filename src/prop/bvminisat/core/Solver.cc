@@ -30,6 +30,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "util/exception.h"
 #include "theory/bv/options.h"
 #include "theory/interrupted.h"
+#include "theory/bv/encoding_manager.h"
+
 using namespace BVMinisat;
 
 namespace BVMinisat {
@@ -154,6 +156,13 @@ Solver::Solver(CVC4::context::Context* c) :
   varTrue = newVar(true, false);
   varFalse = newVar(false, false);
 
+  // true and false have all marks on
+  CVC4::BitVector ones(64, 0u);
+  for (unsigned i = 0; i < 64; ++i)
+    ones.setBit(i);
+  
+  d_varToMarks[varTrue] = ones;
+  d_varToMarks[varFalse] = ones;
   // Assert the constants
   uncheckedEnqueue(mkLit(varTrue, false));
   uncheckedEnqueue(mkLit(varFalse, true));
@@ -188,9 +197,32 @@ Var Solver::newVar(bool sign, bool dvar)
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
 
+    // ENCODING
+    // FIXME FIXED WIDTH MASSIVE HACK!!!!!
+    d_varToMarks.push_back(CVC4::BitVector(64, 0u));
+    
     return v;
 }
 
+void Solver::markLiteral(Lit lit, unsigned mark) {
+  Var v = var(lit);
+  //  std::cout << "Marking " << v <<"=> " << mark <<"\n"; 
+  Assert ((unsigned)v < d_varToMarks.size());
+  CVC4::BitVector& bv = d_varToMarks[v];
+  Assert (bv.getSize() > mark);
+
+  bv = bv.setBit(mark);
+  d_varToMarks[v] = bv;
+}
+
+bool Solver::allSameCircuit(vec<Lit>& learned) {
+  CVC4::BitVector bv = d_varToMarks[var(learned[0])];
+  for (int i = 1; i < learned.size(); ++i) {
+    CVC4::BitVector& bvi = d_varToMarks[var(learned[i])];
+    bv = bvi & bv;
+  }
+  return (bv != CVC4::BitVector(64, 0u));
+}
 
 bool Solver::addClause_(vec<Lit>& ps)
 {
@@ -810,6 +842,11 @@ lbool Solver::search(int nof_conflicts, UIP uip)
 
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level, uip);
+            // TODO ENCODING: learned units?
+            if (allSameCircuit(learnt_clause)) {
+              ++(CVC4::EncodingManager::currentEM()->d_sameCircuitLearned);
+            }
+            ++(CVC4::EncodingManager::currentEM()->d_totalLearned);
 
             Lit p = learnt_clause[0];
             //bool assumption = marker[var(p)] == 2;

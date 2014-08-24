@@ -118,6 +118,7 @@ public:
   virtual SatValue assertAssumption(SatLiteral lit, bool propagate = false) = 0;
 
   virtual void popAssumption() = 0;
+  virtual void markLiteral(SatLiteral lit, unsigned mark) = 0;
 
 };/* class BVSatSolverInterface */
 

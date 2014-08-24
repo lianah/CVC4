@@ -26,7 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "prop/bvminisat/mtl/Heap.h"
 #include "prop/bvminisat/mtl/Alg.h"
 #include "prop/bvminisat/utils/Options.h"
-
+#include "util/bitvector.h"
 #include "context/cdhashmap.h"
 
 #include <ext/hash_set>
@@ -95,6 +95,9 @@ public:
     bool    addClause_(      vec<Lit>& ps);                     // Add a clause to the solver without making superflous internal copy. Will
                                                                 // change the passed vector 'ps'.
 
+  std::vector<CVC4::BitVector> d_varToMarks;
+  void markLiteral(Lit lit, unsigned mark);
+  bool allSameCircuit(vec<Lit>& learned);
     // Solving:
     //
     bool    simplify     ();                        // Removes already satisfied clauses.

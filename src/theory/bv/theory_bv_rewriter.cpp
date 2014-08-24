@@ -308,19 +308,19 @@ RewriteResponse TheoryBVRewriter::RewriteComp(TNode node, bool prerewrite) {
 
 RewriteResponse TheoryBVRewriter::RewriteMult(TNode node, bool prerewrite) {
   Node resultNode = node; 
-  resultNode = LinearRewriteStrategy
-    < RewriteRule<FlattenAssocCommut>, // flattens and sorts
-      RewriteRule<MultSimplify>,       // multiplies constant part and checks for 0
-      RewriteRule<MultPow2>            // replaces multiplication by a power of 2 by a shift
-    >::apply(resultNode);
+  // resultNode = LinearRewriteStrategy
+  //   < RewriteRule<FlattenAssocCommut>, // flattens and sorts
+  //     RewriteRule<MultSimplify>,       // multiplies constant part and checks for 0
+  //     RewriteRule<MultPow2>            // replaces multiplication by a power of 2 by a shift
+  //   >::apply(resultNode);
 
   // only apply if every subterm was already rewritten 
-  if (!prerewrite) {
-    resultNode = LinearRewriteStrategy
-      <   RewriteRule<MultDistribConst>
-        , RewriteRule<MultDistrib>
-        >::apply(resultNode);
-  }
+  // if (!prerewrite) {
+  //   resultNode = LinearRewriteStrategy
+  //     <   RewriteRule<MultDistribConst>
+  //       , RewriteRule<MultDistrib>
+  //       >::apply(resultNode);
+  // }
 
   if(resultNode == node) {
     return RewriteResponse(REWRITE_DONE, resultNode); 

@@ -29,6 +29,7 @@
 #include "theory/bv/theory_bv_rewriter.h"
 #include "theory/theory_model.h"
 #include "theory/bv/abstraction.h"
+#include "theory/bv/encoding_manager.h"
 
 using namespace CVC4;
 using namespace CVC4::theory;
@@ -359,7 +360,10 @@ void TheoryBV::check(Effort e)
 {
   Debug("bitvector") << "TheoryBV::check(" << e << ")" << std::endl;
   // we may be getting new assertions so the model cache may not be sound
-  d_invalidateModelCache.set(true); 
+  d_invalidateModelCache.set(true);
+  if (Theory::fullEffort(e)) {
+    EncodingManager::currentEM()->finalizeEncoding();
+  }
   // if we are using the eager solver
   if (options::bitblastMode() == theory::bv::BITBLAST_MODE_EAGER) {
     // this can only happen on an empty benchmark

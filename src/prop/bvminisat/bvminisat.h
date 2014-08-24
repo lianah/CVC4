@@ -102,6 +102,8 @@ public:
   void renewVar(SatLiteral lit, int level = -1);
   unsigned getAssertionLevel() const;
 
+  void markLiteral(SatLiteral lit, unsigned id); 
+
 
   // helper methods for converting from the internal Minisat representation
 
