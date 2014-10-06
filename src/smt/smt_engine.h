@@ -62,6 +62,8 @@ class Model;
 class LogicRequest;
 class StatisticsRegistry;
 
+class ResourceManager;  
+  
 namespace context {
   class Context;
   class UserContext;
@@ -221,20 +223,10 @@ class CVC4_PUBLIC SmtEngine {
    */
   bool d_earlyTheoryPP;
 
-  /** A user-imposed cumulative time budget, in milliseconds.  0 = no limit. */
-  unsigned long d_timeBudgetCumulative;
-  /** A user-imposed per-call time budget, in milliseconds.  0 = no limit. */
-  unsigned long d_timeBudgetPerCall;
-  /** A user-imposed cumulative resource budget.  0 = no limit. */
-  unsigned long d_resourceBudgetCumulative;
-  /** A user-imposed per-call resource budget.  0 = no limit. */
-  unsigned long d_resourceBudgetPerCall;
 
-  /** The number of milliseconds used by this SmtEngine since its inception. */
-  unsigned long d_cumulativeTimeUsed;
-  /** The amount of resource used by this SmtEngine since its inception. */
-  unsigned long d_cumulativeResourceUsed;
-
+  /** Flag indicating that the SmtEngine was interrupted and left in an unsafe state*/
+  bool d_unsafeState;
+  
   /**
    * Most recent result of last checkSat/query or (set-info :status).
    */
@@ -349,6 +341,11 @@ class CVC4_PUBLIC SmtEngine {
 
   smt::SmtEngineStatistics* d_stats;
 
+  /** 
+   * Manager for limiting time and abstract resource usage. 
+   */
+  ResourceManager* d_resourceManager;
+  
   /**
    * Add to Model command.  This is used for recording a command
    * that should be reported during a get-model call.
@@ -644,6 +641,10 @@ public:
    */
   unsigned long getTimeRemaining() const throw(ModalException);
 
+  /**
+   * Spend a resource
+   */  
+  void spendResource(bool unsafe = true) throw();
   /**
    * Permit access to the underlying ExprManager.
    */

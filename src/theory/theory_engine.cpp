@@ -26,6 +26,7 @@
 #include "expr/node_builder.h"
 #include "options/options.h"
 #include "util/lemma_output_channel.h"
+#include "util/resource_manager.h"
 
 #include "theory/theory.h"
 #include "theory/theory_engine.h"
@@ -123,7 +124,8 @@ void TheoryEngine::eqNotifyDisequal(TNode t1, TNode t2, TNode reason){
 TheoryEngine::TheoryEngine(context::Context* context,
                            context::UserContext* userContext,
                            RemoveITE& iteRemover,
-                           const LogicInfo& logicInfo)
+                           const LogicInfo& logicInfo,
+                           ResourceManager* rm)
 : d_propEngine(NULL),
   d_decisionEngine(NULL),
   d_context(context),
@@ -151,6 +153,7 @@ TheoryEngine::TheoryEngine(context::Context* context,
   d_true(),
   d_false(),
   d_interrupted(false),
+  d_resourceManager(rm),
   d_inPreregister(false),
   d_factsAsserted(context, false),
   d_preRegistrationVisitor(this, context),
@@ -343,8 +346,7 @@ void TheoryEngine::dumpAssertions(const char* tag) {
  * @param effort the effort level to use
  */
 void TheoryEngine::check(Theory::Effort effort) {
-
-  d_propEngine->checkTime();
+  spendResource(0);
 
   // Reset the interrupt flag
   d_interrupted = false;
@@ -1091,7 +1093,7 @@ void TheoryEngine::assertFact(TNode literal)
 {
   Trace("theory") << "TheoryEngine::assertFact(" << literal << ")" << endl;
 
-  d_propEngine->checkTime();
+  spendResource(0);
 
   // If we're in conflict, nothing to do
   if (d_inConflict) {
@@ -1154,7 +1156,7 @@ bool TheoryEngine::propagate(TNode literal, theory::TheoryId theory) {
 
   Debug("theory::propagate") << "TheoryEngine::propagate(" << literal << ", " << theory << ")" << endl;
 
-  d_propEngine->checkTime();
+  spendResource(0);
 
   if(Dump.isOn("t-propagations")) {
     Dump("t-propagations") << CommentCommand("negation of theory propagation: expect valid")
@@ -1750,4 +1752,8 @@ std::pair<bool, Node> TheoryEngine::entailmentCheck(theory::TheoryOfMode mode, T
   Assert(seffects == NULL || tid == seffects->getTheoryId());
 
   return th->entailmentCheck(lit, params, seffects);
+}
+
+void TheoryEngine::spendResource(unsigned long units) throw() {
+  d_resourceManager->spendResource(units);
 }

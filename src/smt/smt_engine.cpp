@@ -50,6 +50,7 @@
 #include "main/options.h"
 #include "util/unsat_core.h"
 #include "util/proof.h"
+#include "util/resource_manager.h"
 #include "proof/proof.h"
 #include "proof/proof_manager.h"
 #include "util/boolean_simplification.h"
@@ -676,16 +677,11 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_queryMade(false),
   d_needPostsolve(false),
   d_earlyTheoryPP(true),
-  d_timeBudgetCumulative(0),
-  d_timeBudgetPerCall(0),
-  d_resourceBudgetCumulative(0),
-  d_resourceBudgetPerCall(0),
-  d_cumulativeTimeUsed(0),
-  d_cumulativeResourceUsed(0),
   d_status(),
   d_private(NULL),
   d_statisticsRegistry(NULL),
-  d_stats(NULL) {
+  d_stats(NULL),
+  d_resourceManager(new ResourceManager(this)) {
 
   SmtScope smts(this);
   d_private = new smt::SmtEnginePrivate(*this);
@@ -694,7 +690,7 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
 
   // We have mutual dependency here, so we add the prop engine to the theory
   // engine later (it is non-essential there)
-  d_theoryEngine = new TheoryEngine(d_context, d_userContext, d_private->d_iteRemover, const_cast<const LogicInfo&>(d_logic));
+  d_theoryEngine = new TheoryEngine(d_context, d_userContext, d_private->d_iteRemover, const_cast<const LogicInfo&>(d_logic), d_resourceManager);
 
   // Add the theories
   for(TheoryId id = theory::THEORY_FIRST; id < theory::THEORY_LAST; ++id) {
@@ -720,8 +716,10 @@ void SmtEngine::finishInit() {
   d_decisionEngine = new DecisionEngine(d_context, d_userContext);
   d_decisionEngine->init();   // enable appropriate strategies
 
-  d_propEngine = new PropEngine(d_theoryEngine, d_decisionEngine, d_context, d_userContext);
+  d_propEngine = new PropEngine(d_theoryEngine, d_decisionEngine, d_context, d_userContext, d_resourceManager);
 
+  d_resourceManager->setPropEngine(d_propEngine);
+  
   d_theoryEngine->setPropEngine(d_propEngine);
   d_theoryEngine->setDecisionEngine(d_decisionEngine);
   d_theoryEngine->finishInit();
@@ -846,6 +844,7 @@ SmtEngine::~SmtEngine() throw() {
 
     d_definedFunctions->deleteSelf();
 
+    delete d_resourceManager;
     delete d_theoryEngine;
     delete d_propEngine;
     delete d_decisionEngine;
@@ -2738,6 +2737,16 @@ Result SmtEngine::check() {
 
   Trace("smt") << "SmtEngine::check()" << endl;
 
+  d_resourceManager->beginCall();
+
+  // Only way we can be out of resource is if cummulative budget is on
+  if (d_resourceManager->cummulativeLimitOn() &&
+      d_resourceManager->out()) {
+    Result::UnknownExplanation why = d_resourceManager->outOfResources() ?
+                             Result::RESOURCEOUT : Result::TIMEOUT;
+    return Result(Result::VALIDITY_UNKNOWN, why, d_filename);
+  }
+  
   // Make sure the prop layer has all of the assertions
   Trace("smt") << "SmtEngine::check(): processing assertions" << endl;
   d_private->processAssertions();
@@ -2757,41 +2766,19 @@ Result SmtEngine::check() {
     }
   }
 
-  unsigned long millis = 0;
-  if(d_timeBudgetCumulative != 0) {
-    millis = getTimeRemaining();
-    if(millis == 0) {
-      return Result(Result::VALIDITY_UNKNOWN, Result::TIMEOUT, d_filename);
-    }
-  }
-  if(d_timeBudgetPerCall != 0 && (millis == 0 || d_timeBudgetPerCall < millis)) {
-    millis = d_timeBudgetPerCall;
-  }
-
-  unsigned long resource = 0;
-  if(d_resourceBudgetCumulative != 0) {
-    resource = getResourceRemaining();
-    if(resource == 0) {
-      return Result(Result::VALIDITY_UNKNOWN, Result::RESOURCEOUT, d_filename);
-    }
-  }
-  if(d_resourceBudgetPerCall != 0 && (resource == 0 || d_resourceBudgetPerCall < resource)) {
-    resource = d_resourceBudgetPerCall;
-  }
-
   TimerStat::CodeTimer solveTimer(d_stats->d_solveTime);
 
   Chat() << "solving..." << endl;
   Trace("smt") << "SmtEngine::check(): running check" << endl;
-  Result result = d_propEngine->checkSat(millis, resource);
+  Result result = d_propEngine->checkSat(d_resourceManager->getResourceBudgetForThisCall());
+  
+  // Has to be before printing resource usage because it will update the time
+  // and resources used by the SAT solvers
+  d_resourceManager->endCall();
+  
+  Trace("limit") << "SmtEngine::check(): cumulative millis " << d_resourceManager->getTimeUsage()
+                 << ", resources " << d_resourceManager->getResourceUsage() << endl;
 
-  // PropEngine::checkSat() returns the actual amount used in these
-  // variables.
-  d_cumulativeTimeUsed += millis;
-  d_cumulativeResourceUsed += resource;
-
-  Trace("limit") << "SmtEngine::check(): cumulative millis " << d_cumulativeTimeUsed
-                 << ", conflicts " << d_cumulativeResourceUsed << endl;
 
   return Result(result, d_filename);
 }
@@ -4193,54 +4180,31 @@ void SmtEngine::interrupt() throw(ModalException) {
   if(!d_fullyInited) {
     return;
   }
-  d_propEngine->interrupt();
+  d_propEngine->interrupt(); 
   d_theoryEngine->interrupt();
 }
 
 void SmtEngine::setResourceLimit(unsigned long units, bool cumulative) {
-  if(cumulative) {
-    Trace("limit") << "SmtEngine: setting cumulative resource limit to " << units << endl;
-    d_resourceBudgetCumulative = (units == 0) ? 0 : (d_cumulativeResourceUsed + units);
-  } else {
-    Trace("limit") << "SmtEngine: setting per-call resource limit to " << units << endl;
-    d_resourceBudgetPerCall = units;
-  }
+  d_resourceManager->setResourceLimit(units, cumulative);
 }
-
-void SmtEngine::setTimeLimit(unsigned long millis, bool cumulative) {
-  if(cumulative) {
-    Trace("limit") << "SmtEngine: setting cumulative time limit to " << millis << " ms" << endl;
-    d_timeBudgetCumulative = (millis == 0) ? 0 : (d_cumulativeTimeUsed + millis);
-  } else {
-    Trace("limit") << "SmtEngine: setting per-call time limit to " << millis << " ms" << endl;
-    d_timeBudgetPerCall = millis;
-  }
+void SmtEngine::setTimeLimit(unsigned long milis, bool cumulative) {
+  d_resourceManager->setTimeLimit(milis, cumulative);
 }
 
 unsigned long SmtEngine::getResourceUsage() const {
-  return d_cumulativeResourceUsed;
+  return d_resourceManager->getResourceUsage();
 }
 
 unsigned long SmtEngine::getTimeUsage() const {
-  return d_cumulativeTimeUsed;
+  return d_resourceManager->getTimeUsage(); 
 }
 
 unsigned long SmtEngine::getResourceRemaining() const throw(ModalException) {
-  if(d_resourceBudgetCumulative == 0) {
-    throw ModalException("No cumulative resource limit is currently set");
-  }
-
-  return d_resourceBudgetCumulative <= d_cumulativeResourceUsed ? 0 :
-    d_resourceBudgetCumulative - d_cumulativeResourceUsed;
+  return d_resourceManager->getResourceRemaining();
 }
 
 unsigned long SmtEngine::getTimeRemaining() const throw(ModalException) {
-  if(d_timeBudgetCumulative == 0) {
-    throw ModalException("No cumulative time limit is currently set");
-  }
-
-  return d_timeBudgetCumulative <= d_cumulativeTimeUsed ? 0 :
-    d_timeBudgetCumulative - d_cumulativeTimeUsed;
+  return d_resourceManager->getTimeRemaining();
 }
 
 Statistics SmtEngine::getStatistics() const throw() {

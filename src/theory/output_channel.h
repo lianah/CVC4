@@ -211,7 +211,7 @@ public:
    * long-running operations, they cannot rely on resource() to break
    * out of infinite or intractable computations.
    */
-  virtual void spendResource() throw() {}
+  virtual void spendResource(unsigned long units = 1) throw() {}
 
   /**
    * Handle user attribute.

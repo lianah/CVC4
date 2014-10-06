@@ -1592,7 +1592,7 @@ CRef Solver::updateLemmas() {
   Debug("minisat::lemmas") << "Solver::updateLemmas() begin" << std::endl;
 
   // Avoid adding lemmas indefinitely without resource-out
-  spendResource();
+  proxy->spendResource();
 
   CRef conflict = CRef_Undef;
 

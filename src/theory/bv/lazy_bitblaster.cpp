@@ -352,8 +352,8 @@ void TLazyBitblaster::MinisatNotify::notify(prop::SatClause& clause) {
   }
 }
 
-void TLazyBitblaster::MinisatNotify::safePoint() {
-  d_bv->d_out->safePoint();
+void TLazyBitblaster::MinisatNotify::spendResource(unsigned long units) {
+  d_bv->d_out->spendResource(units);
 }
 
 

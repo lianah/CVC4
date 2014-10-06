@@ -30,6 +30,9 @@
 #include "theory/theory_model.h"
 #include "theory/bv/abstraction.h"
 
+// FIXME for timeout debugging
+#include <unistd.h>
+
 using namespace CVC4;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv;
@@ -357,6 +360,11 @@ void TheoryBV::checkForLemma(TNode fact) {
 
 void TheoryBV::check(Effort e)
 {
+  // Debug("timeout") << "TheoryBV::check start.\n";
+  // double second = 1 << 20;
+  // usleep(second*4);
+  // Debug("timeout") << "TheoryBV::check done.\n";
+
   if (done() && !fullEffort(e)) {
     return;
   }
@@ -626,7 +634,11 @@ Node TheoryBV::ppRewrite(TNode t)
 }
 
 void TheoryBV::presolve() {
-  Debug("bitvector") << "TheoryBV::presolve" << endl;
+  // Debug("timeout") << "TheoryBV::presolve start.\n";
+  // double second = 1 << 20;
+  // // usleep(second*4);
+  // Debug("timeout") << "TheoryBV::presolve done.\n";
+  // Debug("bitvector") << "TheoryBV::presolve" << endl;
 }
 
 static int prop_count = 0; 

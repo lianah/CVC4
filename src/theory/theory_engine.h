@@ -46,6 +46,8 @@
 
 namespace CVC4 {
 
+class ResourceManager;
+  
 /**
  * A pair of a theory and a node. This is used to mark the flow of
  * propagations between theories.
@@ -339,8 +341,8 @@ class TheoryEngine {
       d_engine->setIncomplete(d_theory);
     }
 
-    void spendResource() throw() {
-      d_engine->spendResource();
+    void spendResource(unsigned long units = 1) throw() {
+      d_engine->spendResource(units);
     }
 
     void handleUserAttribute( const char* attr, theory::Theory* t ){
@@ -382,12 +384,6 @@ class TheoryEngine {
     d_incomplete = true;
   }
 
-  /**
-   * "Spend" a resource during a search or preprocessing.
-   */
-  void spendResource() throw() {
-    d_propEngine->spendResource();
-  }
 
   /**
    * Mapping of propagations from recievers to senders.
@@ -472,16 +468,21 @@ class TheoryEngine {
 
   /** Whether we were just interrupted (or not) */
   bool d_interrupted;
+  ResourceManager* d_resourceManager;
 
 public:
 
   /** Constructs a theory engine */
-  TheoryEngine(context::Context* context, context::UserContext* userContext, RemoveITE& iteRemover, const LogicInfo& logic);
+  TheoryEngine(context::Context* context, context::UserContext* userContext, RemoveITE& iteRemover, const LogicInfo& logic, ResourceManager* rm);
 
   /** Destroys a theory engine */
   ~TheoryEngine();
 
   void interrupt() throw(ModalException);
+  /**
+   * "Spend" a resource during a search or preprocessing.
+   */
+  void spendResource(unsigned long units = 1) throw();
 
   /**
    * Adds a theory. Only one theory per TheoryId can be present, so if

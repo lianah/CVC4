@@ -219,7 +219,7 @@ public:
     void    budgetOff();
     void    interrupt();          // Trigger a (potentially asynchronous) interruption of the solver.
     void    clearInterrupt();     // Clear interrupt indicator flag.
-    void    spendResource();
+    unsigned long updateAndGetSatResource(unsigned long units);
 
     // Memory managment:
     //
@@ -365,6 +365,9 @@ protected:
     //
     int64_t             conflict_budget;    // -1 means no budget.
     int64_t             propagation_budget; // -1 means no budget.
+    int64_t             conflicts_reported;    // conflicts already reported to resource manager
+    int64_t             propagations_reported; // propagations already reported to resource manager
+  
     bool                asynch_interrupt;
 
     // Main internal methods:
@@ -534,10 +537,21 @@ inline void     Solver::interrupt(){ asynch_interrupt = true; }
 inline void     Solver::clearInterrupt(){ asynch_interrupt = false; }
 inline void     Solver::budgetOff(){ conflict_budget = propagation_budget = -1; }
 inline bool     Solver::withinBudget() const {
-    return !asynch_interrupt &&
-           (conflict_budget    < 0 || conflicts + resources_consumed < (uint64_t)conflict_budget) &&
-           (propagation_budget < 0 || propagations < (uint64_t)propagation_budget); }
-inline void     Solver::spendResource() { ++resources_consumed; }
+  bool within_budget =  !asynch_interrupt &&
+    (conflict_budget    < 0 || conflicts + resources_consumed < (uint64_t)conflict_budget) &&
+    (propagation_budget < 0 || propagations < (uint64_t)propagation_budget);
+  return within_budget;
+}
+
+inline unsigned long Solver::updateAndGetSatResource(unsigned long units) {
+  resources_consumed += units;
+  unsigned long new_used = 0;
+  if (propagation_budget > 0) new_used += propagations - propagations_reported;
+  if (conflict_budget > 0) new_used += conflicts - conflicts_reported;
+  propagations_reported = propagations;
+  conflicts_reported = conflicts;
+  return new_used;
+}
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or

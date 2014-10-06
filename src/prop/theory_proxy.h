@@ -111,7 +111,7 @@ public:
 
   void logDecision(SatLiteral lit);
 
-  void checkTime();
+  void spendResource(unsigned long units = 1);
 
   bool isDecisionEngineDone();
 

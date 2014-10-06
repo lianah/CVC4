@@ -182,8 +182,8 @@ SatValue MinisatSatSolver::solve() {
   return toSatLiteralValue(d_minisat->solve());
 }
 
-void MinisatSatSolver::spendResource() {
-  d_minisat->spendResource();
+unsigned long MinisatSatSolver::updateAndGetSatResource(unsigned long units) {
+  return d_minisat->updateAndGetSatResource(units); 
 }
 
 void MinisatSatSolver::interrupt() {
