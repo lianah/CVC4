@@ -19,9 +19,9 @@
 #include "smt/smt_engine.h"
 #include "prop/prop_engine.h"
 
-
 using namespace CVC4;
 using namespace std;
+
 
 /** Set a millisecond timer (0==off). */
 void SmtTimer::set(unsigned long millis) {
@@ -119,19 +119,24 @@ unsigned long ResourceManager::getTimeRemaining() const {
   return d_thisCallTimeBudget - time_passed;
 }
 
-void ResourceManager::spendResource() {
-  spendResource(1);
-}
+// void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
+//   spendResource(1, unsafe);
+// }
 
-void ResourceManager::spendResource(unsigned long units) {
+void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
+  ++d_spendResourceCalls;
   if (!d_on) return;
-  unsigned sat_used = d_propEngine->updateAndGetSatResource(units);
+  //  unsigned sat_used = d_propEngine->updateAndGetSatResource(units);
   
-  d_cumulativeResourceUsed += units + sat_used;
-  d_thisCallResourceUsed += units + sat_used;
+  ++d_cumulativeResourceUsed;
+  ++d_thisCallResourceUsed;
 
   // FIXME: check if smtengine is interrupted
   if(out()) {
+    if (unsafe) {
+      d_smtEngine->markUnsafe();
+      throw UnsafeInterrupt();
+    }
     Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
     d_smtEngine->interrupt();
   }
@@ -173,7 +178,7 @@ void ResourceManager::beginCall() {
 void ResourceManager::endCall() {
   unsigned long usedInCall = d_timer.elapsed();
   d_cumulativeTimeUsed += usedInCall;
-  d_cumulativeResourceUsed += d_propEngine->updateAndGetSatResource(0);
+  //  d_cumulativeResourceUsed += d_propEngine->updateAndGetSatResource(0);
   // FIXME: what about other sat solver?
   d_timer.set(0);
 }

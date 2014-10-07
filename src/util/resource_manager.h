@@ -15,14 +15,21 @@
 **/
 
 #include <cstddef>
-#include "cvc4_private.h"
 #include <sys/time.h>
+
+#include "cvc4_private.h"
+#include "util/exception.h"
 
 #ifndef __CVC4__RESOURCE_MANAGER_H
 #define __CVC4__RESOURCE_MANAGER_H
 
 
 namespace CVC4 {
+  
+  class UnsafeInterrupt : public CVC4::Exception {
+  };/* class UnsafeInterrupted */
+
+  
   class SmtEngine;
   namespace prop {
     class PropEngine;
@@ -92,7 +99,7 @@ namespace CVC4 {
     void setTimeLimit(unsigned long millis, bool cumulative = false);
 
     bool d_on;
-
+    unsigned long d_spendResourceCalls;
     ResourceManager(SmtEngine* smt)
       : d_smtEngine(smt)
       , d_propEngine(NULL)
@@ -107,6 +114,7 @@ namespace CVC4 {
       , d_thisCallTimeBudget()
       , d_thisCallResourceBudget()
       , d_on(false)
+      , d_spendResourceCalls(0)
     {}
 
     /** 
@@ -137,8 +145,8 @@ namespace CVC4 {
     unsigned long getTimeRemaining() const;
 
     unsigned long getResourceBudgetForThisCall() { return d_thisCallResourceBudget; }
-    void spendResource();
-    void spendResource(unsigned long units);
+    void spendResource(bool unsafe = true) throw(UnsafeInterrupt) ;
+    // void spendResource(unsigned long units, bool unsafe = true) throw(UnsafeInterrupt);
   };
 }/* CVC4 namespace */
 

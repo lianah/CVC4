@@ -281,11 +281,11 @@ void PropEngine::interrupt() throw(ModalException) {
   Debug("prop") << "interrupt()" << endl;
 }
 
-unsigned long PropEngine::updateAndGetSatResource(unsigned long units) throw() {
-  return d_satSolver->updateAndGetSatResource(units);
-}
-void PropEngine::spendResource(unsigned long units) throw () {
-  d_resourceManager->spendResource();
+// unsigned long PropEngine::updateAndGetSatResource(unsigned long units) throw() {
+//   return d_satSolver->updateAndGetSatResource(units);
+// }
+void PropEngine::spendResource(bool unsafe) throw () {
+  d_resourceManager->spendResource(unsafe);
 }
 
 bool PropEngine::properExplanation(TNode node, TNode expl) const {

@@ -47,8 +47,8 @@ private:
       d_notify->notify(satClause);
     }
 
-    void spendResource(unsigned long units = 1) {
-      d_notify->spendResource(units);
+    void spendResource(bool unsafe = true) {
+      d_notify->spendResource(unsafe);
     }
   };
 
@@ -87,7 +87,7 @@ public:
 
   void markUnremovable(SatLiteral lit);
 
-  unsigned long updateAndGetSatResource(unsigned long units);
+  // unsigned long updateAndGetSatResource(unsigned long units);
 
   void interrupt();
   

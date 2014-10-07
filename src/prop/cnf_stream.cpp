@@ -30,6 +30,8 @@
 #include "proof/proof_manager.h"
 #include "proof/sat_proof.h"
 #include "prop/minisat/minisat.h"
+#include "smt/smt_engine_scope.h"
+
 #include <queue>
 
 using namespace std;
@@ -664,7 +666,11 @@ void TseitinCnfStream::convertAndAssert(TNode node, bool removable, bool negated
 
 void TseitinCnfStream::convertAndAssert(TNode node, bool negated) {
   Debug("cnf") << "convertAndAssert(" << node << ", negated = " << (negated ? "true" : "false") << ")" << endl;
-
+  
+  if (d_convertAndAssertCounter % 1000 == 0) {
+    smt::currentSmtEngine()->spendResource();
+    d_convertAndAssertCounter = 0;
+  }
   switch(node.getKind()) {
   case AND:
     convertAndAssertAnd(node, negated);

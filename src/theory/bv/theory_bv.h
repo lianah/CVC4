@@ -54,7 +54,7 @@ class TheoryBV : public Theory {
 
 
 public:
-
+  
   TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& out, Valuation valuation, const LogicInfo& logicInfo);
   ~TheoryBV();
 
@@ -103,6 +103,7 @@ private:
 
   Statistics d_statistics;
 
+  void spendResource(bool unsafe = true) throw(UnsafeInterrupt);
 
   /**
    * Return the uninterpreted function symbol corresponding to division-by-zero
@@ -218,6 +219,7 @@ private:
   friend class CoreSolver;
   friend class InequalitySolver;
   friend class AlgebraicSolver;
+  friend class EagerBitblastSolver;
 };/* class TheoryBV */
 
 }/* CVC4::theory::bv namespace */

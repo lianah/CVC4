@@ -1709,3 +1709,13 @@ CRef Solver::updateLemmas() {
 
   return conflict;
 }
+
+inline bool Solver::withinBudget() const {
+  Assert (proxy);
+  proxy->spendResource();
+
+  bool within_budget =  !asynch_interrupt &&
+    (conflict_budget    < 0 || conflicts + resources_consumed < (uint64_t)conflict_budget) &&
+    (propagation_budget < 0 || propagations < (uint64_t)propagation_budget);
+  return within_budget;
+}

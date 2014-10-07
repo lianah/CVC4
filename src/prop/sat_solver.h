@@ -64,7 +64,7 @@ public:
 
   /** Instruct the solver that it should bump its consumed resource count by units
       and also return the number of resources it has consumed since the last call. */
-  virtual unsigned long updateAndGetSatResource(unsigned long units) = 0;
+  //  virtual unsigned long updateAndGetSatResource(unsigned long units) = 0;
 
   /** Interrupt the solver */
   virtual void interrupt() = 0;
@@ -100,7 +100,7 @@ public:
      * Notify about a learnt clause.
      */
     virtual void notify(SatClause& clause) = 0;
-    virtual void spendResource(unsigned long units = 1) = 0;
+    virtual void spendResource(bool unsafe = true) = 0;
     
   };/* class BVSatSolverInterface::Notify */
 

@@ -19,6 +19,8 @@
 #pragma once
 
 #include "expr/node.h"
+#include "util/resource_manager.h"
+
 //#include "expr/attribute.h"
 
 namespace CVC4 {
@@ -107,7 +109,7 @@ public:
    * Rewrites the node using theoryOf() to determine which rewriter to
    * use on the node.
    */
-  static Node rewrite(TNode node);
+  static Node rewrite(TNode node) throw (UnsafeInterrupt);
 
   /**
    * Garbage collects the rewrite caches.

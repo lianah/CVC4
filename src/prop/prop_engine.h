@@ -235,14 +235,14 @@ public:
    * 
    * @return sat resources spend
    */
-  unsigned long updateAndGetSatResource(unsigned long units) throw();
+  //  unsigned long updateAndGetSatResource(unsigned long units) throw();
   /** 
    * Informs the ResourceManager that a resource has been spend and
    * terminates if out of resources.
    * 
    * @param units 
    */
-  void spendResource(unsigned long units = 1) throw ();
+  void spendResource(bool unsafe = true) throw ();
   /**
    * For debugging.  Return true if "expl" is a well-formed
    * explanation for "node," meaning:

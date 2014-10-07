@@ -54,7 +54,7 @@ public:
   typedef context::CDInsertHashMap<Node, SatLiteral, NodeHashFunction> NodeToLiteralMap;
 
 protected:
-
+  
   /** The SAT solver we will be using */
   SatSolver *d_satSolver;
 
@@ -74,6 +74,12 @@ protected:
    */
   const bool d_fullLitToNodeMap;
 
+  /** 
+   * Counter for resource limiting that is used to spend a resource 
+   * every 1000 calls to convertAndAssert.
+   */
+  unsigned long d_convertAndAssertCounter;
+  
   /** The "registrar" for pre-registration of terms */
   Registrar* d_registrar;
 

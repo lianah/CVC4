@@ -39,6 +39,7 @@
 #include "util/statistics_registry.h"
 #include "util/cvc4_assert.h"
 #include "util/sort_inference.h"
+#include "util/resource_manager.h"
 #include "theory/quantifiers/quant_conflict_find.h"
 #include "theory/uf/equality_engine.h"
 #include "theory/bv/bv_to_bool.h"
@@ -277,13 +278,13 @@ class TheoryEngine {
     }
 
     void safePoint() throw(theory::Interrupted, AssertionException) {
-      spendResource();
+      spendResource(true);
       if (d_engine->d_interrupted) {
         throw theory::Interrupted();
       }
     }
 
-    void conflict(TNode conflictNode) throw(AssertionException) {
+    void conflict(TNode conflictNode) throw(AssertionException, UnsafeInterrupt) {
       Trace("theory::conflict") << "EngineOutputChannel<" << d_theory << ">::conflict(" << conflictNode << ")" << std::endl;
       ++ d_statistics.conflicts;
       d_engine->d_outputChannelUsed = true;
@@ -341,8 +342,8 @@ class TheoryEngine {
       d_engine->setIncomplete(d_theory);
     }
 
-    void spendResource(unsigned long units = 1) throw() {
-      d_engine->spendResource(units);
+    void spendResource(bool unsafe = true) throw(UnsafeInterrupt) {
+      d_engine->spendResource(unsafe);
     }
 
     void handleUserAttribute( const char* attr, theory::Theory* t ){
@@ -482,7 +483,7 @@ public:
   /**
    * "Spend" a resource during a search or preprocessing.
    */
-  void spendResource(unsigned long units = 1) throw();
+  void spendResource(bool unsafe = true);
 
   /**
    * Adds a theory. Only one theory per TheoryId can be present, so if

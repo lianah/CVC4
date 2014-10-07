@@ -97,9 +97,9 @@ void BVMinisatSatSolver::markUnremovable(SatLiteral lit){
   d_minisat->setFrozen(BVMinisat::var(toMinisatLit(lit)), true);
 }
 
-unsigned long BVMinisatSatSolver::updateAndGetSatResource(unsigned long units) {
-  return d_minisat->updateAndGetSatResource(units); 
-}
+// unsigned long BVMinisatSatSolver::updateAndGetSatResource(unsigned long units) {
+//   return d_minisat->updateAndGetSatResource(units); 
+// }
 
 void BVMinisatSatSolver::interrupt(){
   d_minisat->interrupt();

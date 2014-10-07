@@ -109,6 +109,10 @@ void TheoryBV::setMasterEqualityEngine(eq::EqualityEngine* eq) {
   }
 }
 
+void TheoryBV::spendResource(bool unsafe) throw(UnsafeInterrupt) {
+  getOutputChannel().spendResource(unsafe);
+}
+
 TheoryBV::Statistics::Statistics():
   d_avgConflictSize("theory::bv::AvgBVConflictSize"),
   d_solveSubstitutions("theory::bv::NumberOfSolveSubstitutions", 0),
@@ -293,7 +297,6 @@ Node TheoryBV::expandDefinition(LogicRequest &logicRequest, Node node) {
   Unreachable();
 }
 
-
 void TheoryBV::preRegisterTerm(TNode node) {
   d_calledPreregister = true;
   Debug("bitvector-preregister") << "TheoryBV::preRegister(" << node << ")" << std::endl;
@@ -360,14 +363,10 @@ void TheoryBV::checkForLemma(TNode fact) {
 
 void TheoryBV::check(Effort e)
 {
-  // Debug("timeout") << "TheoryBV::check start.\n";
-  // double second = 1 << 20;
-  // usleep(second*4);
-  // Debug("timeout") << "TheoryBV::check done.\n";
-
   if (done() && !fullEffort(e)) {
     return;
   }
+  
   Debug("bitvector") << "TheoryBV::check(" << e << ")" << std::endl;
   // we may be getting new assertions so the model cache may not be sound
   d_invalidateModelCache.set(true); 
@@ -633,13 +632,7 @@ Node TheoryBV::ppRewrite(TNode t)
   return res;
 }
 
-void TheoryBV::presolve() {
-  // Debug("timeout") << "TheoryBV::presolve start.\n";
-  // double second = 1 << 20;
-  // // usleep(second*4);
-  // Debug("timeout") << "TheoryBV::presolve done.\n";
-  // Debug("bitvector") << "TheoryBV::presolve" << endl;
-}
+void TheoryBV::presolve() {}
 
 static int prop_count = 0; 
 

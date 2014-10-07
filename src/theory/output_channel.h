@@ -21,6 +21,7 @@
 
 #include "util/cvc4_assert.h"
 #include "theory/interrupted.h"
+#include "util/resource_manager.h"
 
 namespace CVC4 {
 namespace theory {
@@ -97,7 +98,7 @@ public:
    * unit conflict) which is assigned TRUE (and T-conflicting) in the
    * current assignment.
    */
-  virtual void conflict(TNode n) throw(AssertionException) = 0;
+  virtual void conflict(TNode n) throw(AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * Propagate a theory literal.
@@ -211,7 +212,7 @@ public:
    * long-running operations, they cannot rely on resource() to break
    * out of infinite or intractable computations.
    */
-  virtual void spendResource(unsigned long units = 1) throw() {}
+  virtual void spendResource(bool unsafe = true) throw(UnsafeInterrupt) {}
 
   /**
    * Handle user attribute.

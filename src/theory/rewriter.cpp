@@ -18,6 +18,7 @@
 #include "theory/theory.h"
 #include "theory/rewriter.h"
 #include "theory/rewriter_tables.h"
+#include "smt/smt_engine_scope.h"
 
 using namespace std;
 
@@ -76,12 +77,12 @@ struct RewriteStackElement {
   }
 };
 
-Node Rewriter::rewrite(TNode node) {
+Node Rewriter::rewrite(TNode node) throw (UnsafeInterrupt){
   return rewriteTo(theoryOf(node), node);
 }
 
 Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
-
+  
 #ifdef CVC4_ASSERTIONS
   bool isEquality = node.getKind() == kind::EQUAL;
 
@@ -102,9 +103,22 @@ Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
   vector<RewriteStackElement> rewriteStack;
   rewriteStack.push_back(RewriteStackElement(node, theoryId));
 
+  
+  SmtEngine* sm = NULL;
+  bool hasSmtEngine = smt::smtEngineInScope();
+  if (hasSmtEngine) {
+    sm = smt::currentSmtEngine();
+  }
+  unsigned long iteration_count = 0;
   // Rewrite until the stack is empty
   for (;;){
-
+    
+    if (iteration_count % 1000 == 0 && hasSmtEngine) {
+      sm->spendResource();
+      iteration_count = 0;
+    }
+    ++iteration_count;
+    
     // Get the top of the recursion stack
     RewriteStackElement& rewriteStackTop = rewriteStack.back();
 

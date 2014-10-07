@@ -36,6 +36,7 @@
 #include "util/sexpr.h"
 #include "util/hash.h"
 #include "util/statistics.h"
+#include "util/resource_manager.h"
 #include "theory/logic_info.h"
 
 // In terms of abstraction, this is below (and provides services to)
@@ -264,7 +265,7 @@ class CVC4_PUBLIC SmtEngine {
    * into booleans, etc.
    */
   Node postprocess(TNode n, TypeNode expectedType) const;
-
+  void checkForNewOptions();
   /**
    * This is something of an "init" procedure, but is idempotent; call
    * as often as you like.  Should be called whenever the final options
@@ -467,7 +468,7 @@ public:
    * Expand the definitions in a term or formula.  No other
    * simplification or normalization is done.
    */
-  Expr expandDefinitions(const Expr& e) throw(TypeCheckingException, LogicException);
+  Expr expandDefinitions(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
 
   /**
    * Get the assigned value of an expr (only if immediately preceded
@@ -548,6 +549,15 @@ public:
    */
   void interrupt() throw(ModalException);
 
+  // FIXME: move this
+  /** 
+   * Mark the SmtEngine as being in an unsafe state. This means that it
+   * should not be used again and must be destroyed. This can happen due
+   * to resource limiting stopping the search in a bad state.
+   * 
+   */
+  void markUnsafe();
+  bool isUnsafe();
   /**
    * Set a resource limit for SmtEngine operations.  This is like a time
    * limit, but it's deterministic so that reproducible results can be
@@ -644,7 +654,7 @@ public:
   /**
    * Spend a resource
    */  
-  void spendResource(bool unsafe = true) throw();
+  void spendResource(bool unsafe = true) throw(UnsafeInterrupt);
   /**
    * Permit access to the underlying ExprManager.
    */

@@ -434,7 +434,7 @@ private:
    *
    * Returns false if the formula simplifies to "false"
    */
-  bool simplifyAssertions() throw(TypeCheckingException, LogicException);
+  bool simplifyAssertions() throw(TypeCheckingException, LogicException, UnsafeInterrupt);
 
 public:
 
@@ -557,7 +557,7 @@ public:
    * Expand definitions in n.
    */
   Node expandDefinitions(TNode n, hash_map<Node, Node, NodeHashFunction>& cache, bool expandOnly = false)
-    throw(TypeCheckingException, LogicException);
+    throw(TypeCheckingException, LogicException, UnsafeInterrupt);
 
   /**
    * Rewrite Boolean terms in a Node.
@@ -677,6 +677,7 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_queryMade(false),
   d_needPostsolve(false),
   d_earlyTheoryPP(true),
+  d_unsafeState(false),
   d_status(),
   d_private(NULL),
   d_statisticsRegistry(NULL),
@@ -751,6 +752,11 @@ void SmtEngine::finishInit() {
   }
   d_dumpCommands.clear();
 
+  PROOF( ProofManager::currentPM()->setLogic(d_logic.getLogicString()); );
+}
+
+void SmtEngine::checkForNewOptions() {
+  // FIXME: NOT THE RIGHT PLACE
   if(options::perCallResourceLimit() != 0) {
     setResourceLimit(options::perCallResourceLimit(), false);
   }
@@ -763,11 +769,11 @@ void SmtEngine::finishInit() {
   if(options::cumulativeMillisecondLimit() != 0) {
     setTimeLimit(options::cumulativeMillisecondLimit(), true);
   }
-
-  PROOF( ProofManager::currentPM()->setLogic(d_logic.getLogicString()); );
 }
 
 void SmtEngine::finalOptionsAreSet() {
+  checkForNewOptions();
+   
   if(d_fullyInited) {
     return;
   }
@@ -1585,8 +1591,10 @@ void SmtEngine::defineFunction(Expr func,
 }
 
 Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashFunction>& cache, bool expandOnly)
-  throw(TypeCheckingException, LogicException) {
+  throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
 
+  d_smt.spendResource();
+  
   stack< triple<Node, Node, bool> > worklist;
   stack<Node> result;
   worklist.push(make_triple(Node(n), Node(n), false));
@@ -1731,7 +1739,7 @@ Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashF
 
 void SmtEnginePrivate::removeITEs() {
   d_smt.finalOptionsAreSet();
-
+  d_smt.spendResource();
   Trace("simplify") << "SmtEnginePrivate::removeITEs()" << endl;
 
   // Remove all of the ITE occurrences and normalize
@@ -1743,7 +1751,8 @@ void SmtEnginePrivate::removeITEs() {
 
 void SmtEnginePrivate::staticLearning() {
   d_smt.finalOptionsAreSet();
-
+  d_smt.spendResource();
+  
   TimerStat::CodeTimer staticLearningTimer(d_smt.d_stats->d_staticLearningTime);
 
   Trace("simplify") << "SmtEnginePrivate::staticLearning()" << endl;
@@ -1775,6 +1784,7 @@ static void dumpAssertions(const char* key, const AssertionPipeline& assertionLi
 
 // returns false if it learns a conflict
 bool SmtEnginePrivate::nonClausalSimplify() {
+  d_smt.spendResource();
   d_smt.finalOptionsAreSet();
 
   if(options::unsatCores()) {
@@ -2103,6 +2113,7 @@ void SmtEnginePrivate::bvAbstraction() {
 
 void SmtEnginePrivate::bvToBool() {
   Trace("bv-to-bool") << "SmtEnginePrivate::bvToBool()" << endl;
+  d_smt.spendResource();
   std::vector<Node> new_assertions;
   d_smt.d_theoryEngine->ppBvToBool(d_assertions.ref(), new_assertions);
   for (unsigned i = 0; i < d_assertions.size(); ++ i) {
@@ -2113,10 +2124,13 @@ void SmtEnginePrivate::bvToBool() {
 bool SmtEnginePrivate::simpITE() {
   TimerStat::CodeTimer simpITETimer(d_smt.d_stats->d_simpITETime);
 
+  d_smt.spendResource();
+  
   Trace("simplify") << "SmtEnginePrivate::simpITE()" << endl;
 
   unsigned numAssertionOnEntry = d_assertions.size();
   for (unsigned i = 0; i < d_assertions.size(); ++i) {
+    d_smt.spendResource();
     Node result = d_smt.d_theoryEngine->ppSimpITE(d_assertions[i]);
     d_assertions.replace(i, result);
     if(result.isConst() && !result.getConst<bool>()){
@@ -2163,6 +2177,7 @@ void SmtEnginePrivate::compressBeforeRealAssertions(size_t before){
 
 void SmtEnginePrivate::unconstrainedSimp() {
   TimerStat::CodeTimer unconstrainedSimpTimer(d_smt.d_stats->d_unconstrainedSimpTime);
+  d_smt.spendResource();
   Trace("simplify") << "SmtEnginePrivate::unconstrainedSimp()" << endl;
   d_smt.d_theoryEngine->ppUnconstrainedSimp(d_assertions.ref());
 }
@@ -2610,7 +2625,8 @@ void SmtEnginePrivate::doMiplibTrick() {
 
 // returns false if simplification led to "false"
 bool SmtEnginePrivate::simplifyAssertions()
-  throw(TypeCheckingException, LogicException) {
+  throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
+  d_smt.spendResource();
   Assert(d_smt.d_pendingPops == 0);
   try {
     ScopeCounter depth(d_simplifyAssertionsDepth);
@@ -2851,6 +2867,9 @@ bool SmtEnginePrivate::checkForBadSkolems(TNode n, TNode skolem, hash_map<Node, 
 
 Node SmtEnginePrivate::rewriteBooleanTerms(TNode n) {
   TimerStat::CodeTimer codeTimer(d_smt.d_stats->d_rewriteBooleanTermsTime);
+
+  d_smt.spendResource();
+
   if(d_booleanTermConverter == NULL) {
     // This needs to be initialized _after_ the whole SMT framework is in place, subscribed
     // to ExprManager notifications, etc.  Otherwise we might miss the "BooleanTerm" datatype
@@ -2884,7 +2903,7 @@ Node SmtEnginePrivate::rewriteBooleanTerms(TNode n) {
 
 void SmtEnginePrivate::processAssertions() {
   TimerStat::CodeTimer paTimer(d_smt.d_stats->d_processAssertionsTime);
-
+  d_smt.spendResource();
   Assert(d_smt.d_fullyInited);
   Assert(d_smt.d_pendingPops == 0);
 
@@ -2997,15 +3016,14 @@ void SmtEnginePrivate::processAssertions() {
     }
   } else {
     // Apply the substitutions we already have, and normalize
-    if(!options::unsatCores()) {
-      Chat() << "applying substitutions..." << endl;
-      Trace("simplify") << "SmtEnginePrivate::nonClausalSimplify(): "
-                        << "applying substitutions" << endl;
-      for (unsigned i = 0; i < d_assertions.size(); ++ i) {
-        Trace("simplify") << "applying to " << d_assertions[i] << endl;
-        d_assertions.replace(i, Rewriter::rewrite(d_topLevelSubstitutions.apply(d_assertions[i])));
-        Trace("simplify") << "  got " << d_assertions[i] << endl;
-      }
+    Chat() << "applying substitutions..." << endl;
+    Trace("simplify") << "SmtEnginePrivate::nonClausalSimplify(): "
+                      << "applying substitutions" << endl;
+    for (unsigned i = 0; i < d_assertions.size(); ++ i) {
+      Trace("simplify") << "applying to " << d_assertions[i] << endl;
+      d_smt.spendResource();
+      d_assertions.replace(i, Rewriter::rewrite(d_topLevelSubstitutions.apply(d_assertions[i])));
+      Trace("simplify") << "  got " << d_assertions[i] << endl;
     }
   }
 
@@ -3019,6 +3037,7 @@ void SmtEnginePrivate::processAssertions() {
     Chat() << "...doing bvToBool..." << endl;
     bvToBool();
     dumpAssertions("post-bv-to-bool", d_assertions);
+    Trace("smt") << "POST bvToBool" << endl;
   }
 
   if( d_smt.d_logic.isTheoryEnabled(THEORY_STRINGS) ) {
@@ -3119,7 +3138,6 @@ void SmtEnginePrivate::processAssertions() {
   }
   dumpAssertions("post-static-learning", d_assertions);
 
-  Trace("smt") << "POST bvToBool" << endl;
   Debug("smt") << " d_assertions     : " << d_assertions.size() << endl;
 
 
@@ -3314,86 +3332,93 @@ void SmtEngine::ensureBoolean(const Expr& e) throw(TypeCheckingException) {
 }
 
 Result SmtEngine::checkSat(const Expr& ex, bool inUnsatCore) throw(TypeCheckingException, ModalException, LogicException) {
-  Assert(ex.isNull() || ex.getExprManager() == d_exprManager);
-  SmtScope smts(this);
-  finalOptionsAreSet();
-  doPendingPops();
-
-  Trace("smt") << "SmtEngine::checkSat(" << ex << ")" << endl;
-
-  if(d_queryMade && !options::incrementalSolving()) {
-    throw ModalException("Cannot make multiple queries unless "
-                         "incremental solving is enabled "
-                         "(try --incremental)");
-  }
-
-  Expr e;
-  if(!ex.isNull()) {
-    // Substitute out any abstract values in ex.
-    e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
-    // Ensure expr is type-checked at this point.
-    ensureBoolean(e);
-    // Give it to proof manager
-    PROOF( ProofManager::currentPM()->addAssertion(e, inUnsatCore); );
-  }
-
-  // check to see if a postsolve() is pending
-  if(d_needPostsolve) {
-    d_theoryEngine->postsolve();
-    d_needPostsolve = false;
-  }
-
-  // Push the context
-  internalPush();
-
-  // Note that a query has been made
-  d_queryMade = true;
-
-  // Add the formula
-  if(!e.isNull()) {
-    d_problemExtended = true;
-    if(d_assertionList != NULL) {
-      d_assertionList->push_back(e);
+  try {
+    Assert(ex.isNull() || ex.getExprManager() == d_exprManager);
+    SmtScope smts(this);
+    finalOptionsAreSet();
+    doPendingPops();
+    
+    Trace("smt") << "SmtEngine::checkSat(" << ex << ")" << endl;
+    
+    if(d_queryMade && !options::incrementalSolving()) {
+      throw ModalException("Cannot make multiple queries unless "
+                           "incremental solving is enabled "
+                           "(try --incremental)");
     }
-    d_private->addFormula(e.getNode());
-  }
 
-  // Run the check
-  Result r = check().asSatisfiabilityResult();
-  d_needPostsolve = true;
-
-  // Dump the query if requested
-  if(Dump.isOn("benchmark")) {
-    // the expr already got dumped out if assertion-dumping is on
-    Dump("benchmark") << CheckSatCommand();
-  }
-
-  // Pop the context
-  internalPop();
-
-  // Remember the status
-  d_status = r;
-
-  d_problemExtended = false;
-
-  Trace("smt") << "SmtEngine::checkSat(" << e << ") => " << r << endl;
-
-  // Check that SAT results generate a model correctly.
-  if(options::checkModels()) {
-    if(r.asSatisfiabilityResult().isSat() == Result::SAT ||
-       (r.isUnknown() && r.whyUnknown() == Result::INCOMPLETE) ){
-      checkModel(/* hard failure iff */ ! r.isUnknown());
+    Expr e;
+    if(!ex.isNull()) {
+      // Substitute out any abstract values in ex.
+      e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
+      // Ensure expr is type-checked at this point.
+      ensureBoolean(e);
+      // Give it to proof manager
+      PROOF( ProofManager::currentPM()->addAssertion(e, inUnsatCore); );
     }
-  }
-  // Check that UNSAT results generate a proof correctly.
-  if(options::checkProofs()) {
-    if(r.asSatisfiabilityResult().isSat() == Result::UNSAT) {
-      TimerStat::CodeTimer checkProofTimer(d_stats->d_checkProofTime);
-      checkProof();
-    }
-  }
 
-  return r;
+    // check to see if a postsolve() is pending
+    if(d_needPostsolve) {
+      d_theoryEngine->postsolve();
+      d_needPostsolve = false;
+    }
+
+    // Push the context
+    internalPush();
+
+    // Note that a query has been made
+    d_queryMade = true;
+
+    // Add the formula
+    if(!e.isNull()) {
+      d_problemExtended = true;
+      if(d_assertionList != NULL) {
+        d_assertionList->push_back(e);
+      }
+      d_private->addFormula(e.getNode());
+    }
+
+    Result r(Result::SAT_UNKNOWN, Result::UNKNOWN_REASON);
+    r = check().asSatisfiabilityResult();
+    d_needPostsolve = true;
+  
+    // Dump the query if requested
+    if(Dump.isOn("benchmark")) {
+      // the expr already got dumped out if assertion-dumping is on
+      Dump("benchmark") << CheckSatCommand();
+    }
+
+    // Pop the context
+    internalPop();
+
+    // Remember the status
+    d_status = r;
+
+    d_problemExtended = false;
+
+    Trace("smt") << "SmtEngine::checkSat(" << e << ") => " << r << endl;
+
+    // Check that SAT results generate a model correctly.
+    if(options::checkModels()) {
+      if(r.asSatisfiabilityResult().isSat() == Result::SAT ||
+         (r.isUnknown() && r.whyUnknown() == Result::INCOMPLETE) ){
+        checkModel(/* hard failure iff */ ! r.isUnknown());
+      }
+    }
+    // Check that UNSAT results generate a proof correctly.
+    if(options::checkProofs()) {
+      if(r.asSatisfiabilityResult().isSat() == Result::UNSAT) {
+        TimerStat::CodeTimer checkProofTimer(d_stats->d_checkProofTime);
+        checkProof();
+      }
+    }
+
+    return r;
+  } catch (UnsafeInterrupt) {
+    AlwaysAssert(d_resourceManager->out());
+    Result::UnknownExplanation why = d_resourceManager->outOfResources() ?
+      Result::RESOURCEOUT : Result::TIMEOUT;
+    return Result(Result::SAT_UNKNOWN, why, d_filename);
+  }
 }/* SmtEngine::checkSat() */
 
 Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingException, ModalException, LogicException) {
@@ -3402,8 +3427,10 @@ Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingExce
   SmtScope smts(this);
   finalOptionsAreSet();
   doPendingPops();
+  
   Trace("smt") << "SMT query(" << ex << ")" << endl;
 
+  try {
   if(d_queryMade && !options::incrementalSolving()) {
     throw ModalException("Cannot make multiple queries unless "
                          "incremental solving is enabled "
@@ -3437,7 +3464,8 @@ Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingExce
   d_private->addFormula(e.getNode().notNode());
 
   // Run the check
-  Result r = check().asValidityResult();
+  Result r(Result::SAT_UNKNOWN, Result::UNKNOWN_REASON);
+  r = check().asValidityResult();
   d_needPostsolve = true;
 
   // Dump the query if requested
@@ -3472,6 +3500,12 @@ Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingExce
   }
 
   return r;
+  } catch (UnsafeInterrupt) {
+    AlwaysAssert(d_resourceManager->out());
+    Result::UnknownExplanation why = d_resourceManager->outOfResources() ?
+      Result::RESOURCEOUT : Result::TIMEOUT;
+    return Result(Result::VALIDITY_UNKNOWN, why, d_filename);
+  }
 }/* SmtEngine::query() */
 
 Result SmtEngine::assertFormula(const Expr& ex, bool inUnsatCore) throw(TypeCheckingException, LogicException) {
@@ -3520,15 +3554,22 @@ Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicExcep
   if( options::typeChecking() ) {
     e.getType(true); // ensure expr is type-checked at this point
   }
-
-  // Make sure all preprocessing is done
-  d_private->processAssertions();
-  Node n = d_private->simplify(Node::fromExpr(e));
-  n = postprocess(n, TypeNode::fromType(e.getType()));
+  Node n;
+  try {
+    // Make sure all preprocessing is done
+    d_private->processAssertions();
+    n = d_private->simplify(Node::fromExpr(e));
+    n = postprocess(n, TypeNode::fromType(e.getType()));
+  } catch (UnsafeInterrupt) {
+    // need to do something more elegant here
+    throw UnsafeInterrupt();
+  }
   return n.toExpr();
 }
 
-Expr SmtEngine::expandDefinitions(const Expr& ex) throw(TypeCheckingException, LogicException) {
+Expr SmtEngine::expandDefinitions(const Expr& ex) throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
+  spendResource();
+
   Assert(ex.getExprManager() == d_exprManager);
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -4184,11 +4225,23 @@ void SmtEngine::interrupt() throw(ModalException) {
   d_theoryEngine->interrupt();
 }
 
+void SmtEngine::markUnsafe() {
+  d_unsafeState = true;
+}
+
+bool SmtEngine::isUnsafe() {
+  return d_unsafeState;
+}
+
 void SmtEngine::setResourceLimit(unsigned long units, bool cumulative) {
   d_resourceManager->setResourceLimit(units, cumulative);
 }
 void SmtEngine::setTimeLimit(unsigned long milis, bool cumulative) {
   d_resourceManager->setTimeLimit(milis, cumulative);
+}
+
+void SmtEngine::spendResource(bool unsafe) throw(UnsafeInterrupt) {
+  d_resourceManager->spendResource(unsafe);
 }
 
 unsigned long SmtEngine::getResourceUsage() const {

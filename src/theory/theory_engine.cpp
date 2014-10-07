@@ -346,7 +346,7 @@ void TheoryEngine::dumpAssertions(const char* tag) {
  * @param effort the effort level to use
  */
 void TheoryEngine::check(Theory::Effort effort) {
-  spendResource(0);
+  spendResource();
 
   // Reset the interrupt flag
   d_interrupted = false;
@@ -857,7 +857,8 @@ struct preprocess_stack_element {
 Node TheoryEngine::preprocess(TNode assertion) {
 
   Trace("theory::preprocess") << "TheoryEngine::preprocess(" << assertion << ")" << endl;
-
+  spendResource();
+  
   // Do a topological sort of the subexpressions and substitute them
   vector<preprocess_stack_element> toVisit;
   toVisit.push_back(assertion);
@@ -1093,7 +1094,7 @@ void TheoryEngine::assertFact(TNode literal)
 {
   Trace("theory") << "TheoryEngine::assertFact(" << literal << ")" << endl;
 
-  spendResource(0);
+  spendResource();
 
   // If we're in conflict, nothing to do
   if (d_inConflict) {
@@ -1156,7 +1157,7 @@ bool TheoryEngine::propagate(TNode literal, theory::TheoryId theory) {
 
   Debug("theory::propagate") << "TheoryEngine::propagate(" << literal << ", " << theory << ")" << endl;
 
-  spendResource(0);
+  spendResource();
 
   if(Dump.isOn("t-propagations")) {
     Dump("t-propagations") << CommentCommand("negation of theory propagation: expect valid")
@@ -1754,6 +1755,6 @@ std::pair<bool, Node> TheoryEngine::entailmentCheck(theory::TheoryOfMode mode, T
   return th->entailmentCheck(lit, params, seffects);
 }
 
-void TheoryEngine::spendResource(unsigned long units) throw() {
-  d_resourceManager->spendResource(units);
+void TheoryEngine::spendResource(bool unsafe) {
+  d_resourceManager->spendResource(unsafe);
 }
