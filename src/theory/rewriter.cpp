@@ -25,6 +25,8 @@ using namespace std;
 namespace CVC4 {
 namespace theory {
 
+unsigned long Rewriter::d_iterationCount = 0;
+
 static TheoryId theoryOf(TNode node) {
   return Theory::theoryOf(THEORY_OF_TYPE_BASED, node);
 }
@@ -109,17 +111,14 @@ Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
   if (hasSmtEngine) {
     sm = smt::currentSmtEngine();
   }
-  unsigned long iteration_count = 0;
   // Rewrite until the stack is empty
   for (;;){
     
-    if (iteration_count % 1000 == 0 && hasSmtEngine) {
-      
+    if (d_iterationCount % 1000 == 0 && hasSmtEngine) {
       sm->spendResource();
-      iteration_count = 0;
+      d_iterationCount = 0;
     }
-    ++iteration_count;
-    
+
     // Get the top of the recursion stack
     RewriteStackElement& rewriteStackTop = rewriteStack.back();
 

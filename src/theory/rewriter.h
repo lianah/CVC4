@@ -58,7 +58,7 @@ class RewriterInitializer;
 class Rewriter {
 
   friend class RewriterInitializer;
-
+  static unsigned long d_iterationCount;
   /** Returns the appropriate cache for a node */
   static Node getPreRewriteCache(theory::TheoryId theoryId, TNode node);
 
