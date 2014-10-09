@@ -368,6 +368,7 @@ void TheoryBV::check(Effort e)
   }
   
   Debug("bitvector") << "TheoryBV::check(" << e << ")" << std::endl;
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTimer);
   // we may be getting new assertions so the model cache may not be sound
   d_invalidateModelCache.set(true); 
   // if we are using the eager solver
