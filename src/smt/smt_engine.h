@@ -358,7 +358,7 @@ class CVC4_PUBLIC SmtEngine {
    * or INVALID query).  Only permitted if CVC4 was built with model
    * support and produce-models is on.
    */
-  Model* getModel() throw(ModalException);
+  Model* getModel() throw(ModalException, UnsafeInterrupt);
 
   // disallow copy/assignment
   SmtEngine(const SmtEngine&) CVC4_UNDEFINED;
@@ -438,7 +438,7 @@ public:
    * takes a Boolean flag to determine whether to include this asserted
    * formula in an unsat core (if one is later requested).
    */
-  Result assertFormula(const Expr& e, bool inUnsatCore = true) throw(TypeCheckingException, LogicException);
+  Result assertFormula(const Expr& e, bool inUnsatCore = true) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
 
   /**
    * Check validity of an expression with respect to the current set
@@ -462,7 +462,7 @@ public:
    * @todo (design) is this meant to give an equivalent or an
    * equisatisfiable formula?
    */
-  Expr simplify(const Expr& e) throw(TypeCheckingException, LogicException);
+  Expr simplify(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
 
   /**
    * Expand the definitions in a term or formula.  No other
@@ -475,7 +475,7 @@ public:
    * by a SAT or INVALID query).  Only permitted if the SmtEngine is
    * set to operate interactively and produce-models is on.
    */
-  Expr getValue(const Expr& e) const throw(ModalException, TypeCheckingException, LogicException);
+  Expr getValue(const Expr& e) const throw(ModalException, TypeCheckingException, LogicException, UnsafeInterrupt);
 
   /**
    * Add a function to the set of expressions whose value is to be
@@ -493,14 +493,14 @@ public:
    * INVALID query).  Only permitted if the SmtEngine is set to
    * operate interactively and produce-assignments is on.
    */
-  CVC4::SExpr getAssignment() throw(ModalException);
+  CVC4::SExpr getAssignment() throw(ModalException, UnsafeInterrupt);
 
   /**
    * Get the last proof (only if immediately preceded by an UNSAT
    * or VALID query).  Only permitted if CVC4 was built with proof
    * support and produce-proofs is on.
    */
-  Proof* getProof() throw(ModalException);
+  Proof* getProof() throw(ModalException, UnsafeInterrupt);
 
   /**
    * Print all instantiations made by the quantifiers module.
@@ -512,7 +512,7 @@ public:
    * UNSAT or VALID query).  Only permitted if CVC4 was built with
    * unsat-core support and produce-unsat-cores is on.
    */
-  UnsatCore getUnsatCore() throw(ModalException);
+  UnsatCore getUnsatCore() throw(ModalException, UnsafeInterrupt);
 
   /**
    * Get the current set of assertions.  Only permitted if the
@@ -523,12 +523,12 @@ public:
   /**
    * Push a user-level context.
    */
-  void push() throw(ModalException, LogicException);
+  void push() throw(ModalException, LogicException, UnsafeInterrupt);
 
   /**
    * Pop a user-level context.  Throws an exception if nothing to pop.
    */
-  void pop() throw(ModalException);
+  void pop() throw(ModalException, UnsafeInterrupt);
 
   /**
    * Completely reset the state of the solver, as though destroyed and
@@ -549,15 +549,6 @@ public:
    */
   void interrupt() throw(ModalException);
 
-  // FIXME: move this
-  /** 
-   * Mark the SmtEngine as being in an unsafe state. This means that it
-   * should not be used again and must be destroyed. This can happen due
-   * to resource limiting stopping the search in a bad state.
-   * 
-   */
-  void markUnsafe();
-  bool isUnsafe();
   /**
    * Set a resource limit for SmtEngine operations.  This is like a time
    * limit, but it's deterministic so that reproducible results can be

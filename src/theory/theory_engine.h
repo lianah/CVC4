@@ -291,28 +291,28 @@ class TheoryEngine {
       d_engine->conflict(conflictNode, d_theory);
     }
 
-    bool propagate(TNode literal) throw(AssertionException) {
+    bool propagate(TNode literal) throw(AssertionException, UnsafeInterrupt) {
       Trace("theory::propagate") << "EngineOutputChannel<" << d_theory << ">::propagate(" << literal << ")" << std::endl;
       ++ d_statistics.propagations;
       d_engine->d_outputChannelUsed = true;
       return d_engine->propagate(literal, d_theory);
     }
 
-    theory::LemmaStatus lemma(TNode lemma, bool removable = false, bool preprocess = false) throw(TypeCheckingExceptionPrivate, AssertionException) {
+    theory::LemmaStatus lemma(TNode lemma, bool removable = false, bool preprocess = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
       Trace("theory::lemma") << "EngineOutputChannel<" << d_theory << ">::lemma(" << lemma << ")" << std::endl;
       ++ d_statistics.lemmas;
       d_engine->d_outputChannelUsed = true;
       return d_engine->lemma(lemma, false, removable, preprocess, theory::THEORY_LAST);
     }
 
-    theory::LemmaStatus splitLemma(TNode lemma, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException) {
+    theory::LemmaStatus splitLemma(TNode lemma, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
       Trace("theory::lemma") << "EngineOutputChannel<" << d_theory << ">::lemma(" << lemma << ")" << std::endl;
       ++ d_statistics.lemmas;
       d_engine->d_outputChannelUsed = true;
       return d_engine->lemma(lemma, false, removable, false, d_theory);
     }
 
-    void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException) {
+    void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
       NodeManager* curr = NodeManager::currentNM();
       Node restartVar =  curr->mkSkolem("restartVar",
                                         curr->booleanType(),
@@ -323,7 +323,7 @@ class TheoryEngine {
     }
 
     void requirePhase(TNode n, bool phase)
-      throw(theory::Interrupted, AssertionException) {
+      throw(theory::Interrupted, AssertionException, UnsafeInterrupt) {
       Debug("theory") << "EngineOutputChannel::requirePhase("
                       << n << ", " << phase << ")" << std::endl;
       ++ d_statistics.requirePhase;
@@ -331,13 +331,13 @@ class TheoryEngine {
     }
 
     bool flipDecision()
-      throw(theory::Interrupted, AssertionException) {
+      throw(theory::Interrupted, AssertionException, UnsafeInterrupt) {
       Debug("theory") << "EngineOutputChannel::flipDecision()" << std::endl;
       ++ d_statistics.flipDecision;
       return d_engine->d_propEngine->flipDecision();
     }
 
-    void setIncomplete() throw(AssertionException) {
+    void setIncomplete() throw(AssertionException, UnsafeInterrupt) {
       Trace("theory") << "TheoryEngine::setIncomplete()" << std::endl;
       d_engine->setIncomplete(d_theory);
     }

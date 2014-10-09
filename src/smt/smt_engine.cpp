@@ -677,7 +677,6 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_queryMade(false),
   d_needPostsolve(false),
   d_earlyTheoryPP(true),
-  d_unsafeState(false),
   d_status(),
   d_private(NULL),
   d_statisticsRegistry(NULL),
@@ -3508,7 +3507,7 @@ Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingExce
   }
 }/* SmtEngine::query() */
 
-Result SmtEngine::assertFormula(const Expr& ex, bool inUnsatCore) throw(TypeCheckingException, LogicException) {
+Result SmtEngine::assertFormula(const Expr& ex, bool inUnsatCore) throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
   Assert(ex.getExprManager() == d_exprManager);
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -3517,7 +3516,6 @@ Result SmtEngine::assertFormula(const Expr& ex, bool inUnsatCore) throw(TypeChec
   PROOF( ProofManager::currentPM()->addAssertion(ex, inUnsatCore); );
 
   Trace("smt") << "SmtEngine::assertFormula(" << ex << ")" << endl;
-
   // Substitute out any abstract values in ex
   Expr e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
 
@@ -3539,7 +3537,7 @@ Node SmtEngine::postprocess(TNode node, TypeNode expectedType) const {
   return realValue;
 }
 
-Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicException) {
+Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
   Assert(ex.getExprManager() == d_exprManager);
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -3549,22 +3547,23 @@ Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicExcep
   if(Dump.isOn("benchmark")) {
     Dump("benchmark") << SimplifyCommand(ex);
   }
-
-  Expr e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
-  if( options::typeChecking() ) {
-    e.getType(true); // ensure expr is type-checked at this point
-  }
-  Node n;
+  
   try {
+    Expr e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
+    if( options::typeChecking() ) {
+      e.getType(true); // ensure expr is type-checked at this point
+    }
+    Node n;
+
     // Make sure all preprocessing is done
     d_private->processAssertions();
     n = d_private->simplify(Node::fromExpr(e));
     n = postprocess(n, TypeNode::fromType(e.getType()));
+    return n.toExpr();
   } catch (UnsafeInterrupt) {
     // need to do something more elegant here
     throw UnsafeInterrupt();
   }
-  return n.toExpr();
 }
 
 Expr SmtEngine::expandDefinitions(const Expr& ex) throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
@@ -3592,7 +3591,7 @@ Expr SmtEngine::expandDefinitions(const Expr& ex) throw(TypeCheckingException, L
   return n.toExpr();
 }
 
-Expr SmtEngine::getValue(const Expr& ex) const throw(ModalException, TypeCheckingException, LogicException) {
+Expr SmtEngine::getValue(const Expr& ex) const throw(ModalException, TypeCheckingException, LogicException, UnsafeInterrupt) {
   Assert(ex.getExprManager() == d_exprManager);
   SmtScope smts(this);
 
@@ -3697,7 +3696,7 @@ bool SmtEngine::addToAssignment(const Expr& ex) throw() {
   return true;
 }
 
-CVC4::SExpr SmtEngine::getAssignment() throw(ModalException) {
+CVC4::SExpr SmtEngine::getAssignment() throw(ModalException, UnsafeInterrupt) {
   Trace("smt") << "SMT getAssignment()" << endl;
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -3796,7 +3795,7 @@ void SmtEngine::addToModelCommandAndDump(const Command& c, uint32_t flags, bool 
   }
 }
 
-Model* SmtEngine::getModel() throw(ModalException) {
+Model* SmtEngine::getModel() throw(ModalException, UnsafeInterrupt) {
   Trace("smt") << "SMT getModel()" << endl;
   SmtScope smts(this);
 
@@ -4004,7 +4003,7 @@ void SmtEngine::checkModel(bool hardFailure) {
   Notice() << "SmtEngine::checkModel(): all assertions checked out OK !" << endl;
 }
 
-UnsatCore SmtEngine::getUnsatCore() throw(ModalException) {
+UnsatCore SmtEngine::getUnsatCore() throw(ModalException, UnsafeInterrupt) {
   Trace("smt") << "SMT getUnsatCore()" << endl;
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -4028,7 +4027,7 @@ UnsatCore SmtEngine::getUnsatCore() throw(ModalException) {
 #endif /* CVC4_PROOF */
 }
 
-Proof* SmtEngine::getProof() throw(ModalException) {
+Proof* SmtEngine::getProof() throw(ModalException, UnsafeInterrupt) {
   Trace("smt") << "SMT getProof()" << endl;
   SmtScope smts(this);
   finalOptionsAreSet();
@@ -4081,7 +4080,7 @@ vector<Expr> SmtEngine::getAssertions() throw(ModalException) {
   return vector<Expr>(d_assertionList->begin(), d_assertionList->end());
 }
 
-void SmtEngine::push() throw(ModalException, LogicException) {
+void SmtEngine::push() throw(ModalException, LogicException, UnsafeInterrupt) {
   SmtScope smts(this);
   finalOptionsAreSet();
   doPendingPops();
@@ -4111,7 +4110,7 @@ void SmtEngine::push() throw(ModalException, LogicException) {
                        << d_userContext->getLevel() << endl;
 }
 
-void SmtEngine::pop() throw(ModalException) {
+void SmtEngine::pop() throw(ModalException, UnsafeInterrupt) {
   SmtScope smts(this);
   finalOptionsAreSet();
   Trace("smt") << "SMT pop()" << endl;
@@ -4223,14 +4222,6 @@ void SmtEngine::interrupt() throw(ModalException) {
   }
   d_propEngine->interrupt(); 
   d_theoryEngine->interrupt();
-}
-
-void SmtEngine::markUnsafe() {
-  d_unsafeState = true;
-}
-
-bool SmtEngine::isUnsafe() {
-  return d_unsafeState;
 }
 
 void SmtEngine::setResourceLimit(unsigned long units, bool cumulative) {

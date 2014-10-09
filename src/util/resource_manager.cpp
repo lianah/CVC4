@@ -18,6 +18,7 @@
 #include "util/output.h"
 #include "smt/smt_engine.h"
 #include "prop/prop_engine.h"
+#include "theory/rewriter.h"
 
 using namespace CVC4;
 using namespace std;
@@ -134,7 +135,7 @@ void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
   // FIXME: check if smtengine is interrupted
   if(out()) {
     if (unsafe) {
-      d_smtEngine->markUnsafe();
+      theory::Rewriter::garbageCollect();
       throw UnsafeInterrupt();
     }
     Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;

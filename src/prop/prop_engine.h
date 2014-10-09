@@ -24,6 +24,7 @@
 #include "expr/node.h"
 #include "options/options.h"
 #include "util/result.h"
+#include "util/resource_manager.h"
 #include "smt/modal_exception.h"
 #include "proof/proof_manager.h"
 #include <sys/time.h>
@@ -242,7 +243,7 @@ public:
    * 
    * @param units 
    */
-  void spendResource(bool unsafe = true) throw ();
+  void spendResource(bool unsafe = true) throw (UnsafeInterrupt);
   /**
    * For debugging.  Return true if "expl" is a well-formed
    * explanation for "node," meaning:

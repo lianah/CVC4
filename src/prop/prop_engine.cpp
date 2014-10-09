@@ -284,7 +284,7 @@ void PropEngine::interrupt() throw(ModalException) {
 // unsigned long PropEngine::updateAndGetSatResource(unsigned long units) throw() {
 //   return d_satSolver->updateAndGetSatResource(units);
 // }
-void PropEngine::spendResource(bool unsafe) throw () {
+void PropEngine::spendResource(bool unsafe) throw (UnsafeInterrupt) {
   d_resourceManager->spendResource(unsafe);
 }
 

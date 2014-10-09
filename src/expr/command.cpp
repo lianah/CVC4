@@ -201,7 +201,9 @@ void AssertCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     smtEngine->assertFormula(d_expr, d_inUnsatCore);
     d_commandStatus = CommandSuccess::instance();
-  } catch(exception& e) {
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
+  }  catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
 }
@@ -224,7 +226,9 @@ void PushCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     smtEngine->push();
     d_commandStatus = CommandSuccess::instance();
-  } catch(exception& e) {
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
+  }  catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
 }
@@ -247,6 +251,8 @@ void PopCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     smtEngine->pop();
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
@@ -817,6 +823,8 @@ void SimplifyCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     d_result = smtEngine->simplify(d_term);
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
@@ -930,6 +938,8 @@ void GetValueCommand::invoke(SmtEngine* smtEngine) throw() {
     }
     d_result = em->mkExpr(kind::SEXPR, result);
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
@@ -977,6 +987,8 @@ void GetAssignmentCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     d_result = smtEngine->getAssignment();
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
@@ -1020,6 +1032,8 @@ void GetModelCommand::invoke(SmtEngine* smtEngine) throw() {
     d_result = smtEngine->getModel();
     d_smtEngine = smtEngine;
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }
@@ -1066,6 +1080,8 @@ void GetProofCommand::invoke(SmtEngine* smtEngine) throw() {
   try {
     d_result = smtEngine->getProof();
     d_commandStatus = CommandSuccess::instance();
+  } catch (UnsafeInterrupt& e) {
+    d_commandStatus = new CommandFailure("INTERRUPTED");
   } catch(exception& e) {
     d_commandStatus = new CommandFailure(e.what());
   }

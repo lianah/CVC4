@@ -106,7 +106,7 @@ public:
    * @param n - a theory consequence at the current decision level
    * @return false if an immediate conflict was encountered
    */
-  virtual bool propagate(TNode n) throw(AssertionException) = 0;
+  virtual bool propagate(TNode n) throw(AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * Tell the core that a valid theory lemma at decision level 0 has
@@ -120,7 +120,7 @@ public:
    */
   virtual LemmaStatus lemma(TNode n, bool removable = false,
                             bool preprocess = false)
-    throw(TypeCheckingExceptionPrivate, AssertionException) = 0;
+    throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * Request a split on a new theory atom.  This is equivalent to
@@ -129,12 +129,12 @@ public:
    * @param n - a theory atom; must be of Boolean type
    */
   LemmaStatus split(TNode n)
-    throw(TypeCheckingExceptionPrivate, AssertionException) {
+    throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
     return splitLemma(n.orNode(n.notNode()));
   }
 
   virtual LemmaStatus splitLemma(TNode n, bool removable = false)
-    throw(TypeCheckingExceptionPrivate, AssertionException) = 0;
+    throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * If a decision is made on n, it must be in the phase specified.
@@ -149,7 +149,7 @@ public:
    * @param phase - the phase to decide on n
    */
   virtual void requirePhase(TNode n, bool phase)
-    throw(Interrupted, TypeCheckingExceptionPrivate, AssertionException) = 0;
+    throw(Interrupted, TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * Flips the most recent unflipped decision to the other phase and
@@ -192,14 +192,14 @@ public:
    * could be flipped, or if the root decision was re-flipped
    */
   virtual bool flipDecision()
-    throw(Interrupted, TypeCheckingExceptionPrivate, AssertionException) = 0;
+    throw(Interrupted, TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * Notification from a theory that it realizes it is incomplete at
    * this context level.  If SAT is later determined by the
    * TheoryEngine, it should actually return an UNKNOWN result.
    */
-  virtual void setIncomplete() throw(AssertionException) = 0;
+  virtual void setIncomplete() throw(AssertionException, UnsafeInterrupt) = 0;
 
   /**
    * "Spend" a "resource."  The meaning is specific to the context in
@@ -227,7 +227,7 @@ public:
    * Using this leads to non-termination issues.
    * It is appropriate for prototyping for theories.
    */
-  virtual void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException) {}
+  virtual void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {}
 
 };/* class OutputChannel */
 

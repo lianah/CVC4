@@ -72,34 +72,34 @@ public:
   void safePoint()  throw(Interrupted, AssertionException) {}
 
   void conflict(TNode n)
-    throw(AssertionException) {
+    throw(AssertionException, UnsafeInterrupt) {
     push(CONFLICT, n);
   }
 
   bool propagate(TNode n)
-    throw(AssertionException) {
+    throw(AssertionException, UnsafeInterrupt) {
     push(PROPAGATE, n);
     return true;
   }
 
   void propagateAsDecision(TNode n)
-    throw(AssertionException) {
+    throw(AssertionException, UnsafeInterrupt) {
     push(PROPAGATE_AS_DECISION, n);
   }
 
-  LemmaStatus lemma(TNode n, bool removable, bool preprocess) throw(AssertionException) {
+  LemmaStatus lemma(TNode n, bool removable, bool preprocess) throw(AssertionException, UnsafeInterrupt) {
     push(LEMMA, n);
     return LemmaStatus(Node::null(), 0);
   }
 
-  void requirePhase(TNode, bool) throw(Interrupted, AssertionException) {
+  void requirePhase(TNode, bool) throw(Interrupted, AssertionException, UnsafeInterrupt) {
   }
 
-  bool flipDecision() throw(Interrupted, AssertionException) {
+  bool flipDecision() throw(Interrupted, AssertionException, UnsafeInterrupt) {
     return true;
   }
 
-  void setIncomplete() throw(AssertionException) {}
+  void setIncomplete() throw(AssertionException, UnsafeInterrupt) {}
 
   void handleUserAttribute( const char* attr, theory::Theory* t ){}
 
@@ -107,7 +107,7 @@ public:
     d_callHistory.clear();
   }
 
-  LemmaStatus splitLemma(TNode n, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException){
+  LemmaStatus splitLemma(TNode n, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt){
     push(LEMMA, n);
     return LemmaStatus(Node::null(), 0);
   }
