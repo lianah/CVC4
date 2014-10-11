@@ -66,7 +66,7 @@ public:
   }
 };
 
-PropEngine::PropEngine(TheoryEngine* te, DecisionEngine *de, Context* satContext, Context* userContext, ResourceManager* rm) :
+PropEngine::PropEngine(TheoryEngine* te, DecisionEngine *de, Context* satContext, Context* userContext) :
   d_inCheckSat(false),
   d_theoryEngine(te),
   d_decisionEngine(de),
@@ -76,7 +76,7 @@ PropEngine::PropEngine(TheoryEngine* te, DecisionEngine *de, Context* satContext
   d_registrar(NULL),
   d_cnfStream(NULL),
   d_interrupted(false),
-  d_resourceManager(rm) {
+  d_resourceManager(NodeManager::currentResourceManager()) {
 
   Debug("prop") << "Constructing the PropEngine" << endl;
 

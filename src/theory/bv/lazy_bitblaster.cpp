@@ -82,7 +82,6 @@ void TLazyBitblaster::bbAtom(TNode node) {
   if (hasBBAtom(node)) {
     return;
   }
-  // TimerStat::CodeTimer codeTimer(d_statistics.d_bitblastTimer);
   // make sure it is marked as an atom
   addAtom(node);
 

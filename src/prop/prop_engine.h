@@ -95,7 +95,7 @@ public:
   /**
    * Create a PropEngine with a particular decision and theory engine.
    */
-  PropEngine(TheoryEngine*, DecisionEngine*, context::Context* satContext, context::Context* userContext, ResourceManager* rm);
+  PropEngine(TheoryEngine*, DecisionEngine*, context::Context* satContext, context::Context* userContext);
 
   /**
    * Destructor.

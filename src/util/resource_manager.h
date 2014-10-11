@@ -31,9 +31,7 @@ namespace CVC4 {
 
   
   class SmtEngine;
-  namespace prop {
-    class PropEngine;
-  }
+
   /**
    * A helper class to keep track of a time budget and signal
    * the PropEngine when the budget expires.
@@ -68,8 +66,6 @@ namespace CVC4 {
   class ResourceManager {
     friend class SmtEngine;
 
-    SmtEngine* d_smtEngine;
-    prop::PropEngine* d_propEngine;
     SmtTimer d_timer;
 
     /** A user-imposed cumulative time budget, in milliseconds.  0 = no limit. */
@@ -94,28 +90,12 @@ namespace CVC4 {
     unsigned long d_thisCallTimeBudget;
     unsigned long d_thisCallResourceBudget;
     
-    // only the SmtEngine can update theses
-    void setResourceLimit(unsigned long units, bool cumulative = false);
-    void setTimeLimit(unsigned long millis, bool cumulative = false);
 
+    bool d_isHardLimit;
     bool d_on;
+    
     unsigned long d_spendResourceCalls;
-    ResourceManager(SmtEngine* smt)
-      : d_smtEngine(smt)
-      , d_propEngine(NULL)
-      , d_timer()
-      , d_timeBudgetCumulative()
-      , d_timeBudgetPerCall()
-      , d_resourceBudgetCumulative()
-      , d_resourceBudgetPerCall()
-      , d_cumulativeTimeUsed()
-      , d_cumulativeResourceUsed()
-      , d_thisCallResourceUsed()
-      , d_thisCallTimeBudget()
-      , d_thisCallResourceBudget()
-      , d_on(false)
-      , d_spendResourceCalls(0)
-    {}
+
 
     /** 
      * Resets perCall limits to mark the start of a new call,
@@ -128,9 +108,9 @@ namespace CVC4 {
      * 
      */
     void endCall();
-    void setPropEngine(prop::PropEngine* prop);
-  public:
 
+  public:
+    ResourceManager();
     bool limitOn() const {return cummulativeLimitOn() || perCallLimitOn(); }
     bool cummulativeLimitOn() const;
     bool perCallLimitOn() const;
@@ -146,7 +126,11 @@ namespace CVC4 {
 
     unsigned long getResourceBudgetForThisCall() { return d_thisCallResourceBudget; }
     void spendResource(bool unsafe = true) throw(UnsafeInterrupt) ;
-    // void spendResource(unsigned long units, bool unsafe = true) throw(UnsafeInterrupt);
+
+    void setHardLimit(bool value) { d_isHardLimit = value; }
+    void setResourceLimit(unsigned long units, bool cumulative = false);
+    void setTimeLimit(unsigned long millis, bool cumulative = false);
+
   };
 }/* CVC4 namespace */
 

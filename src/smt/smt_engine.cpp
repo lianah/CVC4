@@ -681,16 +681,17 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_private(NULL),
   d_statisticsRegistry(NULL),
   d_stats(NULL),
-  d_resourceManager(new ResourceManager(this)) {
+  d_resourceManager(NULL) {
 
   SmtScope smts(this);
+  d_resourceManager = NodeManager::currentResourceManager();
   d_private = new smt::SmtEnginePrivate(*this);
   d_statisticsRegistry = new StatisticsRegistry();
   d_stats = new SmtEngineStatistics();
 
   // We have mutual dependency here, so we add the prop engine to the theory
   // engine later (it is non-essential there)
-  d_theoryEngine = new TheoryEngine(d_context, d_userContext, d_private->d_iteRemover, const_cast<const LogicInfo&>(d_logic), d_resourceManager);
+  d_theoryEngine = new TheoryEngine(d_context, d_userContext, d_private->d_iteRemover, const_cast<const LogicInfo&>(d_logic));
 
   // Add the theories
   for(TheoryId id = theory::THEORY_FIRST; id < theory::THEORY_LAST; ++id) {
@@ -716,9 +717,8 @@ void SmtEngine::finishInit() {
   d_decisionEngine = new DecisionEngine(d_context, d_userContext);
   d_decisionEngine->init();   // enable appropriate strategies
 
-  d_propEngine = new PropEngine(d_theoryEngine, d_decisionEngine, d_context, d_userContext, d_resourceManager);
+  d_propEngine = new PropEngine(d_theoryEngine, d_decisionEngine, d_context, d_userContext);
 
-  d_resourceManager->setPropEngine(d_propEngine);
   
   d_theoryEngine->setPropEngine(d_propEngine);
   d_theoryEngine->setDecisionEngine(d_decisionEngine);
@@ -849,7 +849,6 @@ SmtEngine::~SmtEngine() throw() {
 
     d_definedFunctions->deleteSelf();
 
-    delete d_resourceManager;
     delete d_theoryEngine;
     delete d_propEngine;
     delete d_decisionEngine;
@@ -1592,8 +1591,7 @@ void SmtEngine::defineFunction(Expr func,
 Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashFunction>& cache, bool expandOnly)
   throw(TypeCheckingException, LogicException, UnsafeInterrupt) {
 
-  d_smt.spendResource();
-  
+
   stack< triple<Node, Node, bool> > worklist;
   stack<Node> result;
   worklist.push(make_triple(Node(n), Node(n), false));
@@ -1602,6 +1600,7 @@ Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashF
   // or upward pass).
 
   do {
+    d_smt.spendResource();
     n = worklist.top().first;                      // n is the input / original
     Node node = worklist.top().second;             // node is the output / result
     bool childrenPushed = worklist.top().third;
@@ -3292,7 +3291,7 @@ void SmtEnginePrivate::processAssertions() {
     Chat() << "converting to CNF..." << endl;
     TimerStat::CodeTimer codeTimer(d_smt.d_stats->d_cnfConversionTime);
     for (unsigned i = 0; i < d_assertions.size(); ++ i) {
-      Chat() << "+ " << d_assertions[i] << std::endl;
+      // Chat() << "+ " << d_assertions[i] << std::endl;
       d_smt.d_propEngine->assertFormula(d_assertions[i]);
     }
   }
@@ -3412,7 +3411,7 @@ Result SmtEngine::checkSat(const Expr& ex, bool inUnsatCore) throw(TypeCheckingE
     }
 
     return r;
-  } catch (UnsafeInterrupt) {
+  } catch (UnsafeInterrupt& e) {
     AlwaysAssert(d_resourceManager->out());
     Result::UnknownExplanation why = d_resourceManager->outOfResources() ?
       Result::RESOURCEOUT : Result::TIMEOUT;
@@ -3499,7 +3498,7 @@ Result SmtEngine::query(const Expr& ex, bool inUnsatCore) throw(TypeCheckingExce
   }
 
   return r;
-  } catch (UnsafeInterrupt) {
+  } catch (UnsafeInterrupt& e) {
     AlwaysAssert(d_resourceManager->out());
     Result::UnknownExplanation why = d_resourceManager->outOfResources() ?
       Result::RESOURCEOUT : Result::TIMEOUT;
@@ -3560,7 +3559,9 @@ Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicExcep
     n = d_private->simplify(Node::fromExpr(e));
     n = postprocess(n, TypeNode::fromType(e.getType()));
     return n.toExpr();
-  } catch (UnsafeInterrupt) {
+  } catch (UnsafeInterrupt& e) {
+    // FIXME!!!!
+    Assert(false); 
     // need to do something more elegant here
     throw UnsafeInterrupt();
   }

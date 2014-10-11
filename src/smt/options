@@ -95,6 +95,8 @@ common-option cumulativeResourceLimit rlimit --rlimit=N "unsigned long"
  enable resource limiting (currently, roughly the number of SAT conflicts)
 common-option perCallResourceLimit rlimit-per --rlimit-per=N "unsigned long"
  enable resource limiting per query
+common-option hardLimit hard-limit --hard-limit bool :default false
+ the resource limit is hard potentially leaving the smtEngine in an unsafe state (should be destroyed and rebuild after resourcing out)
 
 expert-option rewriteApplyToConst rewrite-apply-to-const --rewrite-apply-to-const bool :default false
  eliminate function applications, rewriting e.g. f(5) to a new symbol f_5

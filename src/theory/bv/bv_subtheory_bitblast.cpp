@@ -103,8 +103,11 @@ void BitblastSolver::bitblastQueue() {
       // don't bit-blast lemma atoms
       continue;
     }
-    Debug("bitblast-queue") << "Bitblasting atom " << atom <<"\n"; 
-    d_bitblaster->bbAtom(atom);
+    Debug("bitblast-queue") << "Bitblasting atom " << atom <<"\n";
+    {
+      TimerStat::CodeTimer codeTimer(d_bitblaster->d_statistics.d_bitblastTimer);
+      d_bitblaster->bbAtom(atom);
+    }
   }
 }
 

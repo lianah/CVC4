@@ -30,6 +30,7 @@
 #include "expr/symbol_table.h"
 #include "expr/kind.h"
 #include "expr/expr_stream.h"
+#include "util/resource_manager.h"
 
 namespace CVC4 {
 
@@ -108,7 +109,9 @@ class CVC4_PUBLIC Parser {
 
   /** The expression manager */
   ExprManager *d_exprManager;
-
+  /** The resource manager associated with this expr manager */
+  ResourceManager *d_resourceManager;
+  
   /** The input that we're parsing. */
   Input *d_input;
 
@@ -332,7 +335,7 @@ public:
    */
   void checkDeclaration(const std::string& name, DeclarationCheck check,
                         SymbolType type = SYM_VARIABLE,
-                        std::string notes = "") throw(ParserException);
+                        std::string notes = "") throw(ParserException, UnsafeInterrupt);
 
   /**
    * Reserve a symbol at the assertion level.
@@ -498,10 +501,10 @@ public:
   bool isPredicate(const std::string& name);
 
   /** Parse and return the next command. */
-  Command* nextCommand() throw(ParserException);
+  Command* nextCommand() throw(ParserException, UnsafeInterrupt);
 
   /** Parse and return the next expression. */
-  Expr nextExpression() throw(ParserException);
+  Expr nextExpression() throw(ParserException, UnsafeInterrupt);
 
   /** Issue a warning to the user. */
   inline void warning(const std::string& msg) {

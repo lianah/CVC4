@@ -26,6 +26,7 @@
 #include "parser/parser_exception.h"
 #include "expr/command.h"
 #include "expr/expr.h"
+#include "expr/node.h"
 #include "expr/kind.h"
 #include "expr/type.h"
 #include "util/output.h"
@@ -39,6 +40,7 @@ namespace parser {
 
 Parser::Parser(ExprManager* exprManager, Input* input, bool strictMode, bool parseOnly) :
   d_exprManager(exprManager),
+  d_resourceManager(NodeManager::fromExprManager(d_exprManager)->getResourceManager()),
   d_input(input),
   d_symtabAllocated(),
   d_symtab(&d_symtabAllocated),
@@ -371,7 +373,9 @@ void Parser::checkDeclaration(const std::string& varName,
                               DeclarationCheck check,
                               SymbolType type,
                               std::string notes)
-    throw(ParserException) {
+    throw(ParserException, UnsafeInterrupt) {
+  // Exception hits C code in the parser and then terminates goto termEx
+  //d_resourceManager->spendResource();
   if(!d_checksEnabled) {
     return;
   }
@@ -445,8 +449,9 @@ void Parser::preemptCommand(Command* cmd) {
   d_commandQueue.push_back(cmd);
 }
 
-Command* Parser::nextCommand() throw(ParserException) {
+Command* Parser::nextCommand() throw(ParserException, UnsafeInterrupt) {
   Debug("parser") << "nextCommand()" << std::endl;
+  d_resourceManager->spendResource();
   Command* cmd = NULL;
   if(!d_commandQueue.empty()) {
     cmd = d_commandQueue.front();
@@ -471,8 +476,9 @@ Command* Parser::nextCommand() throw(ParserException) {
   return cmd;
 }
 
-Expr Parser::nextExpression() throw(ParserException) {
+Expr Parser::nextExpression() throw(ParserException, UnsafeInterrupt) {
   Debug("parser") << "nextExpression()" << std::endl;
+  d_resourceManager->spendResource();
   Expr result;
   if(!done()) {
     try {

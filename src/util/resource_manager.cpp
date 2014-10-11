@@ -16,8 +16,8 @@
 
 #include "util/resource_manager.h"
 #include "util/output.h"
-#include "smt/smt_engine.h"
-#include "prop/prop_engine.h"
+#include "smt/smt_engine_scope.h"
+#include "smt/options.h" 
 #include "theory/rewriter.h"
 
 using namespace CVC4;
@@ -68,6 +68,27 @@ bool SmtTimer::expired() const {
   return false;
 }
 
+ResourceManager::ResourceManager()
+  : d_timer()
+  // , d_timeBudgetCumulative(options::cumulativeMillisecondLimit())
+  // , d_timeBudgetPerCall(options::perCallMillisecondLimit())
+  // , d_resourceBudgetCumulative(options::cumulativeResourceLimit())
+  // , d_resourceBudgetPerCall(options::perCallResourceLimit())
+  , d_timeBudgetCumulative(0)
+  , d_timeBudgetPerCall(0)
+  , d_resourceBudgetCumulative(0)
+  , d_resourceBudgetPerCall(0)
+
+  , d_cumulativeTimeUsed(0)
+  , d_cumulativeResourceUsed(0)
+  , d_thisCallResourceUsed(0)
+  , d_thisCallTimeBudget(0)
+  , d_thisCallResourceBudget(0)
+  , d_isHardLimit()
+  , d_on(false)
+  , d_spendResourceCalls(0)
+{}
+
 
 void ResourceManager::setResourceLimit(unsigned long units, bool cumulative) {
   d_on = true;
@@ -101,45 +122,30 @@ unsigned long ResourceManager::getTimeUsage() const {
 }
 
 unsigned long ResourceManager::getResourceRemaining() const {
-  // if(d_resourceBudgetPerCall == 0 && d_resourceBudgetCumulative == 0) {
-  //   throw ModalException("No resource limit is currently set");
-  // }
-
   if (d_thisCallResourceBudget <= d_thisCallResourceUsed)
     return 0;
   return d_thisCallResourceBudget - d_thisCallResourceUsed;
 }
 
 unsigned long ResourceManager::getTimeRemaining() const {
-  // if(d_timeBudgetPerCall == 0 && d_timeBudgetCumulative == 0) {
-  //   throw ModalException("No time limit is currently set");
-  // }
   unsigned long time_passed = d_timer.elapsed();
   if (time_passed >= d_thisCallTimeBudget)
     return 0;
   return d_thisCallTimeBudget - time_passed;
 }
 
-// void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
-//   spendResource(1, unsafe);
-// }
-
 void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
   ++d_spendResourceCalls;
   if (!d_on) return;
-  //  unsigned sat_used = d_propEngine->updateAndGetSatResource(units);
   
   ++d_cumulativeResourceUsed;
   ++d_thisCallResourceUsed;
-
-  // FIXME: check if smtengine is interrupted
   if(out()) {
-    if (unsafe) {
-      theory::Rewriter::garbageCollect();
+    if (d_isHardLimit) {
       throw UnsafeInterrupt();
     }
     Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
-    d_smtEngine->interrupt();
+    smt::currentSmtEngine()->interrupt();
   }
 }
 
@@ -208,7 +214,7 @@ bool ResourceManager::outOfTime() const {
   
   return d_timer.expired();
 }
-void ResourceManager::setPropEngine(prop::PropEngine* prop) {
-  AlwaysAssert(d_propEngine == NULL);
-  d_propEngine = prop;
-}
+// void ResourceManager::setPropEngine(prop::PropEngine* prop) {
+//   AlwaysAssert(d_propEngine == NULL);
+//   d_propEngine = prop;
+// }

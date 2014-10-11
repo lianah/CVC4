@@ -22,7 +22,9 @@
 #include "expr/attribute.h"
 #include "util/cvc4_assert.h"
 #include "options/options.h"
+#include "smt/options.h"
 #include "util/statistics_registry.h"
+#include "util/resource_manager.h"
 #include "util/tls.h"
 
 #include "expr/type_checker.h"
@@ -84,6 +86,7 @@ NodeManager::NodeManager(context::Context* ctxt,
                          ExprManager* exprManager) :
   d_options(new Options()),
   d_statisticsRegistry(new StatisticsRegistry()),
+  d_resourceManager(new ResourceManager()),
   next_id(0),
   d_attrManager(new expr::attr::AttributeManager(ctxt)),
   d_exprManager(exprManager),
@@ -99,6 +102,7 @@ NodeManager::NodeManager(context::Context* ctxt,
                          const Options& options) :
   d_options(new Options(options)),
   d_statisticsRegistry(new StatisticsRegistry()),
+  d_resourceManager(new ResourceManager()),
   next_id(0),
   d_attrManager(new expr::attr::AttributeManager(ctxt)),
   d_exprManager(exprManager),
@@ -119,6 +123,20 @@ void NodeManager::init() {
       d_operators[i] = mkConst(Kind(k));
     }
   }
+  d_resourceManager->setHardLimit((*d_options)[options::hardLimit]);
+  if((*d_options)[options::perCallResourceLimit] != 0) {
+    d_resourceManager->setResourceLimit((*d_options)[options::perCallResourceLimit], false);
+  }
+  if((*d_options)[options::cumulativeResourceLimit] != 0) {
+    d_resourceManager->setResourceLimit((*d_options)[options::cumulativeResourceLimit], true);
+  }
+  if((*d_options)[options::perCallMillisecondLimit] != 0) {
+    d_resourceManager->setTimeLimit((*d_options)[options::perCallMillisecondLimit], false);
+  }
+  if((*d_options)[options::cumulativeMillisecondLimit] != 0) {
+    d_resourceManager->setTimeLimit((*d_options)[options::cumulativeMillisecondLimit], true);
+  }
+
 }
 
 NodeManager::~NodeManager() {
@@ -158,6 +176,7 @@ NodeManager::~NodeManager() {
   }
 
   delete d_statisticsRegistry;
+  delete d_resourceManager;
   delete d_attrManager;
   delete d_options;
 }

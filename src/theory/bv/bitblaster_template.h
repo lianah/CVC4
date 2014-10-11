@@ -228,7 +228,8 @@ private:
     Statistics(const std::string& name);
     ~Statistics();
   };
-  std::string d_name; 
+  std::string d_name;
+public:
   Statistics d_statistics;
 };
 

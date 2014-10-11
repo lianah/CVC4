@@ -474,7 +474,7 @@ class TheoryEngine {
 public:
 
   /** Constructs a theory engine */
-  TheoryEngine(context::Context* context, context::UserContext* userContext, RemoveITE& iteRemover, const LogicInfo& logic, ResourceManager* rm);
+  TheoryEngine(context::Context* context, context::UserContext* userContext, RemoveITE& iteRemover, const LogicInfo& logic);
 
   /** Destroys a theory engine */
   ~TheoryEngine();

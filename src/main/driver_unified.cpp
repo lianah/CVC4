@@ -330,7 +330,19 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         replayParser->useDeclarationsFrom(parser);
       }
       bool needReset = false;
-      while((status || opts[options::continuedExecution]) && (cmd = parser->nextCommand())) {
+      
+      while (status || opts[options::continuedExecution]) {
+        try {
+          cmd = parser->nextCommand();
+          if (cmd == NULL) break;
+        } catch (UnsafeInterrupt& e) {
+          // FIXME: what's the right thing to do here?
+          *opts[options::out] << "PARSING_TIMEOUT\n";
+          pExecutor->reset();
+          status = 1;
+          break;
+        }
+        
         if(dynamic_cast<PushCommand*>(cmd) != NULL) {
           if(needReset) {
             pExecutor->reset();
@@ -419,7 +431,16 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         // have the replay parser use the file's declarations
         replayParser->useDeclarationsFrom(parser);
       }
-      while((status || opts[options::continuedExecution]) && (cmd = parser->nextCommand())) {
+      while(status || opts[options::continuedExecution]) {
+        try {
+          cmd = parser->nextCommand();
+          if (cmd == NULL) break;
+        } catch (UnsafeInterrupt& e) {
+          *opts[options::out] << "PARSING_TIMEOUT\n";
+          pExecutor->reset();
+          break;
+        }
+
         status = pExecutor->doCommand(cmd);
         if(dynamic_cast<QuitCommand*>(cmd) != NULL) {
           delete cmd;
