@@ -136,6 +136,9 @@ void NodeManager::init() {
   if((*d_options)[options::cumulativeMillisecondLimit] != 0) {
     d_resourceManager->setTimeLimit((*d_options)[options::cumulativeMillisecondLimit], true);
   }
+  if((*d_options)[options::cpuTime]) {
+    d_resourceManager->useCPUTime(true);
+  }
 
 }
 

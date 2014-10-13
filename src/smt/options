@@ -97,7 +97,10 @@ common-option perCallResourceLimit rlimit-per --rlimit-per=N "unsigned long"
  enable resource limiting per query
 common-option hardLimit hard-limit --hard-limit bool :default false
  the resource limit is hard potentially leaving the smtEngine in an unsafe state (should be destroyed and rebuild after resourcing out)
-
+common-option cpuTime cpu-time --cpu-time bool :default false
+ measures CPU time if set to true and wall time if false (default false)
+ 
+ 
 expert-option rewriteApplyToConst rewrite-apply-to-const --rewrite-apply-to-const bool :default false
  eliminate function applications, rewriting e.g. f(5) to a new symbol f_5
 

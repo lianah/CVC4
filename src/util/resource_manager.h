@@ -29,23 +29,33 @@ namespace CVC4 {
   class UnsafeInterrupt : public CVC4::Exception {
   };/* class UnsafeInterrupted */
 
-  
-  class SmtEngine;
-
   /**
    * A helper class to keep track of a time budget and signal
    * the PropEngine when the budget expires.
    */
-  class SmtTimer {
+  class Timer {
 
     unsigned long d_ms;
-    timeval d_limit;
+    timeval d_wall_limit;
+    clock_t d_cpu_start_time;
+    clock_t d_cpu_limit;
+    
+    bool d_wall_time;
+
+    /** Return the milliseconds elapsed since last set() cpu time. */
+    unsigned long elapsedCPU() const;
+    /** Return the milliseconds elapsed since last set() wall time. */
+    unsigned long elapsedWall() const;
 
   public:
 
-    /** Construct a SmtTimer attached to the given SmtEngine. */
-    SmtTimer()
-      : d_ms(0) {}
+    /** Construct a Timer. */
+    Timer()
+      : d_ms(0)
+      , d_cpu_start_time(0)
+      , d_cpu_limit(0)
+      , d_wall_time(true)
+    {}
 
     /** Is the timer currently active? */
     bool on() const {
@@ -53,20 +63,18 @@ namespace CVC4 {
     }
 
     /** Set a millisecond timer (0==off). */
-    void set(unsigned long millis);
-    
-    /** Return the milliseconds elapsed since last set(). */
+    void set(unsigned long millis, bool wall_time = true);
+    /** Return the milliseconds elapsed since last set() wall/cpu time
+     depending on d_wall_time*/
     unsigned long elapsed() const;
-
     bool expired() const;
 
-  };/* class SmtTimer */
+  };/* class Timer */
 
 
   class ResourceManager {
-    friend class SmtEngine;
 
-    SmtTimer d_timer;
+    Timer d_timer;
 
     /** A user-imposed cumulative time budget, in milliseconds.  0 = no limit. */
     unsigned long d_timeBudgetCumulative;
@@ -77,12 +85,12 @@ namespace CVC4 {
     /** A user-imposed per-call resource budget.  0 = no limit. */
     unsigned long d_resourceBudgetPerCall;
 
-    /** The number of milliseconds used by this SmtEngine since its inception. */
+    /** The number of milliseconds used. */
     unsigned long d_cumulativeTimeUsed;
-    /** The amount of resource used by this SmtEngine since its inception. */
+    /** The amount of resource used. */
     unsigned long d_cumulativeResourceUsed;
 
-    /** The ammount of resource used by this SmtEngine during this call*/
+    /** The ammount of resource used during this call*/
     unsigned long d_thisCallResourceUsed;
     
     /** The ammount of resource budget for this call (min between per call budget
@@ -93,21 +101,10 @@ namespace CVC4 {
 
     bool d_isHardLimit;
     bool d_on;
-    
+    bool d_cpuTime;
     unsigned long d_spendResourceCalls;
 
 
-    /** 
-     * Resets perCall limits to mark the start of a new call,
-     * updates budget for current call and starts the timer
-     */    
-    void beginCall();
-    /** 
-     * Marks the end of a SmtEngine check call, stops the timer
-     * updates cummulative time used.
-     * 
-     */
-    void endCall();
 
   public:
     ResourceManager();
@@ -130,6 +127,19 @@ namespace CVC4 {
     void setHardLimit(bool value) { d_isHardLimit = value; }
     void setResourceLimit(unsigned long units, bool cumulative = false);
     void setTimeLimit(unsigned long millis, bool cumulative = false);
+    void useCPUTime(bool cpu) { d_cpuTime = cpu;}
+
+    /** 
+     * Resets perCall limits to mark the start of a new call,
+     * updates budget for current call and starts the timer
+     */    
+    void beginCall();
+    /** 
+     * Marks the end of a SmtEngine check call, stops the timer
+     * updates cummulative time used.
+     * 
+     */
+    void endCall();
 
   };
 }/* CVC4 namespace */
