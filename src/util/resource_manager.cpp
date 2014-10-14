@@ -262,3 +262,8 @@ void ResourceManager::setHardLimit(bool value) {
   Trace("limit") << "ResourceManager::setHardLimit("<< value <<")\n"; 
   d_isHardLimit = value;
 }
+
+void ResourceManager::enable(bool on) {
+  Trace("limit") << "ResourceManager::enable("<< on <<")\n";
+  d_on = on;
+}

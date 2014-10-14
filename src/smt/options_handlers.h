@@ -469,9 +469,11 @@ inline unsigned long tlimitPerHandler(std::string option, std::string optarg, Sm
   std::istringstream convert(optarg); 
   if (!(convert >> ms)) 
     throw OptionException("option `"+option+"` requires a number as an argument");
-  
-  ResourceManager* rm = smt->getResourceManager();
-  rm->setTimeLimit(ms, false);
+
+  if (smt != NULL) {
+    ResourceManager* rm = smt->getResourceManager();
+    rm->setTimeLimit(ms, false);
+  }
   return ms;
 }
 
@@ -481,9 +483,11 @@ inline unsigned long rlimitHandler(std::string option, std::string optarg, SmtEn
   std::istringstream convert(optarg); 
   if (!(convert >> ms)) 
     throw OptionException("option `"+option+"` requires a number as an argument");
-  
-  ResourceManager* rm = smt->getResourceManager();
-  rm->setResourceLimit(ms, true);
+
+  if (smt != NULL) {
+    ResourceManager* rm = smt->getResourceManager();
+    rm->setResourceLimit(ms, true);
+  }
   return ms;
 }
 
@@ -493,9 +497,11 @@ inline unsigned long rlimitPerHandler(std::string option, std::string optarg, Sm
   std::istringstream convert(optarg); 
   if (!(convert >> ms)) 
     throw OptionException("option `"+option+"` requires a number as an argument");
-  
-  ResourceManager* rm = smt->getResourceManager();
-  rm->setResourceLimit(ms, false);
+
+  if (smt != NULL) {
+    ResourceManager* rm = smt->getResourceManager();
+    rm->setResourceLimit(ms, false);
+  }
   return ms;
 }
 
