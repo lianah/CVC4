@@ -334,40 +334,41 @@ int runCvc4(int argc, char* argv[], Options& opts) {
       bool interrupted = false;
       while (status || opts[options::continuedExecution]) {
         if (interrupted) {
-          // TODO:
-          // CHECK if interrupted in checksat/query
-          // if yes, ignore all commands except exit and set new time limit but keep
-          // replay commands
+          // // TODO:
+          // // CHECK if interrupted in checksat/query
+          // // if yes, ignore all commands except exit and set new time limit but keep
+          // // replay commands
           *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
-          pExecutor->reset();
-          interrupted = false;
-          exprMgr->enableResourceLimit(false);
-          while (cmd = parser->nextCommand()) {
-            if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
-              break;
-            }
-            // skip commands that are not set option
-            SetOptionCommand* opt_cmd = dynamic_cast<SetOptionCommand*>(cmd);
-            if (opt_cmd != NULL &&
-                (opt_cmd->getFlag() == "tlimit" ||
-                 opt_cmd->getFlag() == "tlimit-per" ||
-                 opt_cmd->getFlag() == "rlimit" ||
-                 opt_cmd->getFlag() == "rlimit-per")) {
-              pExecutor->doCommand(cmd);
-              break;
-            }
-            delete cmd;
-          }
-          // we ran out commands
-          if (cmd == NULL) break;
-          if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
-             delete cmd;
-             break;
-           }
-          delete cmd;
-          // must have seen a new resource setting command so
-          // continue reading rest of commands
-          continue;
+          // pExecutor->reset();
+          // interrupted = false;
+          // exprMgr->enableResourceLimit(false);
+          // while (cmd = parser->nextCommand()) {
+          //   if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
+          //     break;
+          //   }
+          //   // skip commands that are not set option
+          //   SetOptionCommand* opt_cmd = dynamic_cast<SetOptionCommand*>(cmd);
+          //   if (opt_cmd != NULL &&
+          //       (opt_cmd->getFlag() == "tlimit" ||
+          //        opt_cmd->getFlag() == "tlimit-per" ||
+          //        opt_cmd->getFlag() == "rlimit" ||
+          //        opt_cmd->getFlag() == "rlimit-per")) {
+          //     pExecutor->doCommand(cmd);
+          //     break;
+          //   }
+          //   delete cmd;
+          // }
+          // // we ran out commands
+          // if (cmd == NULL) break;
+          // if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
+          //    delete cmd;
+          //    break;
+          //  }
+          // delete cmd;
+          // // must have seen a new resource setting command so
+          // // continue reading rest of commands
+          // continue;
+          break;
         }
 
         try {
@@ -485,20 +486,24 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         // have the replay parser use the file's declarations
         replayParser->useDeclarationsFrom(parser);
       }
+      bool interrupted = false;
       while(status || opts[options::continuedExecution]) {
+        if (interrupted) {
+          *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
+          pExecutor->reset();
+          break;
+        }
         try {
           cmd = parser->nextCommand();
           if (cmd == NULL) break;
         } catch (UnsafeInterrupt& e) {
-          *opts[options::out] << "PARSING_TIMEOUT\n";
-          pExecutor->reset();
+          interrupted = true;
           break;
         }
 
         status = pExecutor->doCommand(cmd);
         if (cmd->interrupted() && status == 0) {
-          *opts[options::out] << "INTERRUPTED\n";
-          pExecutor->reset();
+          interrupted = true;
           break;
         }
           

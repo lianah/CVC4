@@ -449,7 +449,6 @@ inline void statsEnabledBuild(std::string option, bool value, SmtEngine* smt) th
 
 inline unsigned long tlimitHandler(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
   unsigned long ms; 
-  
   std::istringstream convert(optarg); 
   if (!(convert >> ms)) 
     throw OptionException("option `"+option+"` requires a number as an argument");

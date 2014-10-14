@@ -2788,7 +2788,7 @@ Result SmtEngine::check() {
   
   // Has to be before printing resource usage because it will update the time
   // and resources used by the SAT solvers
-  d_resourceManager->endCall();
+  // d_resourceManager->endCall();
   
   Trace("limit") << "SmtEngine::check(): cumulative millis " << d_resourceManager->getTimeUsage()
                  << ", resources " << d_resourceManager->getResourceUsage() << endl;

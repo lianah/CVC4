@@ -191,7 +191,8 @@ void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
 
 void ResourceManager::beginCall() {
   d_thisCallResourceUsed = 0;
-
+  if (!d_on) return;
+  
   if (cummulativeLimitOn()) {
     if (d_resourceBudgetCumulative) {
       d_thisCallResourceBudget = d_resourceBudgetCumulative <= d_cumulativeResourceUsed ? 0 :
@@ -199,6 +200,10 @@ void ResourceManager::beginCall() {
     }
 
     if (d_timeBudgetCumulative) {
+
+      AlwaysAssert(d_timer.on());
+      // timer was on since the option was set
+      d_cumulativeTimeUsed = d_timer.elapsed();
       d_thisCallTimeBudget = d_timeBudgetCumulative <= d_cumulativeTimeUsed? 0 :
                              d_timeBudgetCumulative - d_cumulativeTimeUsed;
       d_timer.set(d_thisCallTimeBudget, d_cpuTime);
@@ -222,11 +227,11 @@ void ResourceManager::beginCall() {
   }
 }
 
-void ResourceManager::endCall() {
-  unsigned long usedInCall = d_timer.elapsed();
-  d_cumulativeTimeUsed += usedInCall;
-  d_timer.set(0, d_cpuTime);
-}
+// void ResourceManager::endCall() {
+//   // unsigned long usedInCall = d_timer.elapsed();
+//   // d_cumulativeTimeUsed += usedInCall;
+//   // d_timer.set(0, d_cpuTime);
+// }
 
 bool ResourceManager::cummulativeLimitOn() const {
   return d_timeBudgetCumulative || d_resourceBudgetCumulative;

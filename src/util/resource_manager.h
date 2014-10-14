@@ -140,7 +140,7 @@ namespace CVC4 {
      * updates cummulative time used.
      * 
      */
-    void endCall();
+    // void endCall();
 
   };
 }/* CVC4 namespace */
