@@ -77,20 +77,26 @@ bool Timer::expired() const {
   if (d_wall_time) {
     timeval tv;
     gettimeofday(&tv, NULL);
-    Trace("limit") << "Timer::expired(): current time is " << tv.tv_sec << "," << tv.tv_usec << std::endl;
-    Trace("limit") << "Timer::expired(): limit time is " << d_wall_limit.tv_sec << "," << d_wall_limit.tv_usec << std::endl;
+    Debug("limit") << "Timer::expired(): current wall time is " << tv.tv_sec << "," << tv.tv_usec << std::endl;
+    Debug("limit") << "Timer::expired(): limit wall time is " << d_wall_limit.tv_sec << "," << d_wall_limit.tv_usec << std::endl;
     if(d_wall_limit.tv_sec < tv.tv_sec ||
        (d_wall_limit.tv_sec == tv.tv_sec && d_wall_limit.tv_usec <= tv.tv_usec)) {
-      Trace("limit") << "Timer::expired(): OVER LIMIT!" << std::endl;
+      Debug("limit") << "Timer::expired(): OVER LIMIT!" << std::endl;
       return true;
     }
-    Trace("limit") << "Timer::expired(): within limit" << std::endl;
+    Debug("limit") << "Timer::expired(): within limit" << std::endl;
     return false;
   }
 
   // cpu time
   double current = ((double)clock())/(CLOCKS_PER_SEC*0.001);
-  return current >= d_cpu_limit;
+  Debug("limit") << "Timer::expired(): current cpu time is " << current <<  std::endl;
+  Debug("limit") << "Timer::expired(): limit cpu time is " << d_cpu_limit <<  std::endl;
+  if (current >= d_cpu_limit) {
+    Debug("limit") << "Timer::expired(): OVER LIMIT!" << current <<  std::endl;
+    return true;
+  }
+  return false;
 }
 
 
@@ -132,7 +138,7 @@ void ResourceManager::setTimeLimit(unsigned long millis, bool cumulative) {
     Trace("limit") << "ResourceManager: setting per-call time limit to " << millis << " ms" << endl;
     d_timeBudgetPerCall = millis;
   }
-  d_timer.set(millis, d_cpuTime);
+  d_timer.set(millis, !d_cpuTime);
 }
 
 unsigned long ResourceManager::getResourceUsage() const {
@@ -159,14 +165,23 @@ unsigned long ResourceManager::getTimeRemaining() const {
 void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
   ++d_spendResourceCalls;
   if (!d_on) return;
-  
+
+  Debug("limit") << "ResourceManager::spendResource()" << std::endl;
   ++d_cumulativeResourceUsed;
   ++d_thisCallResourceUsed;
   if(out()) {
+    Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
+    if (outOfTime()) {
+      Trace("limit") << "ResourceManager::spendResource: elapsed time" << d_timer.elapsed() << std::endl;
+    }
+    
+    if (smt::smtEngineInScope()) {
+      theory::Rewriter::clearCaches();
+    }
     if (d_isHardLimit) {
       throw UnsafeInterrupt();
     }
-    Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
+
     // interrupt it next time resources are checked
     if (smt::smtEngineInScope()) {
       smt::currentSmtEngine()->interrupt();
@@ -237,7 +252,13 @@ bool ResourceManager::outOfTime() const {
   
   return d_timer.expired();
 }
-// void ResourceManager::setPropEngine(prop::PropEngine* prop) {
-//   AlwaysAssert(d_propEngine == NULL);
-//   d_propEngine = prop;
-// }
+
+void ResourceManager::useCPUTime(bool cpu) {
+  Trace("limit") << "ResourceManager::useCPUTime("<< cpu <<")\n"; 
+  d_cpuTime = cpu;
+}
+
+void ResourceManager::setHardLimit(bool value) {
+  Trace("limit") << "ResourceManager::setHardLimit("<< value <<")\n"; 
+  d_isHardLimit = value;
+}

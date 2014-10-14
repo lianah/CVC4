@@ -115,7 +115,7 @@ public:
    * Garbage collects the rewrite caches.
    */
   static void garbageCollect();
-
+  static void clearCaches();
 };/* class Rewriter */
 
 }/* CVC4::theory namespace */

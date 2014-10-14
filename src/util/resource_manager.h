@@ -124,10 +124,10 @@ namespace CVC4 {
     unsigned long getResourceBudgetForThisCall() { return d_thisCallResourceBudget; }
     void spendResource(bool unsafe = true) throw(UnsafeInterrupt) ;
 
-    void setHardLimit(bool value) { d_isHardLimit = value; }
+    void setHardLimit(bool value);
     void setResourceLimit(unsigned long units, bool cumulative = false);
     void setTimeLimit(unsigned long millis, bool cumulative = false);
-    void useCPUTime(bool cpu) { d_cpuTime = cpu;}
+    void useCPUTime(bool cpu); 
 
     /** 
      * Resets perCall limits to mark the start of a new call,

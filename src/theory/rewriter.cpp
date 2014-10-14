@@ -247,5 +247,15 @@ Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
   return Node::null();
 }/* Rewriter::rewriteTo() */
 
+void Rewriter::clearCaches() {
+#ifdef CVC4_ASSERTIONS
+  if(s_rewriteStack != NULL) {
+    delete s_rewriteStack;
+    s_rewriteStack = NULL;
+  }
+#endif
+  Rewriter::garbageCollect();
+}
+
 }/* CVC4::theory namespace */
 }/* CVC4 namespace */

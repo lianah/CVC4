@@ -754,24 +754,24 @@ void SmtEngine::finishInit() {
   PROOF( ProofManager::currentPM()->setLogic(d_logic.getLogicString()); );
 }
 
-void SmtEngine::checkForNewOptions() {
-  // FIXME: NOT THE RIGHT PLACE
-  if(options::perCallResourceLimit() != 0) {
-    setResourceLimit(options::perCallResourceLimit(), false);
-  }
-  if(options::cumulativeResourceLimit() != 0) {
-    setResourceLimit(options::cumulativeResourceLimit(), true);
-  }
-  if(options::perCallMillisecondLimit() != 0) {
-    setTimeLimit(options::perCallMillisecondLimit(), false);
-  }
-  if(options::cumulativeMillisecondLimit() != 0) {
-    setTimeLimit(options::cumulativeMillisecondLimit(), true);
-  }
-}
+// void SmtEngine::checkForNewOptions() {
+//   // FIXME: NOT THE RIGHT PLACE
+//   // if(options::perCallResourceLimit() != 0) {
+//   //   setResourceLimit(options::perCallResourceLimit(), false);
+//   // }
+//   // if(options::cumulativeResourceLimit() != 0) {
+//   //   setResourceLimit(options::cumulativeResourceLimit(), true);
+//   // }
+//   // if(options::perCallMillisecondLimit() != 0) {
+//   //   setTimeLimit(options::perCallMillisecondLimit(), false);
+//   // }
+//   // if(options::cumulativeMillisecondLimit() != 0) {
+//   //   setTimeLimit(options::cumulativeMillisecondLimit(), true);
+//   // }
+// }
 
 void SmtEngine::finalOptionsAreSet() {
-  checkForNewOptions();
+  //  checkForNewOptions();
    
   if(d_fullyInited) {
     return;

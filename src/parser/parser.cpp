@@ -451,7 +451,7 @@ void Parser::preemptCommand(Command* cmd) {
 
 Command* Parser::nextCommand() throw(ParserException, UnsafeInterrupt) {
   Debug("parser") << "nextCommand()" << std::endl;
-  d_resourceManager->spendResource();
+
   Command* cmd = NULL;
   if(!d_commandQueue.empty()) {
     cmd = d_commandQueue.front();
@@ -473,6 +473,13 @@ Command* Parser::nextCommand() throw(ParserException, UnsafeInterrupt) {
     }
   }
   Debug("parser") << "nextCommand() => " << cmd << std::endl;
+  if (cmd != NULL &&
+      dynamic_cast<SetOptionCommand*>(cmd) == NULL) {
+    // don't count set-option commands as to not get stuck in an infinite
+    // loop of resourcing out
+    d_resourceManager->spendResource();
+  }
+
   return cmd;
 }
 

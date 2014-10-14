@@ -265,7 +265,7 @@ class CVC4_PUBLIC SmtEngine {
    * into booleans, etc.
    */
   Node postprocess(TNode n, TypeNode expectedType) const;
-  void checkForNewOptions();
+  // void checkForNewOptions();
   /**
    * This is something of an "init" procedure, but is idempotent; call
    * as often as you like.  Should be called whenever the final options
@@ -646,6 +646,8 @@ public:
    * Spend a resource
    */  
   void spendResource(bool unsafe = true) throw(UnsafeInterrupt);
+
+  ResourceManager* getResourceManager() { return d_resourceManager; }
   /**
    * Permit access to the underlying ExprManager.
    */

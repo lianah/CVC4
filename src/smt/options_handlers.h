@@ -447,6 +447,60 @@ inline void statsEnabledBuild(std::string option, bool value, SmtEngine* smt) th
 #endif /* CVC4_STATISTICS_ON */
 }
 
+inline unsigned long tlimitHandler(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  unsigned long ms; 
+  
+  std::istringstream convert(optarg); 
+  if (!(convert >> ms)) 
+    throw OptionException("option `"+option+"` requires a number as an argument");
+
+  // make sure the resource is set if the option is updated
+  // if the smt engine is null the resource will be set in the
+  if (smt != NULL) {
+    ResourceManager* rm = smt->getResourceManager();
+    rm->setTimeLimit(ms, true);
+  }
+  return ms;
+}
+
+inline unsigned long tlimitPerHandler(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  unsigned long ms; 
+  
+  std::istringstream convert(optarg); 
+  if (!(convert >> ms)) 
+    throw OptionException("option `"+option+"` requires a number as an argument");
+  
+  ResourceManager* rm = smt->getResourceManager();
+  rm->setTimeLimit(ms, false);
+  return ms;
+}
+
+inline unsigned long rlimitHandler(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  unsigned long ms; 
+  
+  std::istringstream convert(optarg); 
+  if (!(convert >> ms)) 
+    throw OptionException("option `"+option+"` requires a number as an argument");
+  
+  ResourceManager* rm = smt->getResourceManager();
+  rm->setResourceLimit(ms, true);
+  return ms;
+}
+
+inline unsigned long rlimitPerHandler(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  unsigned long ms; 
+  
+  std::istringstream convert(optarg); 
+  if (!(convert >> ms)) 
+    throw OptionException("option `"+option+"` requires a number as an argument");
+  
+  ResourceManager* rm = smt->getResourceManager();
+  rm->setResourceLimit(ms, false);
+  return ms;
+}
+
+  
+  
 }/* CVC4::smt namespace */
 }/* CVC4 namespace */
 

@@ -330,27 +330,37 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         replayParser->useDeclarationsFrom(parser);
       }
       bool needReset = false;
-      
+      // true if one of the commands was interrupted
+      bool interrupted = false;
       while (status || opts[options::continuedExecution]) {
+        if (interrupted) {
+          *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
+          pExecutor->reset();
+          // TODO: disable resource limiting and slurp rest of commands
+          // to not get a broken pipe?
+          while (cmd = parser->nextCommand()) {};
+          break;
+        }
+
         try {
           cmd = parser->nextCommand();
           if (cmd == NULL) break;
         } catch (UnsafeInterrupt& e) {
-          // FIXME: what's the right thing to do here?
-          *opts[options::out] << "PARSING_TIMEOUT\n";
-          pExecutor->reset();
-          status = 1;
-          break;
+          *opts[options::out] << "PARSING_TIMEOUT.\n";
+          interrupted = true;
+          continue;
         }
         
         if(dynamic_cast<PushCommand*>(cmd) != NULL) {
           if(needReset) {
             pExecutor->reset();
-            for(size_t i = 0; i < allCommands.size(); ++i) {
-              for(size_t j = 0; j < allCommands[i].size(); ++j) {
+            for(size_t i = 0; i < allCommands.size() && !interrupted; ++i) {
+              if (interrupted) break;
+              for(size_t j = 0; j < allCommands[i].size() && !interrupted; ++j) {
                 Command* cmd = allCommands[i][j]->clone();
                 cmd->setMuted(true);
                 pExecutor->doCommand(cmd);
+                if (cmd->interrupted()) interrupted = true;
                 delete cmd;
               }
             }
@@ -361,11 +371,12 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         } else if(dynamic_cast<PopCommand*>(cmd) != NULL) {
           allCommands.pop_back(); // fixme leaks cmds here
           pExecutor->reset();
-          for(size_t i = 0; i < allCommands.size(); ++i) {
-            for(size_t j = 0; j < allCommands[i].size(); ++j) {
+          for(size_t i = 0; i < allCommands.size() && !interrupted; ++i) {
+            for(size_t j = 0; j < allCommands[i].size() && !interrupted; ++j) {
               Command* cmd = allCommands[i][j]->clone();
               cmd->setMuted(true);
               pExecutor->doCommand(cmd);
+              if (cmd->interrupted()) interrupted = true;
               delete cmd;
             }
           }
@@ -374,16 +385,23 @@ int runCvc4(int argc, char* argv[], Options& opts) {
                   dynamic_cast<QueryCommand*>(cmd) != NULL) {
           if(needReset) {
             pExecutor->reset();
-            for(size_t i = 0; i < allCommands.size(); ++i) {
-              for(size_t j = 0; j < allCommands[i].size(); ++j) {
+            for(size_t i = 0; i < allCommands.size() && !interrupted; ++i) {
+              for(size_t j = 0; j < allCommands[i].size() && !interrupted; ++j) {
                 Command* cmd = allCommands[i][j]->clone();
                 cmd->setMuted(true);
                 pExecutor->doCommand(cmd);
+                if (cmd->interrupted()) interrupted = true;
                 delete cmd;
               }
             }
           }
+          if (interrupted) continue;
+          
           status = pExecutor->doCommand(cmd);
+          if (cmd->interrupted()) {
+            interrupted = true;
+            continue;
+          }
           needReset = true;
         } else {
           // We shouldn't copy certain commands, because they can cause
@@ -394,11 +412,19 @@ int runCvc4(int argc, char* argv[], Options& opts) {
              dynamic_cast<GetValueCommand*>(cmd) == NULL &&
              dynamic_cast<GetModelCommand*>(cmd) == NULL &&
              dynamic_cast<GetAssignmentCommand*>(cmd) == NULL &&
-             dynamic_cast<GetInstantiationsCommand*>(cmd) == NULL) {
+             dynamic_cast<GetInstantiationsCommand*>(cmd) == NULL &&
+             // should only be time limit option command?
+             dynamic_cast<SetOptionCommand*>(cmd) == NULL) {
             Command* copy = cmd->clone();
             allCommands.back().push_back(copy);
           }
           status = pExecutor->doCommand(cmd);
+
+          if (cmd->interrupted()) {
+            interrupted = true;
+            continue;
+          }
+          
           if(dynamic_cast<QuitCommand*>(cmd) != NULL) {
             delete cmd;
             break;
@@ -442,6 +468,12 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         }
 
         status = pExecutor->doCommand(cmd);
+        if (cmd->interrupted() && status == 0) {
+          *opts[options::out] << "INTERRUPTED\n";
+          pExecutor->reset();
+          break;
+        }
+          
         if(dynamic_cast<QuitCommand*>(cmd) != NULL) {
           delete cmd;
           break;
