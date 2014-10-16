@@ -171,6 +171,7 @@ void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
   ++d_thisCallResourceUsed;
   if(out()) {
     Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
+	Trace("limit") << "                 on call " << d_spendResourceCalls << std::endl;
     if (outOfTime()) {
       Trace("limit") << "ResourceManager::spendResource: elapsed time" << d_timer.elapsed() << std::endl;
     }
