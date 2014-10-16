@@ -62,10 +62,6 @@ public:
   /** Check the satisfiability of the added clauses */
   virtual SatValue solve(long unsigned int&) = 0;
 
-  /** Instruct the solver that it should bump its consumed resource count by units
-      and also return the number of resources it has consumed since the last call. */
-  //  virtual unsigned long updateAndGetSatResource(unsigned long units) = 0;
-
   /** Interrupt the solver */
   virtual void interrupt() = 0;
 

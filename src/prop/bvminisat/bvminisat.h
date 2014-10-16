@@ -87,8 +87,6 @@ public:
 
   void markUnremovable(SatLiteral lit);
 
-  // unsigned long updateAndGetSatResource(unsigned long units);
-
   void interrupt();
   
   SatValue solve();

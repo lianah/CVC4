@@ -65,6 +65,7 @@ tokens {
   EXIT_TOK = 'EXIT';
   INCLUDE_TOK = 'INCLUDE';
   DUMP_PROOF_TOK = 'DUMP_PROOF';
+  DUMP_UNSAT_CORE_TOK = 'DUMP_UNSAT_CORE';
   DUMP_ASSUMPTIONS_TOK = 'DUMP_ASSUMPTIONS';
   DUMP_SIG_TOK = 'DUMP_SIG';
   DUMP_TCC_TOK = 'DUMP_TCC';
@@ -697,7 +698,9 @@ mainCommand[CVC4::Command*& cmd]
     { UNSUPPORTED("POPTO_SCOPE command"); }
 
   | RESET_TOK
-    { cmd = new ResetCommand(); }
+    { cmd = new ResetCommand();
+      PARSER_STATE->reset();
+    }
 
     // Datatypes can be mututally-recursive if they're in the same
     // definition block, separated by a comma.  So we parse everything
@@ -792,6 +795,9 @@ mainCommand[CVC4::Command*& cmd]
 
   | DUMP_PROOF_TOK
     { cmd = new GetProofCommand(); }
+
+  | DUMP_UNSAT_CORE_TOK
+    { cmd = new GetUnsatCoreCommand(); }
 
   | ( DUMP_ASSUMPTIONS_TOK
     | DUMP_SIG_TOK
@@ -1446,18 +1452,6 @@ comparisonBinop[unsigned& op]
   | MEMBER_TOK
   ;
 
-term[CVC4::Expr& f]
-@init {
-  std::vector<CVC4::Expr> expressions;
-  std::vector<unsigned> operators;
-  unsigned op;
-  Type t;
-}
-  : storeTerm[f] { expressions.push_back(f); }
-    ( arithmeticBinop[op] storeTerm[f] { operators.push_back(op); expressions.push_back(f); } )*
-    { f = createPrecedenceTree(PARSER_STATE, EXPR_MANAGER, expressions, operators); }
-  ;
-
 arithmeticBinop[unsigned& op]
 @init {
   op = LT(1)->getType(LT(1));
@@ -1472,13 +1466,21 @@ arithmeticBinop[unsigned& op]
   ;
 
 /** Parses an array/tuple/record assignment term. */
-storeTerm[CVC4::Expr& f]
+term[CVC4::Expr& f]
+@init {
+  std::vector<CVC4::Expr> expressions;
+  std::vector<unsigned> operators;
+  unsigned op;
+  Type t;
+}
   : uminusTerm[f]
     ( WITH_TOK
       ( arrayStore[f] ( COMMA arrayStore[f] )*
       | DOT ( tupleStore[f] ( COMMA DOT tupleStore[f] )*
             | recordStore[f] ( COMMA DOT recordStore[f] )* ) )
-    | /* nothing */
+    | { expressions.push_back(f); }
+      ( arithmeticBinop[op] uminusTerm[f] { operators.push_back(op); expressions.push_back(f); } )*
+      { f = createPrecedenceTree(PARSER_STATE, EXPR_MANAGER, expressions, operators); }
     )
   ;
 
@@ -1488,28 +1490,15 @@ storeTerm[CVC4::Expr& f]
  */
 arrayStore[CVC4::Expr& f]
 @init {
-  Expr f2, f3;
-  std::vector<Expr> dims;
+  Expr f2, k;
 }
-  : ( LBRACKET formula[f2] { dims.push_back(f2); } RBRACKET )+
-    ASSIGN_TOK uminusTerm[f3]
-    { assert(dims.size() >= 1);
-      // these loops are a bit complicated; they're only used for the
-      // multidimensional ...WITH [a][b] :=... syntax
-      for(unsigned i = 0; i < dims.size() - 1; ++i) {
-        f = MK_EXPR(CVC4::kind::SELECT, f, dims[i]);
-      }
-      // a[i][j][k] := v  turns into
-      // store(a, i, store(a[i], j, store(a[i][j], k, v)))
-      for(unsigned i = dims.size() - 1; i > 0; --i) {
-        f3 = MK_EXPR(CVC4::kind::STORE, f, dims[i], f3);
-        // strip off one layer of the select
-        f = f[0];
-      }
-
-      // outermost wrapping
-      f = MK_EXPR(CVC4::kind::STORE, f, dims[0], f3);
-    }
+  : LBRACKET formula[k] RBRACKET
+    { f2 = MK_EXPR(CVC4::kind::SELECT, f, k); }
+    ( ( arrayStore[f2]
+      | DOT ( tupleStore[f2]
+            | recordStore[f2] ) )
+    | ASSIGN_TOK term[f2] )
+    { f = MK_EXPR(CVC4::kind::STORE, f, k, f2); }
   ;
 
 /**
@@ -1520,9 +1509,8 @@ tupleStore[CVC4::Expr& f]
 @init {
   Expr f2;
 }
-  : k=numeral ASSIGN_TOK uminusTerm[f2]
-    {
-      Type t = f.getType();
+  : k=numeral
+    { Type t = f.getType();
       if(! t.isTuple()) {
         PARSER_STATE->parseError("tuple-update applied to non-tuple");
       }
@@ -1532,8 +1520,13 @@ tupleStore[CVC4::Expr& f]
         ss << "tuple is of length " << length << "; cannot update index " << k;
         PARSER_STATE->parseError(ss.str());
       }
-      f = MK_EXPR(MK_CONST(TupleUpdate(k)), f, f2);
+      f2 = MK_EXPR(MK_CONST(TupleSelect(k)), f);
     }
+    ( ( arrayStore[f2]
+      | DOT ( tupleStore[f2]
+            | recordStore[f2] ) )
+    | ASSIGN_TOK term[f2] )
+    { f = MK_EXPR(MK_CONST(TupleUpdate(k)), f, f2); }
   ;
 
 /**
@@ -1545,19 +1538,27 @@ recordStore[CVC4::Expr& f]
   std::string id;
   Expr f2;
 }
-  : identifier[id,CHECK_NONE,SYM_VARIABLE] ASSIGN_TOK uminusTerm[f2]
-    {
-      Type t = f.getType();
+  : identifier[id,CHECK_NONE,SYM_VARIABLE]
+    { Type t = f.getType();
       if(! t.isRecord()) {
-        PARSER_STATE->parseError("record-update applied to non-record");
+        std::stringstream ss;
+        ss << "record-update applied to non-record term" << std::endl
+           << "the term: " << f << std::endl
+           << "its type: " << t;
+        PARSER_STATE->parseError(ss.str());
       }
       const Record& rec = RecordType(t).getRecord();
       Record::const_iterator fld = rec.find(id);
       if(fld == rec.end()) {
         PARSER_STATE->parseError(std::string("no such field `") + id + "' in record");
       }
-      f = MK_EXPR(MK_CONST(RecordUpdate(id)), f, f2);
+      f2 = MK_EXPR(MK_CONST(RecordSelect(id)), f);
     }
+    ( ( arrayStore[f2]
+      | DOT ( tupleStore[f2]
+            | recordStore[f2] ) )
+    | ASSIGN_TOK term[f2] )
+    { f = MK_EXPR(MK_CONST(RecordUpdate(id)), f, f2); }
   ;
 
 /** Parses a unary minus term. */

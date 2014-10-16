@@ -47,7 +47,7 @@ public:
                     context::UserContext* u);
 
   ~TheorySetsPrivate();
-  
+
   void setMasterEqualityEngine(eq::EqualityEngine* eq);
 
   void addSharedTerm(TNode);
@@ -66,7 +66,7 @@ public:
 
   void preRegisterTerm(TNode node);
 
-  void propagate(Theory::Effort) { /* we don't depend on this call */ }
+  void propagate(Theory::Effort);
 
 private:
   TheorySets& d_external;
@@ -75,6 +75,8 @@ private:
   public:
     TimerStat d_checkTime;
     TimerStat d_getModelValueTime;
+    IntStat d_memberLemmas;
+    IntStat d_disequalityLemmas;
 
     Statistics();
     ~Statistics();
@@ -112,8 +114,9 @@ private:
     TheorySetsPrivate& d_theory;
     context::Context* d_context;
     eq::EqualityEngine* d_eqEngine;
-
+  public:
     CDNodeSet d_terms;
+  private:
     std::hash_map<TNode, TheorySetsTermInfo*, TNodeHashFunction> d_info;
 
     void mergeLists(CDTNodeList* la, const CDTNodeList* lb) const;

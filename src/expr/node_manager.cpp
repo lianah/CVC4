@@ -82,13 +82,12 @@ struct NVReclaim {
   }
 };
 
-NodeManager::NodeManager(context::Context* ctxt,
-                         ExprManager* exprManager) :
+NodeManager::NodeManager(ExprManager* exprManager) :
   d_options(new Options()),
   d_statisticsRegistry(new StatisticsRegistry()),
   d_resourceManager(new ResourceManager()),
   next_id(0),
-  d_attrManager(new expr::attr::AttributeManager(ctxt)),
+  d_attrManager(new expr::attr::AttributeManager()),
   d_exprManager(exprManager),
   d_nodeUnderDeletion(NULL),
   d_inReclaimZombies(false),
@@ -97,14 +96,13 @@ NodeManager::NodeManager(context::Context* ctxt,
   init();
 }
 
-NodeManager::NodeManager(context::Context* ctxt,
-                         ExprManager* exprManager,
+NodeManager::NodeManager(ExprManager* exprManager,
                          const Options& options) :
   d_options(new Options(options)),
   d_statisticsRegistry(new StatisticsRegistry()),
   d_resourceManager(new ResourceManager()),
   next_id(0),
-  d_attrManager(new expr::attr::AttributeManager(ctxt)),
+  d_attrManager(new expr::attr::AttributeManager()),
   d_exprManager(exprManager),
   d_nodeUnderDeletion(NULL),
   d_inReclaimZombies(false),
@@ -150,12 +148,16 @@ NodeManager::~NodeManager() {
 
   {
     ScopedBool dontGC(d_inReclaimZombies);
+    // hopefully by this point all SmtEngines have been deleted
+    // already, along with all their attributes
     d_attrManager->deleteAllAttributes();
   }
 
   for(unsigned i = 0; i < unsigned(kind::LAST_KIND); ++i) {
     d_operators[i] = Node::null();
   }
+
+  d_tupleAndRecordTypes.clear();
 
   Assert(!d_attrManager->inGarbageCollection() );
   while(!d_zombies.empty()) {
@@ -178,10 +180,15 @@ NodeManager::~NodeManager() {
     Debug("gc:leaks") << ":end:" << endl;
   }
 
+  // defensive coding, in case destruction-order issues pop up (they often do)
   delete d_statisticsRegistry;
+  d_statisticsRegistry = NULL;
   delete d_resourceManager;
+  d_resourceManager = NULL;
   delete d_attrManager;
+  d_attrManager = NULL;
   delete d_options;
+  d_options = NULL;
 }
 
 void NodeManager::reclaimZombies() {
@@ -245,6 +252,18 @@ void NodeManager::reclaimZombies() {
       d_nodeUnderDeletion = nv;
 
       // remove attributes
+      { // notify listeners of deleted node
+        TNode n;
+        n.d_nv = nv;
+        nv->d_rc = 1; // so that TNode doesn't assert-fail
+        for(vector<NodeManagerListener*>::iterator i = d_listeners.begin(); i != d_listeners.end(); ++i) {
+          (*i)->nmNotifyDeleteNode(n);
+        }
+        // this would mean that one of the listeners stowed away
+        // a reference to this node!
+        Assert(nv->d_rc == 1);
+      }
+      nv->d_rc = 0;
       d_attrManager->deleteAllAttributes(nv);
 
       // decr ref counts of children
@@ -418,6 +437,44 @@ TypeNode NodeManager::mkSubrangeType(const SubrangeBounds& bounds)
 
 TypeNode NodeManager::getDatatypeForTupleRecord(TypeNode t) {
   Assert(t.isTuple() || t.isRecord());
+
+  TypeNode tOrig = t;
+  if(t.isTuple()) {
+    vector<TypeNode> v;
+    bool changed = false;
+    for(size_t i = 0; i < t.getNumChildren(); ++i) {
+      TypeNode tn = t[i];
+      TypeNode base;
+      if(tn.isTuple() || tn.isRecord()) {
+        base = getDatatypeForTupleRecord(tn);
+      } else {
+        base = tn.getBaseType();
+      }
+      changed = changed || (tn != base);
+      v.push_back(base);
+    }
+    if(changed) {
+      t = mkTupleType(v);
+    }
+  } else {
+    const Record& r = t.getRecord();
+    std::vector< std::pair<std::string, Type> > v;
+    bool changed = false;
+    for(Record::iterator i = r.begin(); i != r.end(); ++i) {
+      Type tn = (*i).second;
+      Type base;
+      if(tn.isTuple() || tn.isRecord()) {
+        base = getDatatypeForTupleRecord(TypeNode::fromType(tn)).toType();
+      } else {
+        base = tn.getBaseType();
+      }
+      changed = changed || (tn != base);
+      v.push_back(std::make_pair((*i).first, base));
+    }
+    if(changed) {
+      t = mkRecordType(Record(v));
+    }
+  }
 
   // if the type doesn't have an associated datatype, then make one for it
   TypeNode& dtt = d_tupleAndRecordTypes[t];

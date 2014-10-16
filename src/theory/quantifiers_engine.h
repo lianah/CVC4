@@ -37,6 +37,10 @@ namespace theory {
 
 class QuantifiersEngine;
 
+namespace quantifiers {
+  class TermDb;
+}
+
 class QuantifiersModule {
 protected:
   QuantifiersEngine* d_quantEngine;
@@ -49,6 +53,8 @@ public:
   virtual void finishInit() {}
   /* whether this module needs to check this round */
   virtual bool needsCheck( Theory::Effort e ) { return e>=Theory::EFFORT_LAST_CALL; }
+  /* whether this module needs a model built */
+  virtual bool needsModel( Theory::Effort e ) { return false; }
   /* reset at a round */
   virtual void reset_round( Theory::Effort e ){}
   /* Call during quantifier engine's check */
@@ -61,10 +67,15 @@ public:
   virtual Node explain(TNode n) { return TNode::null(); }
   /** Identify this module (for debugging, dynamic configuration, etc..) */
   virtual std::string identify() const = 0;
+public:
+  eq::EqualityEngine * getEqualityEngine();
+  bool areDisequal( TNode n1, TNode n2 );
+  bool areEqual( TNode n1, TNode n2 );
+  TNode getRepresentative( TNode n );
+  quantifiers::TermDb * getTermDatabase();
 };/* class QuantifiersModule */
 
 namespace quantifiers {
-  class TermDb;
   class FirstOrderModel;
   //modules
   class InstantiationEngine;
@@ -73,7 +84,9 @@ namespace quantifiers {
   class QuantConflictFind;
   class RewriteEngine;
   class RelevantDomain;
+  class QModelBuilder;
   class ConjectureGenerator;
+  class CegInstantiation;
 }/* CVC4::theory::quantifiers */
 
 namespace inst {
@@ -101,6 +114,8 @@ private:
   QuantRelevance * d_quant_rel;
   /** relevant domain */
   quantifiers::RelevantDomain* d_rel_dom;
+  /** model builder */
+  quantifiers::QModelBuilder* d_builder;
   /** phase requirements for each quantifier for each instantiation literal */
   std::map< Node, QuantPhaseReq* > d_phase_reqs;
   /** instantiation engine */
@@ -115,6 +130,8 @@ private:
   quantifiers::RewriteEngine * d_rr_engine;
   /** subgoal generator */
   quantifiers::ConjectureGenerator * d_sg_gen;
+  /** ceg instantiation */
+  quantifiers::CegInstantiation * d_ceg_inst;
 public: //effort levels
   enum {
     QEFFORT_CONFLICT,
@@ -160,10 +177,6 @@ public:
   /** get equality query object for the given type. The default is the
       generic one */
   EqualityQueryQuantifiersEngine* getEqualityQuery();
-  /** get instantiation engine */
-  quantifiers::InstantiationEngine* getInstantiationEngine() { return d_inst_engine; }
-  /** get model engine */
-  quantifiers::ModelEngine* getModelEngine() { return d_model_engine; }
   /** get default sat context for quantifiers engine */
   context::Context* getSatContext();
   /** get default sat context for quantifiers engine */
@@ -176,14 +189,37 @@ public:
   quantifiers::RelevantDomain* getRelevantDomain() { return d_rel_dom; }
   /** get quantifier relevance */
   QuantRelevance* getQuantifierRelevance() { return d_quant_rel; }
+  /** get the model builder */
+  quantifiers::QModelBuilder* getModelBuilder() { return d_builder; }
   /** get phase requirement information */
   QuantPhaseReq* getPhaseRequirements( Node f ) { return d_phase_reqs.find( f )==d_phase_reqs.end() ? NULL : d_phase_reqs[f]; }
   /** get phase requirement terms */
   void getPhaseReqTerms( Node f, std::vector< Node >& nodes );
+public:  //modules
+  /** get instantiation engine */
+  quantifiers::InstantiationEngine* getInstantiationEngine() { return d_inst_engine; }
+  /** get model engine */
+  quantifiers::ModelEngine* getModelEngine() { return d_model_engine; }
   /** get bounded integers utility */
   quantifiers::BoundedIntegers * getBoundedIntegers() { return d_bint; }
   /** Conflict find mechanism for quantifiers */
   quantifiers::QuantConflictFind* getConflictFind() { return d_qcf; }
+  /** rewrite rules utility */
+  quantifiers::RewriteEngine * getRewriteEngine() { return d_rr_engine; }
+  /** subgoal generator */
+  quantifiers::ConjectureGenerator * getConjectureGenerator() { return d_sg_gen; }
+  /** ceg instantiation */
+  quantifiers::CegInstantiation * getCegInstantiation() { return d_ceg_inst; }
+private:
+  /** owner of quantified formulas */
+  std::map< Node, QuantifiersModule * > d_owner;
+public:
+  /** get owner */
+  QuantifiersModule * getOwner( Node q );
+  /** set owner */
+  void setOwner( Node q, QuantifiersModule * m );
+  /** considers */
+  bool hasOwnership( Node q, QuantifiersModule * m = NULL );
 public:
   /** initialize */
   void finishInit();
@@ -255,6 +291,8 @@ public:
   void addTermToDatabase( Node n, bool withinQuant = false );
   /** get the master equality engine */
   eq::EqualityEngine* getMasterEqualityEngine() ;
+  /** debug print equality engine */
+  void debugPrintEqualityEngine( const char * c );
 public:
   /** print instantiations */
   void printInstantiations( std::ostream& out );
@@ -297,7 +335,7 @@ private:
   bool d_liberal;
 private:
   /** node contains */
-  Node getInstance( Node n, std::vector< Node >& eqc );
+  Node getInstance( Node n, const std::vector< Node >& eqc, std::hash_map<TNode, Node, TNodeHashFunction>& cache );
   /** get score */
   int getRepScore( Node n, Node f, int index );
 public:

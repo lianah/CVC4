@@ -61,7 +61,6 @@ void InstantiationEngine::finishInit(){
       tstrt = Trigger::TS_MAX_TRIGGER;
     }
     d_i_ag = new InstStrategyAutoGenTriggers( d_quantEngine, tstrt, 3 );
-    d_i_ag->setGenerateAdditional( true );
     addInstStrategy( d_i_ag );
     
     //full saturation : instantiate from relevant domain, then arbitrary terms
@@ -215,7 +214,7 @@ void InstantiationEngine::check( Theory::Effort e, unsigned quant_e ){
     for( int i=0; i<(int)d_quantEngine->getModel()->getNumAssertedQuantifiers(); i++ ){
       Node n = d_quantEngine->getModel()->getAssertedQuantifier( i );
       //it is not active if it corresponds to a rewrite rule: we will process in rewrite engine
-      if( TermDb::isRewriteRule( n ) ){
+      if( !d_quantEngine->hasOwnership( n, this ) ){
         d_quant_active[n] = false;
       }else if( !d_quantEngine->getModel()->isQuantifierActive( n ) ){
         d_quant_active[n] = false;
@@ -300,7 +299,7 @@ void InstantiationEngine::check( Theory::Effort e, unsigned quant_e ){
 }
 
 void InstantiationEngine::registerQuantifier( Node f ){
-  if( !TermDb::isRewriteRule( f ) ){
+  if( d_quantEngine->hasOwnership( f, this ) ){
     //Notice() << "do cbqi " << f << " ? " << std::endl;
     if( options::cbqi() ){
       Node ceBody = d_quantEngine->getTermDatabase()->getInstConstantBody( f );

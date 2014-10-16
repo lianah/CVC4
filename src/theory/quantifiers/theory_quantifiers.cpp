@@ -42,7 +42,9 @@ TheoryQuantifiers::TheoryQuantifiers(Context* c, context::UserContext* u, Output
   d_baseDecLevel = -1;
   out.handleUserAttribute( "axiom", this );
   out.handleUserAttribute( "conjecture", this );
-  out.handleUserAttribute( "inst-level", this );
+  out.handleUserAttribute( "sygus", this );
+  out.handleUserAttribute( "synthesis", this );
+  out.handleUserAttribute( "quant-inst-max-level", this );
   out.handleUserAttribute( "rr-priority", this );
 }
 
