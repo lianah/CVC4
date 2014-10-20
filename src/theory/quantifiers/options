@@ -18,7 +18,7 @@ option miniscopeQuantFreeVar /--disable-miniscope-quant-fv bool :default true
  disable miniscope quantifiers for ground subformulas
 
 # Whether to prenex (nested universal) quantifiers
-option prenexQuant /--disable-prenex-quant bool :default true
+option prenexQuant --prenex-quant=MODE CVC4::theory::quantifiers::PrenexQuantMode :default CVC4::theory::quantifiers::PRENEX_NO_USER_PAT :include "theory/quantifiers/modes.h" :handler CVC4::theory::quantifiers::stringToPrenexQuantMode :handler-include "theory/quantifiers/options_handlers.h"
  disable prenexing of quantified formulas
 
 # Whether to variable-eliminate quantifiers.
@@ -67,6 +67,8 @@ option relationalTriggers --relational-triggers bool :default false
  choose relational triggers such as x = f(y), x >= f(y)
 option purifyTriggers --purify-triggers bool :default false :read-write
  purify triggers, e.g. f( x+1 ) becomes f( y ), x mapsto y-1
+option multiTriggerWhenSingle --multi-trigger-when-single bool :default true
+ never select multi-triggers when single triggers exist
 option triggerSelMode --trigger-sel CVC4::theory::quantifiers::TriggerSelMode :default CVC4::theory::quantifiers::TRIGGER_SEL_DEFAULT :read-write :include "theory/quantifiers/modes.h" :handler  CVC4::theory::quantifiers::stringToTriggerSelMode :handler-include "theory/quantifiers/options_handlers.h"
  selection mode for triggers
 
@@ -173,4 +175,10 @@ option conjectureGenGtEnum --conjecture-gen-gt-enum=N int :default 0
  number of ground terms to generate for model filtering
 option conjectureUeeIntro --conjecture-gen-uee-intro bool :default false
  more aggressive merging for universal equality engine, introduces terms
+ 
+option ceGuidedInst --cegqi bool :default false
+  counterexample guided quantifier instantiation
+option ceGuidedInstFair --cegqi-fair=MODE CVC4::theory::quantifiers::CegqiFairMode :default CVC4::theory::quantifiers::CEGQI_FAIR_UF_DT_SIZE :include "theory/quantifiers/modes.h" :handler CVC4::theory::quantifiers::stringToCegqiFairMode :handler-include "theory/quantifiers/options_handlers.h"
+  if and how to apply fairness for cegqi
+ 
 endmodule

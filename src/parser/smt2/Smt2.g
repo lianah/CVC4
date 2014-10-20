@@ -344,28 +344,6 @@ command returns [CVC4::Command* cmd = NULL]
       Expr func = PARSER_STATE->mkFunction(name, t, ExprManager::VAR_FLAG_DEFINED);
       $cmd = new DefineFunctionCommand(name, func, terms, expr);
     }
-  | DEFINE_CONST_TOK { PARSER_STATE->checkThatLogicIsSet(); }
-    symbol[name,CHECK_UNDECLARED,SYM_VARIABLE]
-    { PARSER_STATE->checkUserSymbol(name); }
-    sortSymbol[t,CHECK_DECLARED]
-    { /* add variables to parser state before parsing term */
-      Debug("parser") << "define const: '" << name << "'" << std::endl;
-      PARSER_STATE->pushScope(true);
-      for(std::vector<std::pair<std::string, CVC4::Type> >::const_iterator i =
-            sortedVarNames.begin(), iend = sortedVarNames.end();
-          i != iend;
-          ++i) {
-        terms.push_back(PARSER_STATE->mkBoundVar((*i).first, (*i).second));
-      }
-    }
-    term[expr, expr2]
-    { PARSER_STATE->popScope();
-      // declare the name down here (while parsing term, signature
-      // must not be extended with the name itself; no recursion
-      // permitted)
-      Expr func = PARSER_STATE->mkFunction(name, t, ExprManager::VAR_FLAG_DEFINED);
-      $cmd = new DefineFunctionCommand(name, func, terms, expr);
-    }
   | /* value query */
     GET_VALUE_TOK { PARSER_STATE->checkThatLogicIsSet(); }
     ( LPAREN_TOK termList[terms,expr] RPAREN_TOK
@@ -624,6 +602,28 @@ extendedCommand[CVC4::Command*& cmd]
         $cmd = new DefineFunctionCommand(name, func, terms, e);
       }
     )
+  | DEFINE_CONST_TOK { PARSER_STATE->checkThatLogicIsSet(); }
+    symbol[name,CHECK_UNDECLARED,SYM_VARIABLE]
+    { PARSER_STATE->checkUserSymbol(name); }
+    sortSymbol[t,CHECK_DECLARED]
+    { /* add variables to parser state before parsing term */
+      Debug("parser") << "define const: '" << name << "'" << std::endl;
+      PARSER_STATE->pushScope(true);
+      for(std::vector<std::pair<std::string, CVC4::Type> >::const_iterator i =
+            sortedVarNames.begin(), iend = sortedVarNames.end();
+          i != iend;
+          ++i) {
+        terms.push_back(PARSER_STATE->mkBoundVar((*i).first, (*i).second));
+      }
+    }
+    term[e, e2]
+    { PARSER_STATE->popScope();
+      // declare the name down here (while parsing term, signature
+      // must not be extended with the name itself; no recursion
+      // permitted)
+      Expr func = PARSER_STATE->mkFunction(name, t, ExprManager::VAR_FLAG_DEFINED);
+      $cmd = new DefineFunctionCommand(name, func, terms, e);
+    }
 
   | SIMPLIFY_TOK { PARSER_STATE->checkThatLogicIsSet(); }
     term[e,e2]
@@ -1079,7 +1079,7 @@ term[CVC4::Expr& expr, CVC4::Expr& expr2]
     /* attributed expressions */
   | LPAREN_TOK ATTRIBUTE_TOK term[expr, f2]
     ( attribute[expr, attexpr, attr]
-      { if( ( attr == ":pattern" || attr == ":no-pattern" ) && ! attexpr.isNull()) {
+      { if( ! attexpr.isNull()) {
           patexprs.push_back( attexpr );
         }
       }
@@ -1191,7 +1191,7 @@ attribute[CVC4::Expr& expr,CVC4::Expr& retExpr, std::string& attr]
         PARSER_STATE->warning(ss.str());
       }
       // do nothing
-    } else if(attr == ":axiom" || attr == ":conjecture") {
+    } else if(attr==":axiom" || attr==":conjecture" || attr==":sygus" || attr==":synthesis") {
       if(hasValue) {
         std::stringstream ss;
         ss << "warning: Attribute " << attr << " does not take a value (ignoring)";
@@ -1199,7 +1199,11 @@ attribute[CVC4::Expr& expr,CVC4::Expr& retExpr, std::string& attr]
       }
       std::string attr_name = attr;
       attr_name.erase( attr_name.begin() );
-      Command* c = new SetUserAttributeCommand( attr_name, expr );
+      //will set the attribute on auxiliary var (preserves attribute on formula through rewriting)
+      Type t = EXPR_MANAGER->booleanType();
+      Expr avar = PARSER_STATE->mkVar(attr_name, t);
+      retExpr = MK_EXPR(kind::INST_ATTRIBUTE, avar);
+      Command* c = new SetUserAttributeCommand( attr_name, avar );
       c->setMuted(true);
       PARSER_STATE->preemptCommand(c);
     } else {
@@ -1216,23 +1220,17 @@ attribute[CVC4::Expr& expr,CVC4::Expr& retExpr, std::string& attr]
       attr = std::string(":no-pattern");
       retExpr = MK_EXPR(kind::INST_NO_PATTERN, patexpr);
     }
-  | ATTRIBUTE_INST_LEVEL INTEGER_LITERAL
+  | tok=( ATTRIBUTE_INST_LEVEL | ATTRIBUTE_RR_PRIORITY ) INTEGER_LITERAL
     {
       Expr n = MK_CONST( AntlrInput::tokenToInteger($INTEGER_LITERAL) );
       std::vector<Expr> values;
       values.push_back( n );
-      std::string attr_name("quant-inst-max-level");
-      Command* c = new SetUserAttributeCommand( attr_name, expr, values );
-      c->setMuted(true);
-      PARSER_STATE->preemptCommand(c);
-    }
-  | ATTRIBUTE_RR_PRIORITY_LEVEL INTEGER_LITERAL
-    {
-      Expr n = MK_CONST( AntlrInput::tokenToInteger($INTEGER_LITERAL) );
-      std::vector<Expr> values;
-      values.push_back( n );
-      std::string attr_name("rr-priority");
-      Command* c = new SetUserAttributeCommand( attr_name, expr, values );
+      std::string attr_name(AntlrInput::tokenText($tok));
+      attr_name.erase( attr_name.begin() );
+      Type t = EXPR_MANAGER->booleanType();
+      Expr avar = PARSER_STATE->mkVar(attr_name, t);
+      retExpr = MK_EXPR(kind::INST_ATTRIBUTE, avar);
+      Command* c = new SetUserAttributeCommand( attr_name, avar, values );
       c->setMuted(true);
       PARSER_STATE->preemptCommand(c);
     }
@@ -1460,6 +1458,8 @@ builtinOp[CVC4::Kind& kind]
   | REOPT_TOK      { $kind = CVC4::kind::REGEXP_OPT; }
   | RERANGE_TOK    { $kind = CVC4::kind::REGEXP_RANGE; }
   | RELOOP_TOK    { $kind = CVC4::kind::REGEXP_LOOP; }
+  
+  | DTSIZE_TOK     { $kind = CVC4::kind::DT_SIZE; }
   
   | FMFCARD_TOK    { $kind = CVC4::kind::CARDINALITY_CONSTRAINT; }
 
@@ -1859,6 +1859,8 @@ RERANGE_TOK : 're.range';
 RELOOP_TOK : 're.loop';
 RENOSTR_TOK : 're.nostr';
 REALLCHAR_TOK : 're.allchar';
+
+DTSIZE_TOK : 'dt.size';
 
 FMFCARD_TOK : 'fmf.card';
 

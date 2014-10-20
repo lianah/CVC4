@@ -165,6 +165,33 @@ max \n\
 + Consider only maximal subterms that meet criteria for triggers. \n\
 \n\
 ";
+static const std::string prenexQuantModeHelp = "\
+Prenex quantifiers modes currently supported by the --prenex-quant option:\n\
+\n\
+default \n\
++ Default, prenex all nested quantifiers except those with user patterns.\n\
+\n\
+all \n\
++ Prenex all nested quantifiers.\n\
+\n\
+none \n\
++ Do no prenex nested quantifiers. \n\
+\n\
+";
+static const std::string cegqiFairModeHelp = "\
+Modes for enforcing fairness for counterexample guided quantifier instantion, supported by --cegqi-fair:\n\
+\n\
+default \n\
++ Default, enforce fairness using an uninterpreted function for datatypes size.\n\
+\n\
+dt-size \n\
++ Enforce fairness using size theory operator.\n\
+\n\
+none \n\
++ Do not enforce fairness. \n\
+\n\
+";
+
 inline InstWhenMode stringToInstWhenMode(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
   if(optarg == "pre-full") {
     return INST_WHEN_PRE_FULL;
@@ -309,6 +336,7 @@ inline UserPatMode stringToUserPatMode(std::string option, std::string optarg, S
                           optarg + "'.  Try --user-pat help.");
   }
 }
+
 inline TriggerSelMode stringToTriggerSelMode(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
   if(optarg ==  "default" || optarg == "all" ) {
     return TRIGGER_SEL_DEFAULT;
@@ -324,6 +352,39 @@ inline TriggerSelMode stringToTriggerSelMode(std::string option, std::string opt
                           optarg + "'.  Try --trigger-sel help.");
   }
 }
+
+inline PrenexQuantMode stringToPrenexQuantMode(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if(optarg ==  "default" ) {
+    return PRENEX_NO_USER_PAT;
+  } else if(optarg == "all") {
+    return PRENEX_ALL;
+  } else if(optarg == "none") {
+    return PRENEX_NONE;
+  } else if(optarg ==  "help") {
+    puts(prenexQuantModeHelp.c_str());
+    exit(1);
+  } else {
+    throw OptionException(std::string("unknown option for --prenex-quant: `") +
+                          optarg + "'.  Try --prenex-quant help.");
+  }
+}
+
+inline CegqiFairMode stringToCegqiFairMode(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if(optarg == "default" || optarg == "uf-dt-size" ) {
+    return CEGQI_FAIR_UF_DT_SIZE;
+  } else if(optarg == "dt-size") {
+    return CEGQI_FAIR_DT_SIZE;
+  } else if(optarg == "none") {
+    return CEGQI_FAIR_NONE;
+  } else if(optarg ==  "help") {
+    puts(cegqiFairModeHelp.c_str());
+    exit(1);
+  } else {
+    throw OptionException(std::string("unknown option for --cegqi-fair: `") +
+                          optarg + "'.  Try --cegqi-fair help.");
+  }
+}
+
 }/* CVC4::theory::quantifiers namespace */
 }/* CVC4::theory namespace */
 }/* CVC4 namespace */

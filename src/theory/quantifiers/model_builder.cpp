@@ -36,11 +36,11 @@ using namespace CVC4::theory::quantifiers;
 
 QModelBuilder::QModelBuilder( context::Context* c, QuantifiersEngine* qe ) :
 TheoryEngineModelBuilder( qe->getTheoryEngine() ), d_curr_model( c, NULL ), d_qe( qe ){
-  d_considerAxioms = true;
+
 }
 
 bool QModelBuilder::isQuantifierActive( Node f ) {
-  return !TermDb::isRewriteRule( f );
+  return d_qe->hasOwnership( f );
 }
 
 
@@ -161,7 +161,7 @@ void QModelBuilderIG::processBuildModel( TheoryModel* m, bool fullModel ) {
         Trace("model-engine") << "Initialize, Added Lemmas = " << d_addedLemmas << std::endl;
       }else{
         //initialize model
-        fm->initialize( d_considerAxioms );
+        fm->initialize();
         //analyze the functions
         Trace("model-engine-debug") << "Analyzing model..." << std::endl;
         analyzeModel( fm );
@@ -382,8 +382,7 @@ QModelBuilderIG::Statistics::~Statistics(){
 }
 
 bool QModelBuilderIG::isQuantifierActive( Node f ){
-  return !TermDb::isRewriteRule( f ) &&
-         ( d_considerAxioms || !f.getAttribute(AxiomAttribute()) ) && d_quant_sat.find( f )==d_quant_sat.end();
+  return d_qe->hasOwnership( f ) && d_quant_sat.find( f )==d_quant_sat.end();
 }
 
 bool QModelBuilderIG::isTermActive( Node n ){

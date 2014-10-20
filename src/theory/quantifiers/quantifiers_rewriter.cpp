@@ -577,7 +577,7 @@ Node QuantifiersRewriter::computeCNF( Node n, std::vector< Node >& args, NodeBui
 
 Node QuantifiersRewriter::computePrenex( Node body, std::vector< Node >& args, bool pol ){
   if( body.getKind()==FORALL ){
-    if( pol ){
+    if( pol && ( options::prenexQuant()==PRENEX_ALL || body.getNumChildren()==2 ) ){
       std::vector< Node > terms;
       std::vector< Node > subs;
       //for doing prenexing of same-signed quantifiers
@@ -950,7 +950,7 @@ bool QuantifiersRewriter::doOperation( Node f, bool isNested, int computeOption 
   }else if( computeOption==COMPUTE_SIMPLE_ITE_LIFT ){
     return options::simpleIteLiftQuant();
   }else if( computeOption==COMPUTE_PRENEX ){
-    return options::prenexQuant() && !options::aggressiveMiniscopeQuant();
+    return options::prenexQuant()!=PRENEX_NONE && !options::aggressiveMiniscopeQuant();
   }else if( computeOption==COMPUTE_VAR_ELIMINATION ){
     return options::varElimQuant() || options::dtVarExpandQuant();
   }else if( computeOption==COMPUTE_CNF ){
@@ -1117,7 +1117,7 @@ Node QuantifiersRewriter::rewriteRewriteRule( Node r ) {
   NodeBuilder<> patternListB(kind::INST_PATTERN_LIST);
   //the entire rewrite rule is the first pattern
   if( options::quantRewriteRules() ){
-    patternListB << NodeManager::currentNM()->mkNode( INST_PATTERN, r );
+    patternListB << NodeManager::currentNM()->mkNode( INST_ATTRIBUTE, r );
   }
   patternListB << static_cast<Node>(patternB);
   forallB << static_cast<Node>(patternListB);

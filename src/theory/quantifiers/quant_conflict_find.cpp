@@ -1702,7 +1702,7 @@ Node QuantConflictFind::mkEqNode( Node a, Node b ) {
 //-------------------------------------------------- registration
 
 void QuantConflictFind::registerQuantifier( Node q ) {
-  if( !TermDb::isRewriteRule( q ) ){
+  if( d_quantEngine->hasOwnership( q, this ) ){
     d_quants.push_back( q );
     d_quant_id[q] = d_quants.size();
     Trace("qcf-qregister") << "Register ";
@@ -1839,7 +1839,7 @@ bool QuantConflictFind::areMatchDisequal( TNode n1, TNode n2 ) {
 //-------------------------------------------------- handling assertions / eqc
 
 void QuantConflictFind::assertNode( Node q ) {
-  if( !TermDb::isRewriteRule( q ) ){
+  if( d_quantEngine->hasOwnership( q, this ) ){
     Trace("qcf-proc") << "QCF : assertQuantifier : ";
     debugPrintQuant("qcf-proc", q);
     Trace("qcf-proc") << std::endl;
@@ -1849,27 +1849,6 @@ void QuantConflictFind::assertNode( Node q ) {
     //  it->first->d_active.set( true );
     //}
   }
-}
-
-eq::EqualityEngine * QuantConflictFind::getEqualityEngine() {
-  //return ((uf::TheoryUF*)d_quantEngine->getTheoryEngine()->theoryOf( theory::THEORY_UF ))->getEqualityEngine();
-  return d_quantEngine->getTheoryEngine()->getMasterEqualityEngine();
-}
-bool QuantConflictFind::areEqual( Node n1, Node n2 ) {
-  return getEqualityEngine()->hasTerm( n1 ) && getEqualityEngine()->hasTerm( n2 ) && getEqualityEngine()->areEqual( n1,n2 );
-}
-bool QuantConflictFind::areDisequal( Node n1, Node n2 ) {
-  return n1!=n2 && getEqualityEngine()->hasTerm( n1 ) && getEqualityEngine()->hasTerm( n2 ) && getEqualityEngine()->areDisequal( n1,n2, false );
-}
-Node QuantConflictFind::getRepresentative( Node n ) {
-  if( getEqualityEngine()->hasTerm( n ) ){
-    return getEqualityEngine()->getRepresentative( n );
-  }else{
-    return n;
-  }
-}
-TermDb* QuantConflictFind::getTermDatabase() { 
-  return d_quantEngine->getTermDatabase();
 }
 
 Node QuantConflictFind::evaluateTerm( Node n ) {

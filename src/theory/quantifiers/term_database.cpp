@@ -21,6 +21,8 @@
 #include "theory/quantifiers/theory_quantifiers.h"
 #include "util/datatype.h"
 #include "theory/datatypes/datatypes_rewriter.h"
+#include "theory/quantifiers/ce_guided_instantiation.h"
+#include "theory/quantifiers/rewrite_engine.h"
 
 using namespace std;
 using namespace CVC4;
@@ -749,6 +751,27 @@ Node TermDb::getSkolemizedBody( Node f ){
   return d_skolem_body[ f ];
 }
 
+Node TermDb::getEnumerateTerm( TypeNode tn, unsigned index ) {
+  std::map< TypeNode, unsigned >::iterator it = d_typ_enum_map.find( tn );
+  unsigned teIndex;
+  if( it==d_typ_enum_map.end() ){
+    teIndex = (int)d_typ_enum.size();
+    d_typ_enum_map[tn] = teIndex;
+    d_typ_enum.push_back( TypeEnumerator(tn) );
+  }else{
+    teIndex = it->second;
+  }
+  while( index>=d_enum_terms[tn].size() ){
+    if( d_typ_enum[teIndex].isFinished() ){
+      return Node::null();
+    }
+    d_enum_terms[tn].push_back( *d_typ_enum[teIndex] );
+    ++d_typ_enum[teIndex];
+  }
+  return d_enum_terms[tn][index];
+}
+
+
 Node TermDb::getFreeVariableForInstConstant( Node n ){
   TypeNode tn = n.getType();
   if( d_free_vars.find( tn )==d_free_vars.end() ){
@@ -974,5 +997,115 @@ Node TermDb::getRewriteRule( Node q ) {
     return q[2][0][0];
   }else{
     return Node::null();
+  }
+}
+
+
+void TermDb::computeAttributes( Node q ) {
+  if( q.getNumChildren()==3 ){
+    for( unsigned i=0; i<q[2].getNumChildren(); i++ ){
+      Trace("quant-attr-debug") << "Check : " << q[2][i] << " " << q[2][i].getKind() << std::endl;
+      if( q[2][i].getKind()==INST_ATTRIBUTE ){
+        Node avar = q[2][i][0];
+        if( avar.getAttribute(AxiomAttribute()) ){
+          Trace("quant-attr") << "Attribute : axiom : " << q << std::endl;
+          d_qattr_axiom[q] = true;
+        }
+        if( avar.getAttribute(ConjectureAttribute()) ){
+          Trace("quant-attr") << "Attribute : conjecture : " << q << std::endl;
+          d_qattr_conjecture[q] = true;
+        }
+        if( avar.getAttribute(SygusAttribute()) ){
+          //should be nested existential
+          Assert( q[1].getKind()==NOT );
+          Assert( q[1][0].getKind()==FORALL );
+          Trace("quant-attr") << "Attribute : sygus : " << q << std::endl;
+          d_qattr_sygus[q] = true;
+          if( d_quantEngine->getCegInstantiation()==NULL ){
+            Trace("quant-warn") << "WARNING : ceg instantiation is null, and we have : " << q << std::endl;
+          }
+          d_quantEngine->setOwner( q, d_quantEngine->getCegInstantiation() );
+        }
+        if( avar.getAttribute(SynthesisAttribute()) ){
+          Trace("quant-attr") << "Attribute : synthesis : " << q << std::endl;
+          d_qattr_synthesis[q] = true;
+          if( d_quantEngine->getCegInstantiation()==NULL ){
+            Trace("quant-warn") << "WARNING : ceg instantiation is null, and we have : " << q << std::endl;
+          }
+          d_quantEngine->setOwner( q, d_quantEngine->getCegInstantiation() );
+        }
+        if( avar.hasAttribute(QuantInstLevelAttribute()) ){
+          d_qattr_qinstLevel[q] = avar.getAttribute(QuantInstLevelAttribute());
+          Trace("quant-attr") << "Attribute : quant inst level " << d_qattr_qinstLevel[q] << " : " << q << std::endl;
+        }
+        if( avar.hasAttribute(RrPriorityAttribute()) ){
+          d_qattr_rr_priority[q] = avar.getAttribute(RrPriorityAttribute());
+          Trace("quant-attr") << "Attribute : rr priority " << d_qattr_rr_priority[q] << " : " << q << std::endl;
+        }
+        if( avar.getKind()==REWRITE_RULE ){
+          Trace("quant-attr") << "Attribute : rewrite rule : " << q << std::endl;
+          Assert( i==0 );
+          if( d_quantEngine->getRewriteEngine()==NULL ){
+            Trace("quant-warn") << "WARNING : rewrite engine is null, and we have : " << q << std::endl;
+          }
+          //set rewrite engine as owner
+          d_quantEngine->setOwner( q, d_quantEngine->getRewriteEngine() );
+        }
+      }
+    }
+  }
+}
+
+bool TermDb::isQAttrConjecture( Node q ) {
+  std::map< Node, bool >::iterator it = d_qattr_conjecture.find( q );
+  if( it==d_qattr_conjecture.end() ){
+    return false;
+  }else{
+    return it->second;
+  }
+}
+
+bool TermDb::isQAttrAxiom( Node q ) {
+  std::map< Node, bool >::iterator it = d_qattr_axiom.find( q );
+  if( it==d_qattr_axiom.end() ){
+    return false;
+  }else{
+    return it->second;
+  }
+}
+
+bool TermDb::isQAttrSygus( Node q ) {
+  std::map< Node, bool >::iterator it = d_qattr_sygus.find( q );
+  if( it==d_qattr_sygus.end() ){
+    return false;
+  }else{
+    return it->second;
+  }
+}
+
+bool TermDb::isQAttrSynthesis( Node q ) {
+  std::map< Node, bool >::iterator it = d_qattr_synthesis.find( q );
+  if( it==d_qattr_synthesis.end() ){
+    return false;
+  }else{
+    return it->second;
+  }
+}
+
+int TermDb::getQAttrQuantInstLevel( Node q ) {
+  std::map< Node, int >::iterator it = d_qattr_qinstLevel.find( q );
+  if( it==d_qattr_qinstLevel.end() ){
+    return -1;
+  }else{
+    return it->second;
+  }
+}
+
+int TermDb::getQAttrRewriteRulePriority( Node q ) {
+  std::map< Node, int >::iterator it = d_qattr_rr_priority.find( q );
+  if( it==d_qattr_rr_priority.end() ){
+    return -1;
+  }else{
+    return it->second;
   }
 }
