@@ -772,7 +772,8 @@ void Smt2Printer::toStream(std::ostream& out, const CommandStatus* s) const thro
 
   if(tryToStream<CommandSuccess>(out, s) ||
      tryToStream<CommandFailure>(out, s) ||
-     tryToStream<CommandUnsupported>(out, s)) {
+     tryToStream<CommandUnsupported>(out, s) ||
+     tryToStream<CommandInterrupted>(out, s)) {
     return;
   }
 
@@ -1167,6 +1168,10 @@ static void toStream(std::ostream& out, const CommandSuccess* s) throw() {
   }
 }
 
+static void toStream(std::ostream& out, const CommandInterrupted* s) throw() {
+  out << "interrupted" << endl;
+}
+  
 static void toStream(std::ostream& out, const CommandUnsupported* s) throw() {
 #ifdef CVC4_COMPETITION_MODE
   // if in competition mode, lie and say we're ok
