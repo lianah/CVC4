@@ -101,7 +101,8 @@ libutil_la_SOURCES = \
 	unsat_core.h \
 	unsat_core.cpp \
 	resource_manager.h \
-	resource_manager.cpp
+	resource_manager.cpp \
+	unsafe_interrupt_exception.h
 
 libstatistics_la_SOURCES = \
 	statistics_registry.h \
