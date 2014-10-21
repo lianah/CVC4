@@ -19,7 +19,6 @@
 #include "expr/variable_type_map.h"
 #include "options/options.h"
 #include "util/statistics_registry.h"
-#include "util/resource_manager.h"
 #include <map>
 
 ${includes}
@@ -128,10 +127,6 @@ StatisticsRegistry* ExprManager::getStatisticsRegistry() throw() {
 
 const Options& ExprManager::getOptions() const {
   return d_nodeManager->getOptions();
-}
-
-void ExprManager::enableResourceLimit(bool on) {
-  d_nodeManager->getResourceManager()->enable(on);
 }
 
 

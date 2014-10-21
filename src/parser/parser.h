@@ -30,7 +30,7 @@
 #include "expr/symbol_table.h"
 #include "expr/kind.h"
 #include "expr/expr_stream.h"
-#include "util/resource_manager.h"
+#include "util/unsafe_interrupt_exception.h"
 
 namespace CVC4 {
 
@@ -40,7 +40,8 @@ class ExprManager;
 class Command;
 class FunctionType;
 class Type;
-
+class ResourceManager;
+  
 namespace parser {
 
 class Input;
@@ -335,7 +336,7 @@ public:
    */
   void checkDeclaration(const std::string& name, DeclarationCheck check,
                         SymbolType type = SYM_VARIABLE,
-                        std::string notes = "") throw(ParserException, UnsafeInterrupt);
+                        std::string notes = "") throw(ParserException);
 
   /**
    * Reserve a symbol at the assertion level.
@@ -501,10 +502,10 @@ public:
   bool isPredicate(const std::string& name);
 
   /** Parse and return the next command. */
-  Command* nextCommand() throw(ParserException, UnsafeInterrupt);
+  Command* nextCommand() throw(ParserException, UnsafeInterruptException);
 
   /** Parse and return the next expression. */
-  Expr nextExpression() throw(ParserException, UnsafeInterrupt);
+  Expr nextExpression() throw(ParserException, UnsafeInterruptException);
 
   /** Issue a warning to the user. */
   inline void warning(const std::string& msg) {

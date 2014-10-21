@@ -39,7 +39,7 @@
 #include "util/statistics_registry.h"
 #include "util/cvc4_assert.h"
 #include "util/sort_inference.h"
-#include "util/resource_manager.h"
+#include "util/unsafe_interrupt_exception.h"
 #include "theory/quantifiers/quant_conflict_find.h"
 #include "theory/uf/equality_engine.h"
 #include "theory/bv/bv_to_bool.h"
@@ -284,35 +284,35 @@ class TheoryEngine {
       }
     }
 
-    void conflict(TNode conflictNode) throw(AssertionException, UnsafeInterrupt) {
+    void conflict(TNode conflictNode) throw(AssertionException, UnsafeInterruptException) {
       Trace("theory::conflict") << "EngineOutputChannel<" << d_theory << ">::conflict(" << conflictNode << ")" << std::endl;
       ++ d_statistics.conflicts;
       d_engine->d_outputChannelUsed = true;
       d_engine->conflict(conflictNode, d_theory);
     }
 
-    bool propagate(TNode literal) throw(AssertionException, UnsafeInterrupt) {
+    bool propagate(TNode literal) throw(AssertionException, UnsafeInterruptException) {
       Trace("theory::propagate") << "EngineOutputChannel<" << d_theory << ">::propagate(" << literal << ")" << std::endl;
       ++ d_statistics.propagations;
       d_engine->d_outputChannelUsed = true;
       return d_engine->propagate(literal, d_theory);
     }
 
-    theory::LemmaStatus lemma(TNode lemma, bool removable = false, bool preprocess = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
+    theory::LemmaStatus lemma(TNode lemma, bool removable = false, bool preprocess = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterruptException) {
       Trace("theory::lemma") << "EngineOutputChannel<" << d_theory << ">::lemma(" << lemma << ")" << std::endl;
       ++ d_statistics.lemmas;
       d_engine->d_outputChannelUsed = true;
       return d_engine->lemma(lemma, false, removable, preprocess, theory::THEORY_LAST);
     }
 
-    theory::LemmaStatus splitLemma(TNode lemma, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
+    theory::LemmaStatus splitLemma(TNode lemma, bool removable = false) throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterruptException) {
       Trace("theory::lemma") << "EngineOutputChannel<" << d_theory << ">::lemma(" << lemma << ")" << std::endl;
       ++ d_statistics.lemmas;
       d_engine->d_outputChannelUsed = true;
       return d_engine->lemma(lemma, false, removable, false, d_theory);
     }
 
-    void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterrupt) {
+    void demandRestart() throw(TypeCheckingExceptionPrivate, AssertionException, UnsafeInterruptException) {
       NodeManager* curr = NodeManager::currentNM();
       Node restartVar =  curr->mkSkolem("restartVar",
                                         curr->booleanType(),
@@ -323,7 +323,7 @@ class TheoryEngine {
     }
 
     void requirePhase(TNode n, bool phase)
-      throw(theory::Interrupted, AssertionException, UnsafeInterrupt) {
+      throw(theory::Interrupted, AssertionException, UnsafeInterruptException) {
       Debug("theory") << "EngineOutputChannel::requirePhase("
                       << n << ", " << phase << ")" << std::endl;
       ++ d_statistics.requirePhase;
@@ -331,18 +331,18 @@ class TheoryEngine {
     }
 
     bool flipDecision()
-      throw(theory::Interrupted, AssertionException, UnsafeInterrupt) {
+      throw(theory::Interrupted, AssertionException, UnsafeInterruptException) {
       Debug("theory") << "EngineOutputChannel::flipDecision()" << std::endl;
       ++ d_statistics.flipDecision;
       return d_engine->d_propEngine->flipDecision();
     }
 
-    void setIncomplete() throw(AssertionException, UnsafeInterrupt) {
+    void setIncomplete() throw(AssertionException, UnsafeInterruptException) {
       Trace("theory") << "TheoryEngine::setIncomplete()" << std::endl;
       d_engine->setIncomplete(d_theory);
     }
 
-    void spendResource(bool unsafe = true) throw(UnsafeInterrupt) {
+    void spendResource(bool unsafe = true) throw(UnsafeInterruptException) {
       d_engine->spendResource(unsafe);
     }
 

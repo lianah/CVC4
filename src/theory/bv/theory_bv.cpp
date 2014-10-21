@@ -30,9 +30,6 @@
 #include "theory/theory_model.h"
 #include "theory/bv/abstraction.h"
 
-// FIXME for timeout debugging
-#include <unistd.h>
-
 using namespace CVC4;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv;
@@ -109,7 +106,7 @@ void TheoryBV::setMasterEqualityEngine(eq::EqualityEngine* eq) {
   }
 }
 
-void TheoryBV::spendResource(bool unsafe) throw(UnsafeInterrupt) {
+void TheoryBV::spendResource(bool unsafe) throw(UnsafeInterruptException) {
   getOutputChannel().spendResource(unsafe);
 }
 
@@ -297,6 +294,7 @@ Node TheoryBV::expandDefinition(LogicRequest &logicRequest, Node node) {
   Unreachable();
 }
 
+
 void TheoryBV::preRegisterTerm(TNode node) {
   d_calledPreregister = true;
   Debug("bitvector-preregister") << "TheoryBV::preRegister(" << node << ")" << std::endl;
@@ -366,7 +364,6 @@ void TheoryBV::check(Effort e)
   if (done() && !fullEffort(e)) {
     return;
   }
-  
   Debug("bitvector") << "TheoryBV::check(" << e << ")" << std::endl;
   TimerStat::CodeTimer codeTimer(d_statistics.d_solveTimer);
   // we may be getting new assertions so the model cache may not be sound
@@ -633,7 +630,9 @@ Node TheoryBV::ppRewrite(TNode t)
   return res;
 }
 
-void TheoryBV::presolve() {}
+void TheoryBV::presolve() {
+  Debug("bitvector") << "TheoryBV::presolve" << endl;
+}
 
 static int prop_count = 0; 
 

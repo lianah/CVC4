@@ -54,7 +54,7 @@ class TheoryBV : public Theory {
 
 
 public:
-  
+
   TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& out, Valuation valuation, const LogicInfo& logicInfo);
   ~TheoryBV();
 
@@ -103,7 +103,7 @@ private:
 
   Statistics d_statistics;
 
-  void spendResource(bool unsafe = true) throw(UnsafeInterrupt);
+  void spendResource(bool unsafe = true) throw(UnsafeInterruptException);
 
   /**
    * Return the uninterpreted function symbol corresponding to division-by-zero

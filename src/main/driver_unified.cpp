@@ -334,48 +334,14 @@ int runCvc4(int argc, char* argv[], Options& opts) {
       bool interrupted = false;
       while (status || opts[options::continuedExecution]) {
         if (interrupted) {
-          // // TODO:
-          // // CHECK if interrupted in checksat/query
-          // // if yes, ignore all commands except exit and set new time limit but keep
-          // // replay commands
           *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
-          // pExecutor->reset();
-          // interrupted = false;
-          // exprMgr->enableResourceLimit(false);
-          // while (cmd = parser->nextCommand()) {
-          //   if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
-          //     break;
-          //   }
-          //   // skip commands that are not set option
-          //   SetOptionCommand* opt_cmd = dynamic_cast<SetOptionCommand*>(cmd);
-          //   if (opt_cmd != NULL &&
-          //       (opt_cmd->getFlag() == "tlimit" ||
-          //        opt_cmd->getFlag() == "tlimit-per" ||
-          //        opt_cmd->getFlag() == "rlimit" ||
-          //        opt_cmd->getFlag() == "rlimit-per")) {
-          //     pExecutor->doCommand(cmd);
-          //     break;
-          //   }
-          //   delete cmd;
-          // }
-          // // we ran out commands
-          // if (cmd == NULL) break;
-          // if (dynamic_cast<QuitCommand*>(cmd) != NULL) {
-          //    delete cmd;
-          //    break;
-          //  }
-          // delete cmd;
-          // // must have seen a new resource setting command so
-          // // continue reading rest of commands
-          // continue;
           break;
         }
 
         try {
           cmd = parser->nextCommand();
           if (cmd == NULL) break;
-        } catch (UnsafeInterrupt& e) {
-          // *opts[options::out] << "PARSING_TIMEOUT.\n";
+        } catch (UnsafeInterruptException& e) {
           interrupted = true;
           continue;
         }
@@ -496,7 +462,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         try {
           cmd = parser->nextCommand();
           if (cmd == NULL) break;
-        } catch (UnsafeInterrupt& e) {
+        } catch (UnsafeInterruptException& e) {
           interrupted = true;
           break;
         }

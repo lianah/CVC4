@@ -160,7 +160,7 @@ void PropEngine::printSatisfyingAssignment(){
   }
 }
 
-Result PropEngine::checkSat(unsigned long resource) {
+Result PropEngine::checkSat() {
   Assert(!d_inCheckSat, "Sat solver in solve()!");
   Debug("prop") << "PropEngine::checkSat()" << endl;
 
@@ -179,7 +179,7 @@ Result PropEngine::checkSat(unsigned long resource) {
   d_interrupted = false;
 
   // Check the problem
-  SatValue result = d_satSolver->solve(resource);
+  SatValue result = d_satSolver->solve();
 
   if( result == SAT_VALUE_UNKNOWN ) {
 
@@ -281,7 +281,7 @@ void PropEngine::interrupt() throw(ModalException) {
   Debug("prop") << "interrupt()" << endl;
 }
 
-void PropEngine::spendResource(bool unsafe) throw (UnsafeInterrupt) {
+void PropEngine::spendResource(bool unsafe) throw (UnsafeInterruptException) {
   d_resourceManager->spendResource(unsafe);
 }
 

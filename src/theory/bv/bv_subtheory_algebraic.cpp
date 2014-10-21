@@ -210,6 +210,7 @@ AlgebraicSolver::~AlgebraicSolver() {
 }
 
 
+
 bool AlgebraicSolver::check(Theory::Effort e) {
   Assert(options::bitblastMode() == theory::bv::BITBLAST_MODE_LAZY); 
 

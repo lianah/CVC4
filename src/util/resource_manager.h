@@ -19,16 +19,13 @@
 
 #include "cvc4_private.h"
 #include "util/exception.h"
+#include "util/unsafe_interrupt_exception.h"
 
 #ifndef __CVC4__RESOURCE_MANAGER_H
 #define __CVC4__RESOURCE_MANAGER_H
 
 
 namespace CVC4 {
-  
-  class UnsafeInterrupt : public CVC4::Exception {
-  };/* class UnsafeInterrupted */
-
   /**
    * A helper class to keep track of a time budget and signal
    * the PropEngine when the budget expires.
@@ -74,8 +71,9 @@ namespace CVC4 {
 
   class ResourceManager {
 
-    Timer d_timer;
-
+    Timer d_cumulativeTimer;
+    Timer d_perCallTimer;
+    
     /** A user-imposed cumulative time budget, in milliseconds.  0 = no limit. */
     unsigned long d_timeBudgetCumulative;
     /** A user-imposed per-call time budget, in milliseconds.  0 = no limit. */
@@ -104,9 +102,11 @@ namespace CVC4 {
     bool d_cpuTime;
     unsigned long d_spendResourceCalls;
 
-
-
+    // Count indicating how often to check resource manager
+    // in loops
+    const static unsigned long s_resourceCount;
   public:
+
     ResourceManager();
     bool limitOn() const {return cummulativeLimitOn() || perCallLimitOn(); }
     bool cummulativeLimitOn() const;
@@ -122,7 +122,7 @@ namespace CVC4 {
     unsigned long getTimeRemaining() const;
 
     unsigned long getResourceBudgetForThisCall() { return d_thisCallResourceBudget; }
-    void spendResource(bool unsafe = true) throw(UnsafeInterrupt) ;
+    void spendResource(bool unsafe = true) throw(UnsafeInterruptException) ;
 
     void setHardLimit(bool value);
     void setResourceLimit(unsigned long units, bool cumulative = false);
@@ -136,12 +136,12 @@ namespace CVC4 {
      */    
     void beginCall();
     /** 
-     * Marks the end of a SmtEngine check call, stops the timer
-     * updates cummulative time used.
+     * Marks the end of a SmtEngine check call, stops the per
+     * call timer, updates cummulative time used.
      * 
      */
-    // void endCall();
-
+    void endCall();
+    static unsigned long getFrequencyCount() { return s_resourceCount; }
   };
 }/* CVC4 namespace */
 

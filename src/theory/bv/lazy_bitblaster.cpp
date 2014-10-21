@@ -82,6 +82,7 @@ void TLazyBitblaster::bbAtom(TNode node) {
   if (hasBBAtom(node)) {
     return;
   }
+
   // make sure it is marked as an atom
   addAtom(node);
 
@@ -160,6 +161,7 @@ Node TLazyBitblaster::getBBAtom(TNode node) const {
 }
 
 void TLazyBitblaster::bbTerm(TNode node, Bits& bits) {
+
   if (hasBBTerm(node)) {
     getBBTerm(node, bits);
     return;
@@ -352,7 +354,11 @@ void TLazyBitblaster::MinisatNotify::notify(prop::SatClause& clause) {
 }
 
 void TLazyBitblaster::MinisatNotify::spendResource(bool unsafe) {
-  d_bv->d_out->spendResource(unsafe);
+  d_bv->spendResource(unsafe);
+}
+
+void TLazyBitblaster::MinisatNotify::safePoint() {
+  d_bv->d_out->safePoint();
 }
 
 

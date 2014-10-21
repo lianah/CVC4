@@ -155,7 +155,7 @@ public:
    */
   void checkDeclaration(const std::string& name, DeclarationCheck check,
                         SymbolType type = SYM_VARIABLE,
-                        std::string notes = "") throw(ParserException, UnsafeInterrupt) {
+                        std::string notes = "") throw(ParserException) {
     // if the symbol is something like "-1", we'll give the user a helpful
     // syntax hint.  (-1 is a valid identifier in SMT-LIB, NOT unary minus.)
     if( check != CHECK_DECLARED ||

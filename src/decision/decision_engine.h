@@ -118,7 +118,7 @@ public:
 
   /** Gets the next decision based on strategies that are enabled */
   SatLiteral getNext(bool &stopSearch) {
-    smt::currentSmtEngine()->spendResource();
+    NodeManager::currentResourceManager()->spendResource();
     Assert(d_cnfStream != NULL,
            "Forgot to set cnfStream for decision engine?");
     Assert(d_satSolver != NULL,

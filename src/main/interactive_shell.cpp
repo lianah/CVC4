@@ -341,8 +341,8 @@ restart:
     //
     //delete cmd_seq;
     //cmd_seq = new CommandSequence();
-  } catch (UnsafeInterrupt& e) {
-    d_out << "PARSING_TIMEOUT\n" << endl; 
+  } catch (UnsafeInterruptException& e) {
+    d_out << "INTERRUPTED (solver/assertions reset).\n";
   }
 
   return cmd_seq;

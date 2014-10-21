@@ -35,8 +35,8 @@
 #include "util/result.h"
 #include "util/sexpr.h"
 #include "util/hash.h"
+#include "util/unsafe_interrupt_exception.h"
 #include "util/statistics.h"
-#include "util/resource_manager.h"
 #include "theory/logic_info.h"
 
 // In terms of abstraction, this is below (and provides services to)
@@ -63,8 +63,6 @@ class Model;
 class LogicRequest;
 class StatisticsRegistry;
 
-class ResourceManager;  
-  
 namespace context {
   class Context;
   class UserContext;
@@ -272,7 +270,7 @@ class CVC4_PUBLIC SmtEngine {
    * into booleans, etc.
    */
   Node postprocess(TNode n, TypeNode expectedType) const;
-  // void checkForNewOptions();
+
   /**
    * This is something of an "init" procedure, but is idempotent; call
    * as often as you like.  Should be called whenever the final options
@@ -360,11 +358,6 @@ class CVC4_PUBLIC SmtEngine {
 
   smt::SmtEngineStatistics* d_stats;
 
-  /** 
-   * Manager for limiting time and abstract resource usage. 
-   */
-  ResourceManager* d_resourceManager;
-  
   /**
    * Add to Model command.  This is used for recording a command
    * that should be reported during a get-model call.
@@ -376,7 +369,7 @@ class CVC4_PUBLIC SmtEngine {
    * or INVALID query).  Only permitted if CVC4 was built with model
    * support and produce-models is on.
    */
-  Model* getModel() throw(ModalException, UnsafeInterrupt);
+  Model* getModel() throw(ModalException, UnsafeInterruptException);
 
   // disallow copy/assignment
   SmtEngine(const SmtEngine&) CVC4_UNDEFINED;
@@ -456,7 +449,7 @@ public:
    * takes a Boolean flag to determine whether to include this asserted
    * formula in an unsat core (if one is later requested).
    */
-  Result assertFormula(const Expr& e, bool inUnsatCore = true) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
+  Result assertFormula(const Expr& e, bool inUnsatCore = true) throw(TypeCheckingException, LogicException, UnsafeInterruptException);
 
   /**
    * Check validity of an expression with respect to the current set
@@ -480,20 +473,20 @@ public:
    * @todo (design) is this meant to give an equivalent or an
    * equisatisfiable formula?
    */
-  Expr simplify(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
+  Expr simplify(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterruptException);
 
   /**
    * Expand the definitions in a term or formula.  No other
    * simplification or normalization is done.
    */
-  Expr expandDefinitions(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterrupt);
+  Expr expandDefinitions(const Expr& e) throw(TypeCheckingException, LogicException, UnsafeInterruptException);
 
   /**
    * Get the assigned value of an expr (only if immediately preceded
    * by a SAT or INVALID query).  Only permitted if the SmtEngine is
    * set to operate interactively and produce-models is on.
    */
-  Expr getValue(const Expr& e) const throw(ModalException, TypeCheckingException, LogicException, UnsafeInterrupt);
+  Expr getValue(const Expr& e) const throw(ModalException, TypeCheckingException, LogicException, UnsafeInterruptException);
 
   /**
    * Add a function to the set of expressions whose value is to be
@@ -511,14 +504,14 @@ public:
    * INVALID query).  Only permitted if the SmtEngine is set to
    * operate interactively and produce-assignments is on.
    */
-  CVC4::SExpr getAssignment() throw(ModalException, UnsafeInterrupt);
+  CVC4::SExpr getAssignment() throw(ModalException, UnsafeInterruptException);
 
   /**
    * Get the last proof (only if immediately preceded by an UNSAT
    * or VALID query).  Only permitted if CVC4 was built with proof
    * support and produce-proofs is on.
    */
-  Proof* getProof() throw(ModalException, UnsafeInterrupt);
+  Proof* getProof() throw(ModalException, UnsafeInterruptException);
 
   /**
    * Print all instantiations made by the quantifiers module.
@@ -530,7 +523,7 @@ public:
    * UNSAT or VALID query).  Only permitted if CVC4 was built with
    * unsat-core support and produce-unsat-cores is on.
    */
-  UnsatCore getUnsatCore() throw(ModalException, UnsafeInterrupt);
+  UnsatCore getUnsatCore() throw(ModalException, UnsafeInterruptException);
 
   /**
    * Get the current set of assertions.  Only permitted if the
@@ -541,12 +534,12 @@ public:
   /**
    * Push a user-level context.
    */
-  void push() throw(ModalException, LogicException, UnsafeInterrupt);
+  void push() throw(ModalException, LogicException, UnsafeInterruptException);
 
   /**
    * Pop a user-level context.  Throws an exception if nothing to pop.
    */
-  void pop() throw(ModalException, UnsafeInterrupt);
+  void pop() throw(ModalException, UnsafeInterruptException);
 
   /**
    * Completely reset the state of the solver, as though destroyed and
@@ -660,12 +653,6 @@ public:
    */
   unsigned long getTimeRemaining() const throw(ModalException);
 
-  /**
-   * Spend a resource
-   */  
-  void spendResource(bool unsafe = true) throw(UnsafeInterrupt);
-
-  ResourceManager* getResourceManager() { return d_resourceManager; }
   /**
    * Permit access to the underlying ExprManager.
    */

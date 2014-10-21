@@ -54,7 +54,7 @@ public:
   typedef context::CDInsertHashMap<Node, SatLiteral, NodeHashFunction> NodeToLiteralMap;
 
 protected:
-  
+
   /** The SAT solver we will be using */
   SatSolver *d_satSolver;
 
@@ -76,7 +76,7 @@ protected:
 
   /** 
    * Counter for resource limiting that is used to spend a resource 
-   * every 1000 calls to convertAndAssert.
+   * every ResourceManager::resourceCounter calls to convertAndAssert.
    */
   unsigned long d_convertAndAssertCounter;
   

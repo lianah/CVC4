@@ -19,6 +19,7 @@
 #include "theory/rewriter.h"
 #include "theory/rewriter_tables.h"
 #include "smt/smt_engine_scope.h"
+#include "util/resource_manager.h"
 
 using namespace std;
 
@@ -79,12 +80,12 @@ struct RewriteStackElement {
   }
 };
 
-Node Rewriter::rewrite(TNode node) throw (UnsafeInterrupt){
+Node Rewriter::rewrite(TNode node) throw (UnsafeInterruptException){
   return rewriteTo(theoryOf(node), node);
 }
 
 Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
-  
+
 #ifdef CVC4_ASSERTIONS
   bool isEquality = node.getKind() == kind::EQUAL;
 
@@ -105,17 +106,16 @@ Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
   vector<RewriteStackElement> rewriteStack;
   rewriteStack.push_back(RewriteStackElement(node, theoryId));
 
-  
-  SmtEngine* sm = NULL;
+  ResourceManager* rm = NULL;
   bool hasSmtEngine = smt::smtEngineInScope();
   if (hasSmtEngine) {
-    sm = smt::currentSmtEngine();
+    rm = NodeManager::currentResourceManager();
   }
   // Rewrite until the stack is empty
   for (;;){
     
-    if (d_iterationCount % 1000 == 0 && hasSmtEngine) {
-      sm->spendResource();
+    if (d_iterationCount % ResourceManager::getFrequencyCount() == 0 && hasSmtEngine) {
+      rm->spendResource();
       d_iterationCount = 0;
     }
 
@@ -254,7 +254,7 @@ void Rewriter::clearCaches() {
     s_rewriteStack = NULL;
   }
 #endif
-  Rewriter::garbageCollect();
+  Rewriter::clearCachesInternal();
 }
 
 }/* CVC4::theory namespace */

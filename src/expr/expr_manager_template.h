@@ -122,9 +122,6 @@ public:
 
   /** Get this node manager's options */
   const Options& getOptions() const;
-  
-  /** Enable/disable resource limiting */
-  void enableResourceLimit(bool on);
 
   /** Get the type for booleans */
   BooleanType booleanType() const;

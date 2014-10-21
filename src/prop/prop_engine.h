@@ -24,7 +24,7 @@
 #include "expr/node.h"
 #include "options/options.h"
 #include "util/result.h"
-#include "util/resource_manager.h"
+#include "util/unsafe_interrupt_exception.h"
 #include "smt/modal_exception.h"
 #include "proof/proof_manager.h"
 #include <sys/time.h>
@@ -165,10 +165,8 @@ public:
   /**
    * Checks the current context for satisfiability.
    *
-   * @param on input, resource the number of resource units permitted
-   * for this call (0==off);
    */
-  Result checkSat(unsigned long resource);
+  Result checkSat();
 
   /**
    * Get the value of a boolean variable.
@@ -226,24 +224,13 @@ public:
    */
   void interrupt() throw(ModalException);
 
-  /**
-   * "Spend" units "resources."  If the sum of these externally-counted
-   * resources and SAT-internal resources exceed the current limit,
-   * SAT should terminate. Returns any new sat resources spent since
-   * the last call.
-   * 
-   * @param units units spend
-   * 
-   * @return sat resources spend
-   */
-  //  unsigned long updateAndGetSatResource(unsigned long units) throw();
   /** 
-   * Informs the ResourceManager that a resource has been spend and
-   * terminates if out of resources.
+   * Informs the ResourceManager that a resource has been spend. If out of resources
+   * can throw an UnsafeInterruptException exception. 
    * 
    * @param units 
    */
-  void spendResource(bool unsafe = true) throw (UnsafeInterrupt);
+  void spendResource(bool unsafe = true) throw (UnsafeInterruptException);
   /**
    * For debugging.  Return true if "expl" is a well-formed
    * explanation for "node," meaning:

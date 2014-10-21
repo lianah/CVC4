@@ -30,6 +30,7 @@
 #include "expr/kind.h"
 #include "expr/type.h"
 #include "util/output.h"
+#include "util/resource_manager.h"
 #include "options/options.h"
 
 using namespace std;
@@ -373,9 +374,7 @@ void Parser::checkDeclaration(const std::string& varName,
                               DeclarationCheck check,
                               SymbolType type,
                               std::string notes)
-    throw(ParserException, UnsafeInterrupt) {
-  // Exception hits C code in the parser and then terminates goto termEx
-  //d_resourceManager->spendResource();
+    throw(ParserException) {
   if(!d_checksEnabled) {
     return;
   }
@@ -449,9 +448,8 @@ void Parser::preemptCommand(Command* cmd) {
   d_commandQueue.push_back(cmd);
 }
 
-Command* Parser::nextCommand() throw(ParserException, UnsafeInterrupt) {
+Command* Parser::nextCommand() throw(ParserException, UnsafeInterruptException) {
   Debug("parser") << "nextCommand()" << std::endl;
-
   Command* cmd = NULL;
   if(!d_commandQueue.empty()) {
     cmd = d_commandQueue.front();
@@ -479,11 +477,10 @@ Command* Parser::nextCommand() throw(ParserException, UnsafeInterrupt) {
     // loop of resourcing out
     d_resourceManager->spendResource();
   }
-
   return cmd;
 }
 
-Expr Parser::nextExpression() throw(ParserException, UnsafeInterrupt) {
+Expr Parser::nextExpression() throw(ParserException, UnsafeInterruptException) {
   Debug("parser") << "nextExpression()" << std::endl;
   d_resourceManager->spendResource();
   Expr result;

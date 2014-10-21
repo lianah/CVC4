@@ -19,7 +19,7 @@
 #pragma once
 
 #include "expr/node.h"
-#include "util/resource_manager.h"
+#include "util/unsafe_interrupt_exception.h"
 
 //#include "expr/attribute.h"
 
@@ -102,19 +102,18 @@ class Rewriter {
    * Should be called to clean up any state.
    */
   static void shutdown();
-
+  static void clearCachesInternal();
 public:
 
   /**
    * Rewrites the node using theoryOf() to determine which rewriter to
    * use on the node.
    */
-  static Node rewrite(TNode node) throw (UnsafeInterrupt);
+  static Node rewrite(TNode node) throw (UnsafeInterruptException);
 
   /**
    * Garbage collects the rewrite caches.
    */
-  static void garbageCollect();
   static void clearCaches();
 };/* class Rewriter */
 

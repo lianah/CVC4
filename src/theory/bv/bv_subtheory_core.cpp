@@ -168,7 +168,7 @@ bool CoreSolver::check(Theory::Effort e) {
   Trace("bitvector::core") << "CoreSolver::check \n";
 
   d_bv->spendResource();
-  
+ 
   d_checkCalled = true; 
   Assert (!d_bv->inConflict());
   ++(d_statistics.d_numCallstoCheck);

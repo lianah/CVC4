@@ -41,7 +41,7 @@ inline SmtEngine* currentSmtEngine() {
 inline bool smtEngineInScope() {
   return s_smtEngine_current != NULL;
 }
-  
+
 inline ProofManager* currentProofManager() {
 #ifdef CVC4_PROOF
   Assert(options::proof() || options::unsatCores());

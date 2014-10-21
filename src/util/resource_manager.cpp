@@ -99,9 +99,11 @@ bool Timer::expired() const {
   return false;
 }
 
+const unsigned long ResourceManager::s_resourceCount = 1000;
 
 ResourceManager::ResourceManager()
-  : d_timer()
+  : d_cumulativeTimer()
+  , d_perCallTimer()
   , d_timeBudgetCumulative(0)
   , d_timeBudgetPerCall(0)
   , d_resourceBudgetCumulative(0)
@@ -134,11 +136,13 @@ void ResourceManager::setTimeLimit(unsigned long millis, bool cumulative) {
   if(cumulative) {
     Trace("limit") << "ResourceManager: setting cumulative time limit to " << millis << " ms" << endl;
     d_timeBudgetCumulative = (millis == 0) ? 0 : (d_cumulativeTimeUsed + millis);
+    d_cumulativeTimer.set(millis, !d_cpuTime);
   } else {
     Trace("limit") << "ResourceManager: setting per-call time limit to " << millis << " ms" << endl;
     d_timeBudgetPerCall = millis;
+    // perCall timer will be set in beginCall
   }
-  d_timer.set(millis, !d_cpuTime);
+
 }
 
 unsigned long ResourceManager::getResourceUsage() const {
@@ -146,6 +150,9 @@ unsigned long ResourceManager::getResourceUsage() const {
 }
 
 unsigned long ResourceManager::getTimeUsage() const {
+  if (d_timeBudgetCumulative) {
+    return d_cumulativeTimer.elapsed();
+  }
   return d_cumulativeTimeUsed;
 }
 
@@ -156,13 +163,13 @@ unsigned long ResourceManager::getResourceRemaining() const {
 }
 
 unsigned long ResourceManager::getTimeRemaining() const {
-  unsigned long time_passed = d_timer.elapsed();
+  unsigned long time_passed = d_cumulativeTimer.elapsed();
   if (time_passed >= d_thisCallTimeBudget)
     return 0;
   return d_thisCallTimeBudget - time_passed;
 }
 
-void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
+void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterruptException) {
   ++d_spendResourceCalls;
   if (!d_on) return;
 
@@ -173,14 +180,14 @@ void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
     Trace("limit") << "ResourceManager::spendResource: interrupt!" << std::endl;
 	Trace("limit") << "                 on call " << d_spendResourceCalls << std::endl;
     if (outOfTime()) {
-      Trace("limit") << "ResourceManager::spendResource: elapsed time" << d_timer.elapsed() << std::endl;
+      Trace("limit") << "ResourceManager::spendResource: elapsed time" << d_cumulativeTimer.elapsed() << std::endl;
     }
     
     if (smt::smtEngineInScope()) {
       theory::Rewriter::clearCaches();
     }
     if (d_isHardLimit) {
-      throw UnsafeInterrupt();
+      throw UnsafeInterruptException();
     }
 
     // interrupt it next time resources are checked
@@ -191,6 +198,8 @@ void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterrupt) {
 }
 
 void ResourceManager::beginCall() {
+  
+  d_perCallTimer.set(d_timeBudgetPerCall, !d_cpuTime);
   d_thisCallResourceUsed = 0;
   if (!d_on) return;
   
@@ -202,12 +211,12 @@ void ResourceManager::beginCall() {
 
     if (d_timeBudgetCumulative) {
 
-      AlwaysAssert(d_timer.on());
+      AlwaysAssert(d_cumulativeTimer.on());
       // timer was on since the option was set
-      d_cumulativeTimeUsed = d_timer.elapsed();
+      d_cumulativeTimeUsed = d_cumulativeTimer.elapsed();
       d_thisCallTimeBudget = d_timeBudgetCumulative <= d_cumulativeTimeUsed? 0 :
                              d_timeBudgetCumulative - d_cumulativeTimeUsed;
-      d_timer.set(d_thisCallTimeBudget, d_cpuTime);
+      d_cumulativeTimer.set(d_thisCallTimeBudget, d_cpuTime);
     }
     // we are out of resources so we shouldn't update the
     // budget for this call to the per call budget
@@ -228,11 +237,11 @@ void ResourceManager::beginCall() {
   }
 }
 
-// void ResourceManager::endCall() {
-//   // unsigned long usedInCall = d_timer.elapsed();
-//   // d_cumulativeTimeUsed += usedInCall;
-//   // d_timer.set(0, d_cpuTime);
-// }
+void ResourceManager::endCall() {
+  unsigned long usedInCall = d_perCallTimer.elapsed();
+  d_perCallTimer.set(0);
+  d_cumulativeTimeUsed += usedInCall;
+}
 
 bool ResourceManager::cummulativeLimitOn() const {
   return d_timeBudgetCumulative || d_resourceBudgetCumulative;
@@ -256,7 +265,7 @@ bool ResourceManager::outOfTime() const {
       d_timeBudgetCumulative == 0)
     return false;
   
-  return d_timer.expired();
+  return d_cumulativeTimer.expired() || d_perCallTimer.expired();
 }
 
 void ResourceManager::useCPUTime(bool cpu) {

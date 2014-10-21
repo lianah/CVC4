@@ -50,6 +50,9 @@ private:
     void spendResource(bool unsafe = true) {
       d_notify->spendResource(unsafe);
     }
+    void safePoint() {
+      d_notify->safePoint();
+    }
   };
 
   BVMinisat::SimpSolver* d_minisat;

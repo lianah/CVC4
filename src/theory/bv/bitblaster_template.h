@@ -28,7 +28,7 @@
 #include "prop/sat_solver.h"
 #include "theory/valuation.h"
 #include "theory/theory_registrar.h"
-#include "smt/smt_engine_scope.h"
+#include "util/resource_manager.h"
 
 class Abc_Obj_t_;
 typedef Abc_Obj_t_ Abc_Obj_t;
@@ -136,6 +136,7 @@ class TLazyBitblaster :  public TBitblaster<Node> {
     bool notify(prop::SatLiteral lit);
     void notify(prop::SatClause& clause);
     void spendResource(bool unsafe = true);
+    void safePoint();
   };
   
   TheoryBV *d_bv;
@@ -239,8 +240,9 @@ public:
   bool notify(prop::SatLiteral lit) { return true; }
   void notify(prop::SatClause& clause) { }
   void spendResource(bool unsafe = true) {
-    smt::currentSmtEngine()->spendResource(unsafe);
+    NodeManager::currentResourceManager()->spendResource(unsafe);
   }
+  void safePoint() {}
 };
 
 

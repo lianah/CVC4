@@ -667,10 +667,12 @@ void TseitinCnfStream::convertAndAssert(TNode node, bool removable, bool negated
 void TseitinCnfStream::convertAndAssert(TNode node, bool negated) {
   Debug("cnf") << "convertAndAssert(" << node << ", negated = " << (negated ? "true" : "false") << ")" << endl;
   
-  if (d_convertAndAssertCounter % 1000 == 0) {
-    smt::currentSmtEngine()->spendResource();
+  if (d_convertAndAssertCounter % ResourceManager::getFrequencyCount() == 0) {
+    NodeManager::currentResourceManager()->spendResource();
     d_convertAndAssertCounter = 0;
   }
+  ++d_convertAndAssertCounter;
+
   switch(node.getKind()) {
   case AND:
     convertAndAssertAnd(node, negated);

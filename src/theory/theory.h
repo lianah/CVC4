@@ -479,7 +479,7 @@ public:
   }
 
   /**
-   * Finish theory initialization.  At this pointg, options and the logic
+   * Finish theory initialization.  At this point, options and the logic
    * setting are final, and the master equality engine and quantifiers
    * engine (if any) are initialized.  This base class implementation
    * does nothing.
