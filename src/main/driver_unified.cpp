@@ -334,7 +334,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
       bool interrupted = false;
       while (status || opts[options::continuedExecution]) {
         if (interrupted) {
-          *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
+          *opts[options::out] << CommandInterrupted();
           break;
         }
 
@@ -455,7 +455,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
       bool interrupted = false;
       while(status || opts[options::continuedExecution]) {
         if (interrupted) {
-          *opts[options::out] << "INTERRUPTED (solver/assertions reset).\n";
+          *opts[options::out] << CommandInterrupted();
           pExecutor->reset();
           break;
         }
@@ -464,7 +464,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
           if (cmd == NULL) break;
         } catch (UnsafeInterruptException& e) {
           interrupted = true;
-          break;
+          continue;
         }
 
         status = pExecutor->doCommand(cmd);
