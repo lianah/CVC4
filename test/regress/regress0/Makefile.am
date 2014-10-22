@@ -165,7 +165,8 @@ BUG_TESTS = \
 	bug576a.smt2 \
 	bug578.smt2 \
 	bug585.cvc \
-	bug586.cvc
+	bug586.cvc \
+	bug590.smt2
 
 TESTS = $(SMT_TESTS) $(SMT2_TESTS) $(CVC_TESTS) $(TPTP_TESTS) $(BUG_TESTS)
 
@@ -176,7 +177,8 @@ DISABLED_TESTS = \
 
 EXTRA_DIST = $(TESTS) \
 	simplification_bug4.smt2.expect \
-	bug216.smt2.expect
+	bug216.smt2.expect \
+	bug590.smt2.expect
 
 if CVC4_BUILD_PROFILE_COMPETITION
 else

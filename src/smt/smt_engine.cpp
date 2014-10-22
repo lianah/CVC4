@@ -1336,6 +1336,13 @@ void SmtEngine::setDefaults() {
       options::conjectureFilterModel.set( false );
     }
   }
+  if( options::conjectureGenPerRound.wasSetByUser() ){
+    if( options::conjectureGenPerRound()>0 ){
+      options::conjectureGen.set( true );
+    }else{
+      options::conjectureGen.set( false );
+    }
+  }
 
   //until bugs 371,431 are fixed
   if( ! options::minisatUseElim.wasSetByUser()){

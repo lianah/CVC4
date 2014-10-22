@@ -260,7 +260,7 @@ public:
       }
     }else if( n1!=n2 ){
       if( n1.isConst() && n2.isConst() ){
-        return true;        
+        return true;
       }else{
         Node eq = NodeManager::currentNM()->mkNode( n1.getType().isBoolean() ? kind::IFF : kind::EQUAL, n1, n2 );
         rew.push_back( eq );
@@ -269,7 +269,7 @@ public:
     return false;
   }
   /** get instantiate cons */
-  static Node getInstCons( Node n, const Datatype& dt, int index, bool mkVar = false ) {
+  static Node getInstCons( Node n, const Datatype& dt, int index ) {
     Type tspec;
     if( dt.isParametric() ){
       tspec = dt[index].getSpecializedConstructorType(n.getType().toType());
@@ -278,13 +278,6 @@ public:
     children.push_back( Node::fromExpr( dt[index].getConstructor() ) );
     for( int i=0; i<(int)dt[index].getNumArgs(); i++ ){
       Node nc = NodeManager::currentNM()->mkNode( kind::APPLY_SELECTOR_TOTAL, Node::fromExpr( dt[index][i].getSelector() ), n );
-      if( mkVar ){
-        TypeNode tn = nc.getType();
-        if( dt.isParametric() ){
-          tn = TypeNode::fromType( tspec )[i];
-        }
-        nc = NodeManager::currentNM()->mkSkolem( "m", tn, "created for inst cons" );
-      }
       children.push_back( nc );
     }
     Node n_ic = NodeManager::currentNM()->mkNode( kind::APPLY_CONSTRUCTOR, children );
@@ -318,6 +311,29 @@ public:
       }
     }
     return false;
+  }
+  static Node mkTester( Node n, int i, const Datatype& dt ){
+    //Node ret = n.eqNode( DatatypesRewriter::getInstCons( n, dt, i ) );
+    //Assert( isTester( ret )==i );
+    Node ret = NodeManager::currentNM()->mkNode( kind::APPLY_TESTER, Node::fromExpr( dt[i].getTester() ), n );
+    return ret;
+  }
+  static bool isNullaryApplyConstructor( Node n ){
+    Assert( n.getKind()==kind::APPLY_CONSTRUCTOR );
+    for( unsigned i=0; i<n.getNumChildren(); i++ ){
+      if( n[i].getType().isDatatype() ){
+        return false;
+      }
+    }
+    return true;
+  }
+  static bool isNullaryConstructor( const DatatypeConstructor& c ){
+    for( unsigned j=0; j<c.getNumArgs(); j++ ){
+      if( c[j].getType().getRangeType().isDatatype() ){
+        return false;
+      }
+    }
+    return true;
   }
 
   /** is this term a datatype */
