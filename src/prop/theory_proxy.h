@@ -111,7 +111,7 @@ public:
 
   void logDecision(SatLiteral lit);
 
-  void spendResource(bool unsafe = true);
+  void spendResource();
 
   bool isDecisionEngineDone();
 

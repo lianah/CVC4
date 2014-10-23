@@ -236,7 +236,7 @@ RewriteResponse TheoryBVRewriter::RewriteOr(TNode node, bool prerewrite){
   resultNode = LinearRewriteStrategy
     < RewriteRule<FlattenAssocCommutNoDuplicates>,
       RewriteRule<OrSimplify>
-       >::apply(node);
+      >::apply(node);
 
   if (!prerewrite) {
     resultNode = LinearRewriteStrategy

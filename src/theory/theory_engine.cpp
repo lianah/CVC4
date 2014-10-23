@@ -1754,6 +1754,6 @@ std::pair<bool, Node> TheoryEngine::entailmentCheck(theory::TheoryOfMode mode, T
   return th->entailmentCheck(lit, params, seffects);
 }
 
-void TheoryEngine::spendResource(bool unsafe) {
-  d_resourceManager->spendResource(unsafe);
+void TheoryEngine::spendResource() {
+  d_resourceManager->spendResource();
 }

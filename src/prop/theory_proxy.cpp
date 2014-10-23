@@ -179,8 +179,8 @@ void TheoryProxy::logDecision(SatLiteral lit) {
 #endif /* CVC4_REPLAY */
 }
 
-void TheoryProxy::spendResource(bool unsafe) {
-  d_theoryEngine->spendResource(unsafe);
+void TheoryProxy::spendResource() {
+  d_theoryEngine->spendResource();
 }
 
 bool TheoryProxy::isDecisionRelevant(SatVariable var) {

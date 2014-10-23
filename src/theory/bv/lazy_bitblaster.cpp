@@ -353,8 +353,8 @@ void TLazyBitblaster::MinisatNotify::notify(prop::SatClause& clause) {
   }
 }
 
-void TLazyBitblaster::MinisatNotify::spendResource(bool unsafe) {
-  d_bv->spendResource(unsafe);
+void TLazyBitblaster::MinisatNotify::spendResource() {
+  d_bv->spendResource();
 }
 
 void TLazyBitblaster::MinisatNotify::safePoint() {

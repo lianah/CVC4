@@ -52,7 +52,7 @@ public:
    */
   virtual void notify(vec<Lit>& learnt) = 0;
 
-  virtual void spendResource(bool unsafe = true)  = 0;
+  virtual void spendResource()  = 0;
   virtual void safePoint() = 0;
 };
 
@@ -80,8 +80,7 @@ public:
     virtual ~Solver();
 
     void setNotify(Notify* toNotify) { notify = toNotify; }
-  //    unsigned long updateAndGetSatResource(unsigned long units);
-  
+
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
@@ -182,8 +181,8 @@ public:
 
     // Statistics: (read-only member variable)
     //
-  uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
-  uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
+    uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
+    uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
     // Bitvector Propagations
     //
@@ -273,9 +272,6 @@ protected:
     //
     int64_t             conflict_budget;    // -1 means no budget.
     int64_t             propagation_budget; // -1 means no budget.
-    int64_t             conflicts_reported;    // conflicts already reported to resource manager
-    int64_t             propagations_reported; // propagations already reported to resource manager
-
     bool                asynch_interrupt;
 
     // Main internal methods:
@@ -424,8 +420,6 @@ inline bool     Solver::withinBudget() const {
     return !asynch_interrupt &&
            (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
            (propagation_budget < 0 || propagations < (uint64_t)propagation_budget); }
-
-  
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or

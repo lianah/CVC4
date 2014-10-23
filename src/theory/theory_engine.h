@@ -278,7 +278,7 @@ class TheoryEngine {
     }
 
     void safePoint() throw(theory::Interrupted, AssertionException) {
-      spendResource(true);
+      spendResource();
       if (d_engine->d_interrupted) {
         throw theory::Interrupted();
       }
@@ -342,8 +342,8 @@ class TheoryEngine {
       d_engine->setIncomplete(d_theory);
     }
 
-    void spendResource(bool unsafe = true) throw(UnsafeInterruptException) {
-      d_engine->spendResource(unsafe);
+    void spendResource() throw(UnsafeInterruptException) {
+      d_engine->spendResource();
     }
 
     void handleUserAttribute( const char* attr, theory::Theory* t ){
@@ -483,7 +483,7 @@ public:
   /**
    * "Spend" a resource during a search or preprocessing.
    */
-  void spendResource(bool unsafe = true);
+  void spendResource();
 
   /**
    * Adds a theory. Only one theory per TheoryId can be present, so if

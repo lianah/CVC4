@@ -114,7 +114,8 @@ Node Rewriter::rewriteTo(theory::TheoryId theoryId, Node node) {
   // Rewrite until the stack is empty
   for (;;){
     
-    if (d_iterationCount % ResourceManager::getFrequencyCount() == 0 && hasSmtEngine) {
+    if (hasSmtEngine && 
+		d_iterationCount % ResourceManager::getFrequencyCount() == 0) {
       rm->spendResource();
       d_iterationCount = 0;
     }

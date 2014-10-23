@@ -1266,7 +1266,6 @@ static void toStream(std::ostream& out, const CommandUnsupported* s, bool cvc3Mo
 static void toStream(std::ostream& out, const CommandInterrupted* s, bool cvc3Mode) throw() {
   out << "INTERRUPTED" << endl;
 }
-
   
 static void toStream(std::ostream& out, const CommandFailure* s, bool cvc3Mode) throw() {
   out << s->getMessage() << endl;

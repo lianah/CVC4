@@ -230,9 +230,6 @@ class CVC4_PUBLIC SmtEngine {
   bool d_earlyTheoryPP;
 
 
-  /** Flag indicating that the SmtEngine was interrupted and left in an unsafe state*/
-  bool d_unsafeState;
-  
   /**
    * Most recent result of last checkSat/query or (set-info :status).
    */

@@ -47,8 +47,8 @@ private:
       d_notify->notify(satClause);
     }
 
-    void spendResource(bool unsafe = true) {
-      d_notify->spendResource(unsafe);
+    void spendResource() {
+      d_notify->spendResource();
     }
     void safePoint() {
       d_notify->safePoint();

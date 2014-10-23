@@ -122,7 +122,7 @@ namespace CVC4 {
     unsigned long getTimeRemaining() const;
 
     unsigned long getResourceBudgetForThisCall() { return d_thisCallResourceBudget; }
-    void spendResource(bool unsafe = true) throw(UnsafeInterruptException) ;
+    void spendResource() throw(UnsafeInterruptException) ;
 
     void setHardLimit(bool value);
     void setResourceLimit(unsigned long units, bool cumulative = false);

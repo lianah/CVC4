@@ -212,7 +212,7 @@ public:
    * long-running operations, they cannot rely on resource() to break
    * out of infinite or intractable computations.
    */
-  virtual void spendResource(bool unsafe = true) throw(UnsafeInterruptException) {}
+  virtual void spendResource() throw(UnsafeInterruptException) {}
 
   /**
    * Handle user attribute.

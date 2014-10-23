@@ -414,7 +414,6 @@ int runCvc4(int argc, char* argv[], Options& opts) {
             allCommands.back().push_back(copy);
           }
           status = pExecutor->doCommand(cmd);
-
           if (cmd->interrupted()) {
             interrupted = true;
             continue;

@@ -481,8 +481,8 @@ public:
   }
 
   ResourceManager* getResourceManager() { return d_resourceManager; }
-  void spendResource(bool unsafe = true) throw(UnsafeInterruptException) {
-    d_resourceManager->spendResource(unsafe);
+  void spendResource() throw(UnsafeInterruptException) {
+    d_resourceManager->spendResource();
   }
 
   void nmNotifyNewSort(TypeNode tn, uint32_t flags) {
@@ -700,7 +700,6 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_stats(NULL) {
 
   SmtScope smts(this);
-
   d_smtAttributes = new expr::attr::SmtAttributes(d_context);
   d_private = new smt::SmtEnginePrivate(*this);
   d_statisticsRegistry = new StatisticsRegistry();
@@ -1608,7 +1607,6 @@ void SmtEngine::defineFunction(Expr func,
 
 Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashFunction>& cache, bool expandOnly)
   throw(TypeCheckingException, LogicException, UnsafeInterruptException) {
-
 
   stack< triple<Node, Node, bool> > worklist;
   stack<Node> result;
@@ -3031,14 +3029,16 @@ void SmtEnginePrivate::processAssertions() {
     }
   } else {
     // Apply the substitutions we already have, and normalize
-    Chat() << "applying substitutions..." << endl;
-    Trace("simplify") << "SmtEnginePrivate::nonClausalSimplify(): "
-                      << "applying substitutions" << endl;
-    for (unsigned i = 0; i < d_assertions.size(); ++ i) {
-      Trace("simplify") << "applying to " << d_assertions[i] << endl;
-      spendResource();
-      d_assertions.replace(i, Rewriter::rewrite(d_topLevelSubstitutions.apply(d_assertions[i])));
-      Trace("simplify") << "  got " << d_assertions[i] << endl;
+    if(!options::unsatCores()) {
+      Chat() << "applying substitutions..." << endl;
+      Trace("simplify") << "SmtEnginePrivate::nonClausalSimplify(): "
+                        << "applying substitutions" << endl;
+      for (unsigned i = 0; i < d_assertions.size(); ++ i) {
+        Trace("simplify") << "applying to " << d_assertions[i] << endl;
+         spendResource();
+        d_assertions.replace(i, Rewriter::rewrite(d_topLevelSubstitutions.apply(d_assertions[i])));
+        Trace("simplify") << "  got " << d_assertions[i] << endl;
+      }
     }
   }
 
@@ -3563,16 +3563,15 @@ Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicExcep
   if(Dump.isOn("benchmark")) {
     Dump("benchmark") << SimplifyCommand(ex);
   }
-  
+
   Expr e = d_private->substituteAbstractValues(Node::fromExpr(ex)).toExpr();
   if( options::typeChecking() ) {
     e.getType(true); // ensure expr is type-checked at this point
   }
-  Node n;
-  
+
   // Make sure all preprocessing is done
   d_private->processAssertions();
-  n = d_private->simplify(Node::fromExpr(e));
+  Node n = d_private->simplify(Node::fromExpr(e));
   n = postprocess(n, TypeNode::fromType(e.getType()));
   return n.toExpr();
 }

@@ -135,7 +135,7 @@ class TLazyBitblaster :  public TBitblaster<Node> {
     {}
     bool notify(prop::SatLiteral lit);
     void notify(prop::SatClause& clause);
-    void spendResource(bool unsafe = true);
+    void spendResource();
     void safePoint();
   };
   
@@ -239,8 +239,8 @@ public:
   MinisatEmptyNotify() {}
   bool notify(prop::SatLiteral lit) { return true; }
   void notify(prop::SatClause& clause) { }
-  void spendResource(bool unsafe = true) {
-    NodeManager::currentResourceManager()->spendResource(unsafe);
+  void spendResource() {
+    NodeManager::currentResourceManager()->spendResource();
   }
   void safePoint() {}
 };

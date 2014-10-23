@@ -230,7 +230,7 @@ public:
    * 
    * @param units 
    */
-  void spendResource(bool unsafe = true) throw (UnsafeInterruptException);
+  void spendResource() throw (UnsafeInterruptException);
   /**
    * For debugging.  Return true if "expl" is a well-formed
    * explanation for "node," meaning:

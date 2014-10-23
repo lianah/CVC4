@@ -19,6 +19,7 @@
 #include "expr/variable_type_map.h"
 #include "options/options.h"
 #include "util/statistics_registry.h"
+
 #include <map>
 
 ${includes}
@@ -128,7 +129,6 @@ StatisticsRegistry* ExprManager::getStatisticsRegistry() throw() {
 const Options& ExprManager::getOptions() const {
   return d_nodeManager->getOptions();
 }
-
 
 BooleanType ExprManager::booleanType() const {
   NodeManagerScope nms(d_nodeManager);

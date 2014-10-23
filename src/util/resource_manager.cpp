@@ -169,7 +169,7 @@ unsigned long ResourceManager::getTimeRemaining() const {
   return d_thisCallTimeBudget - time_passed;
 }
 
-void ResourceManager::spendResource(bool unsafe) throw (UnsafeInterruptException) {
+void ResourceManager::spendResource() throw (UnsafeInterruptException) {
   ++d_spendResourceCalls;
   if (!d_on) return;
 

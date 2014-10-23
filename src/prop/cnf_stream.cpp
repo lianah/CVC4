@@ -31,7 +31,6 @@
 #include "proof/sat_proof.h"
 #include "prop/minisat/minisat.h"
 #include "smt/smt_engine_scope.h"
-
 #include <queue>
 
 using namespace std;
