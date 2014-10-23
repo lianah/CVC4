@@ -342,7 +342,7 @@ restart:
     //delete cmd_seq;
     //cmd_seq = new CommandSequence();
   } catch (UnsafeInterruptException& e) {
-    d_out << "INTERRUPTED (solver/assertions reset).\n";
+    d_out << CommandInterrupted();
   }
 
   return cmd_seq;

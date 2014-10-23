@@ -345,7 +345,7 @@ void TheoryEngine::dumpAssertions(const char* tag) {
  * @param effort the effort level to use
  */
 void TheoryEngine::check(Theory::Effort effort) {
-  spendResource();
+  // spendResource();
 
   // Reset the interrupt flag
   d_interrupted = false;
@@ -856,7 +856,7 @@ struct preprocess_stack_element {
 Node TheoryEngine::preprocess(TNode assertion) {
 
   Trace("theory::preprocess") << "TheoryEngine::preprocess(" << assertion << ")" << endl;
-  spendResource();
+  // spendResource();
   
   // Do a topological sort of the subexpressions and substitute them
   vector<preprocess_stack_element> toVisit;
@@ -1093,7 +1093,7 @@ void TheoryEngine::assertFact(TNode literal)
 {
   Trace("theory") << "TheoryEngine::assertFact(" << literal << ")" << endl;
 
-  spendResource();
+  // spendResource();
 
   // If we're in conflict, nothing to do
   if (d_inConflict) {
@@ -1156,7 +1156,7 @@ bool TheoryEngine::propagate(TNode literal, theory::TheoryId theory) {
 
   Debug("theory::propagate") << "TheoryEngine::propagate(" << literal << ", " << theory << ")" << endl;
 
-  spendResource();
+  // spendResource();
 
   if(Dump.isOn("t-propagations")) {
     Dump("t-propagations") << CommentCommand("negation of theory propagation: expect valid")
@@ -1379,7 +1379,7 @@ void TheoryEngine::ensureLemmaAtoms(const std::vector<TNode>& atoms, theory::The
 
 theory::LemmaStatus TheoryEngine::lemma(TNode node, bool negated, bool removable, bool preprocess, theory::TheoryId atomsTo) {
   // For resource-limiting (also does a time check).
-  spendResource();
+  // spendResource();
 
   // Do we need to check atoms
   if (atomsTo != theory::THEORY_LAST) {
