@@ -171,7 +171,7 @@ InteractiveShell::~InteractiveShell() {
 #endif /* HAVE_LIBREADLINE */
 }
 
-Command* InteractiveShell::readCommand() {
+Command* InteractiveShell::readCommand() throw (UnsafeInterruptException) {
   char* lineBuf = NULL;
   string line = "";
 
@@ -341,8 +341,6 @@ restart:
     //
     //delete cmd_seq;
     //cmd_seq = new CommandSequence();
-  } catch (UnsafeInterruptException& e) {
-    d_out << CommandInterrupted();
   }
 
   return cmd_seq;

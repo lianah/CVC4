@@ -296,8 +296,21 @@ int runCvc4(int argc, char* argv[], Options& opts) {
         // have the replay parser use the declarations input interactively
         replayParser->useDeclarationsFrom(shell.getParser());
       }
-      while((cmd = shell.readCommand())) {
+
+      while(true) {
+        try {
+          cmd = shell.readCommand();
+        } catch(UnsafeInterruptException& e) {
+          *opts[options::out] << CommandInterrupted();
+          break;
+        }
+        if (cmd == NULL)
+          break;
         status = pExecutor->doCommand(cmd) && status;
+        if (cmd->interrupted()) {
+          delete cmd;
+          break;
+        }
         delete cmd;
       }
     } else if(opts[options::tearDownIncremental]) {
