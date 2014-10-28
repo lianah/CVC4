@@ -125,6 +125,7 @@ void ResourceManager::setResourceLimit(unsigned long units, bool cumulative) {
   if(cumulative) {
     Trace("limit") << "ResourceManager: setting cumulative resource limit to " << units << endl;
     d_resourceBudgetCumulative = (units == 0) ? 0 : (d_cumulativeResourceUsed + units);
+    d_thisCallResourceBudget = d_resourceBudgetCumulative;
   } else {
     Trace("limit") << "ResourceManager: setting per-call resource limit to " << units << endl;
     d_resourceBudgetPerCall = units;

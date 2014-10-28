@@ -277,7 +277,7 @@ class TheoryEngine {
     {
     }
 
-    void safePoint() throw(theory::Interrupted, AssertionException) {
+      void safePoint() throw(theory::Interrupted, UnsafeInterruptException, AssertionException) {
       spendResource();
       if (d_engine->d_interrupted) {
         throw theory::Interrupted();

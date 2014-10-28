@@ -85,7 +85,7 @@ public:
    * With safePoint(), the theory signals that it is at a safe point
    * and can be interrupted.
    */
-  virtual void safePoint() throw(Interrupted, AssertionException) {
+  virtual void safePoint() throw(Interrupted, UnsafeInterruptException, AssertionException) {
   }
 
   /**
