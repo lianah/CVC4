@@ -472,7 +472,8 @@ Command* Parser::nextCommand() throw(ParserException, UnsafeInterruptException) 
   }
   Debug("parser") << "nextCommand() => " << cmd << std::endl;
   if (cmd != NULL &&
-      dynamic_cast<SetOptionCommand*>(cmd) == NULL) {
+      dynamic_cast<SetOptionCommand*>(cmd) == NULL &&
+      dynamic_cast<QuitCommand*>(cmd) == NULL) {
     // don't count set-option commands as to not get stuck in an infinite
     // loop of resourcing out
     d_resourceManager->spendResource();

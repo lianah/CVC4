@@ -388,6 +388,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
               delete cmd;
             }
           }
+          if (interrupted) continue;
           *opts[options::out] << CommandSuccess();
         } else if(dynamic_cast<CheckSatCommand*>(cmd) != NULL ||
                   dynamic_cast<QueryCommand*>(cmd) != NULL) {
@@ -420,9 +421,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
              dynamic_cast<GetValueCommand*>(cmd) == NULL &&
              dynamic_cast<GetModelCommand*>(cmd) == NULL &&
              dynamic_cast<GetAssignmentCommand*>(cmd) == NULL &&
-             dynamic_cast<GetInstantiationsCommand*>(cmd) == NULL &&
-             // should only be time limit option command?
-             dynamic_cast<SetOptionCommand*>(cmd) == NULL) {
+             dynamic_cast<GetInstantiationsCommand*>(cmd) == NULL) {
             Command* copy = cmd->clone();
             allCommands.back().push_back(copy);
           }
