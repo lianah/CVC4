@@ -1000,6 +1000,19 @@ Node TermDb::getRewriteRule( Node q ) {
   }
 }
 
+bool TermDb::isFunDef( Node q ) {
+  if( q.getKind()==FORALL && ( q[1].getKind()==EQUAL || q[1].getKind()==IFF ) && q[1][0].getKind()==APPLY_UF ){
+    for( unsigned i=0; i<q[2].getNumChildren(); i++ ){
+      if( q[2][i].getKind()==INST_ATTRIBUTE ){
+        if( q[2][i][0].getAttribute(FunDefAttribute()) ){
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 
 void TermDb::computeAttributes( Node q ) {
   if( q.getNumChildren()==3 ){
@@ -1014,6 +1027,10 @@ void TermDb::computeAttributes( Node q ) {
         if( avar.getAttribute(ConjectureAttribute()) ){
           Trace("quant-attr") << "Attribute : conjecture : " << q << std::endl;
           d_qattr_conjecture[q] = true;
+        }
+        if( avar.getAttribute(FunDefAttribute()) ){
+          Trace("quant-attr") << "Attribute : function definition : " << q << std::endl;
+          d_qattr_fundef[q] = true;
         }
         if( avar.getAttribute(SygusAttribute()) ){
           //should be nested existential
@@ -1068,6 +1085,15 @@ bool TermDb::isQAttrConjecture( Node q ) {
 bool TermDb::isQAttrAxiom( Node q ) {
   std::map< Node, bool >::iterator it = d_qattr_axiom.find( q );
   if( it==d_qattr_axiom.end() ){
+    return false;
+  }else{
+    return it->second;
+  }
+}
+
+bool TermDb::isQAttrFunDef( Node q ) {
+  std::map< Node, bool >::iterator it = d_qattr_fundef.find( q );
+  if( it==d_qattr_fundef.end() ){
     return false;
   }else{
     return it->second;

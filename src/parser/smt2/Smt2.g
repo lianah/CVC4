@@ -133,7 +133,7 @@ using namespace CVC4::parser;
 #define MK_CONST EXPR_MANAGER->mkConst
 #define UNSUPPORTED PARSER_STATE->unimplementedFeature
 
-static bool isClosed(Expr e, std::set<Expr>& free, std::hash_set<Expr, ExprHashFunction>& closedCache) {
+static bool isClosed(const Expr& e, std::set<Expr>& free, std::hash_set<Expr, ExprHashFunction>& closedCache) {
   if(closedCache.find(e) != closedCache.end()) {
     return true;
   }
@@ -163,7 +163,7 @@ static bool isClosed(Expr e, std::set<Expr>& free, std::hash_set<Expr, ExprHashF
   }
 }
 
-static inline bool isClosed(Expr e, std::set<Expr>& free) {
+static inline bool isClosed(const Expr& e, std::set<Expr>& free) {
   std::hash_set<Expr, ExprHashFunction> cache;
   return isClosed(e, free, cache);
 }
@@ -224,7 +224,6 @@ command returns [CVC4::Command* cmd = NULL]
   std::vector<Expr> terms;
   std::vector<Type> sorts;
   std::vector<std::pair<std::string, Type> > sortedVarNames;
-  SExpr sexpr;
 }
   : /* set the logic */
     SET_LOGIC_TOK symbol[name,CHECK_NONE,SYM_SORT]
@@ -234,20 +233,13 @@ command returns [CVC4::Command* cmd = NULL]
       }
       PARSER_STATE->setLogic(name);
       $cmd = new SetBenchmarkLogicCommand(name); }
-  | SET_INFO_TOK KEYWORD symbolicExpr[sexpr]
-    { name = AntlrInput::tokenText($KEYWORD);
-      if(name == ":cvc4-logic" || name == ":cvc4_logic") {
-        PARSER_STATE->setLogic(sexpr.getValue());
-      }
-      PARSER_STATE->setInfo(name.c_str() + 1, sexpr);
-      cmd = new SetInfoCommand(name.c_str() + 1, sexpr); }
+  | /* set-info */
+    SET_INFO_TOK metaInfoInternal[cmd]
   | /* get-info */
     GET_INFO_TOK KEYWORD
     { cmd = new GetInfoCommand(AntlrInput::tokenText($KEYWORD).c_str() + 1); }
   | /* set-option */
-    SET_OPTION_TOK keyword[name] symbolicExpr[sexpr]
-    { PARSER_STATE->setOption(name.c_str() + 1, sexpr);
-      cmd = new SetOptionCommand(name.c_str() + 1, sexpr); }
+    SET_OPTION_TOK setOptionInternal[cmd]
   | /* get-option */
     GET_OPTION_TOK KEYWORD
     { cmd = new GetOptionCommand(AntlrInput::tokenText($KEYWORD).c_str() + 1); }
@@ -443,8 +435,17 @@ command returns [CVC4::Command* cmd = NULL]
           cmd = new PopCommand();
         }
       } )
+
+    /* exit */
   | EXIT_TOK
     { cmd = new QuitCommand(); }
+
+    /* New SMT-LIB 2.5 command set */
+  | smt25Command[cmd]
+    { if(PARSER_STATE->v2_0() && PARSER_STATE->strictModeEnabled()) {
+        PARSER_STATE->parseError("SMT-LIB 2.5 commands are not permitted while operating in strict compliance mode and in SMT-LIB 2.0 mode.");
+      }
+    }
 
     /* CVC4-extended SMT-LIB commands */
   | extendedCommand[cmd]
@@ -464,12 +465,138 @@ command returns [CVC4::Command* cmd = NULL]
     }
   ;
 
+// Separate this into its own rule (can be invoked by set-info or meta-info)
+metaInfoInternal[CVC4::Command*& cmd]
+@declarations {
+  std::string name;
+  SExpr sexpr;
+}
+  : KEYWORD symbolicExpr[sexpr]
+    { name = AntlrInput::tokenText($KEYWORD);
+      if(name == ":cvc4-logic" || name == ":cvc4_logic") {
+        PARSER_STATE->setLogic(sexpr.getValue());
+      } else if(name == ":smt-lib-version") {
+        // if we don't recognize the revision name, just keep the current mode
+        if( (sexpr.isRational() && sexpr.getRationalValue() == Rational(2)) ||
+            sexpr.getValue() == "2" ||
+            sexpr.getValue() == "2.0" ) {
+          PARSER_STATE->setLanguage(language::input::LANG_SMTLIB_V2_0);
+        } else if( (sexpr.isRational() && sexpr.getRationalValue() == Rational(5, 2)) ||
+                   sexpr.getValue() == "2.5" ) {
+          PARSER_STATE->setLanguage(language::input::LANG_SMTLIB_V2_5);
+        }
+      }
+      PARSER_STATE->setInfo(name.c_str() + 1, sexpr);
+      cmd = new SetInfoCommand(name.c_str() + 1, sexpr);
+    }
+  ;
+
+setOptionInternal[CVC4::Command*& cmd]
+@init {
+  std::string name;
+  SExpr sexpr;
+}
+  : keyword[name] symbolicExpr[sexpr]
+    { PARSER_STATE->setOption(name.c_str() + 1, sexpr);
+      cmd = new SetOptionCommand(name.c_str() + 1, sexpr);
+      // Ugly that this changes the state of the parser; but
+      // global-declarations affects parsing, so we can't hold off
+      // on this until some SmtEngine eventually (if ever) executes it.
+      if(name == ":global-declarations") {
+        PARSER_STATE->setGlobalDeclarations(sexpr.getValue() == "true");
+      }
+    }
+  ;
+
+smt25Command[CVC4::Command*& cmd]
+@declarations {
+  std::string name;
+  Expr expr, expr2;
+  std::vector<std::pair<std::string, Type> > sortedVarNames;
+  SExpr sexpr;
+  Type t;
+}
+    /* meta-info */
+  : META_INFO_TOK metaInfoInternal[cmd]
+
+    /* declare-const */
+  | DECLARE_CONST_TOK { PARSER_STATE->checkThatLogicIsSet(); }
+    symbol[name,CHECK_UNDECLARED,SYM_VARIABLE]
+    { PARSER_STATE->checkUserSymbol(name); }
+    sortSymbol[t,CHECK_DECLARED]
+    { Expr c = PARSER_STATE->mkVar(name, t);
+      $cmd = new DeclareFunctionCommand(name, c, t); }
+
+    /* get model */
+  | GET_MODEL_TOK { PARSER_STATE->checkThatLogicIsSet(); }
+    { cmd = new GetModelCommand(); }
+
+    /* echo */
+  | ECHO_TOK
+    ( simpleSymbolicExpr[sexpr]
+      { std::stringstream ss;
+        ss << sexpr;
+        cmd = new EchoCommand(ss.str());
+      }
+    | { cmd = new EchoCommand(); }
+    )
+
+    /* reset: reset everything, returning solver to initial state.
+     * Logic and options must be set again. */
+  | RESET_TOK
+    { cmd = new ResetCommand();
+      PARSER_STATE->reset();
+    }
+    /* reset-assertions: reset assertions, assertion stack, declarations,
+     * etc., but the logic and options remain as they were. */
+  | RESET_ASSERTIONS_TOK
+    { cmd = new ResetAssertionsCommand();
+      PARSER_STATE->resetAssertions();
+    }
+
+  | /* recursive function definition */
+    DEFINE_FUN_REC_TOK { PARSER_STATE->checkThatLogicIsSet(); } LPAREN_TOK
+    { PARSER_STATE->pushScope(true); }
+    ( LPAREN_TOK symbol[name,CHECK_UNDECLARED,SYM_VARIABLE]
+      { PARSER_STATE->checkUserSymbol(name); }
+      LPAREN_TOK sortedVarList[sortedVarNames] RPAREN_TOK
+      sortSymbol[t,CHECK_DECLARED]
+      { /* add variables to parser state before parsing term */
+        Debug("parser") << "define fun rec: '" << name << "'" << std::endl;
+          if( sortedVarNames.size() > 0 ) {
+          std::vector<CVC4::Type> sorts;
+          sorts.reserve(sortedVarNames.size());
+          for(std::vector<std::pair<std::string, CVC4::Type> >::const_iterator i =
+                sortedVarNames.begin(), iend = sortedVarNames.end();
+              i != iend;
+              ++i) {
+            sorts.push_back((*i).second);
+          }
+          t = EXPR_MANAGER->mkFunctionType(sorts, t);
+        }
+        PARSER_STATE->mkFunction(name, t, ExprManager::VAR_FLAG_DEFINED);
+        PARSER_STATE->pushScope(true);
+        for(std::vector<std::pair<std::string, CVC4::Type> >::const_iterator i =
+              sortedVarNames.begin(), iend = sortedVarNames.end();
+            i != iend;
+            ++i) {
+          PARSER_STATE->mkBoundVar((*i).first, (*i).second);
+        }
+      }
+      term[expr, expr2]
+      { PARSER_STATE->popScope(); }
+      RPAREN_TOK )+ RPAREN_TOK
+      { PARSER_STATE->popScope(); }
+
+  // CHECK_SAT_ASSUMING still being discussed
+  // GET_UNSAT_ASSUMPTIONS
+  ;
+
 extendedCommand[CVC4::Command*& cmd]
 @declarations {
   std::vector<CVC4::Datatype> dts;
-  Type t;
   Expr e, e2;
-  SExpr sexpr;
+  Type t;
   std::string name;
   std::vector<std::string> names;
   std::vector<Expr> terms;
@@ -480,28 +607,10 @@ extendedCommand[CVC4::Command*& cmd]
      * --smtlib2 compliance mode. */
   : DECLARE_DATATYPES_TOK datatypesDefCommand[false, cmd]
   | DECLARE_CODATATYPES_TOK datatypesDefCommand[true, cmd]
-  | /* get model */
-    GET_MODEL_TOK { PARSER_STATE->checkThatLogicIsSet(); }
-    { cmd = new GetModelCommand(); }
-  | ECHO_TOK
-    ( simpleSymbolicExpr[sexpr]
-      { std::stringstream ss;
-        ss << sexpr;
-        cmd = new EchoCommand(ss.str());
-      }
-    | { cmd = new EchoCommand(); }
-    )
   | rewriterulesCommand[cmd]
 
     /* Support some of Z3's extended SMT-LIB commands */
 
-  | DECLARE_CONST_TOK { PARSER_STATE->checkThatLogicIsSet(); }
-    symbol[name,CHECK_UNDECLARED,SYM_VARIABLE]
-    { PARSER_STATE->checkUserSymbol(name); }
-    sortSymbol[t,CHECK_DECLARED]
-    { Expr c = PARSER_STATE->mkVar(name, t);
-      $cmd = new DeclareFunctionCommand(name, c, t); }
-      
   | DECLARE_SORTS_TOK { PARSER_STATE->checkThatLogicIsSet(); }
     { if(!PARSER_STATE->isTheoryEnabled(Smt2::THEORY_UF) &&
          !PARSER_STATE->isTheoryEnabled(Smt2::THEORY_ARRAYS) &&
@@ -753,8 +862,7 @@ rewriterulesCommand[CVC4::Command*& cmd]
   ;
 
 rewritePropaKind[CVC4::Kind& kind]
-  :
-  REDUCTION_RULE_TOK    { $kind = CVC4::kind::RR_REDUCTION; }
+  : REDUCTION_RULE_TOK    { $kind = CVC4::kind::RR_REDUCTION; }
   | PROPAGATION_RULE_TOK  { $kind = CVC4::kind::RR_DEDUCTION; }
   ;
 
@@ -799,11 +907,11 @@ simpleSymbolicExprNoKeyword[CVC4::SExpr& sexpr]
 //	}
   | symbol[s,CHECK_NONE,SYM_SORT]
     { sexpr = SExpr(SExpr::Keyword(s)); }
-  | tok=(ASSERT_TOK | CHECKSAT_TOK | DECLARE_FUN_TOK | DECLARE_SORT_TOK | DEFINE_FUN_TOK | DEFINE_SORT_TOK | GET_VALUE_TOK | GET_ASSIGNMENT_TOK | GET_ASSERTIONS_TOK | GET_PROOF_TOK | GET_UNSAT_CORE_TOK | EXIT_TOK | SET_LOGIC_TOK | SET_INFO_TOK | GET_INFO_TOK | SET_OPTION_TOK | GET_OPTION_TOK | PUSH_TOK | POP_TOK | DECLARE_DATATYPES_TOK | GET_MODEL_TOK | ECHO_TOK | REWRITE_RULE_TOK | REDUCTION_RULE_TOK | PROPAGATION_RULE_TOK | SIMPLIFY_TOK)
+  | tok=(ASSERT_TOK | CHECKSAT_TOK | DECLARE_FUN_TOK | DECLARE_SORT_TOK | DEFINE_FUN_TOK | DEFINE_FUN_REC_TOK | DEFINE_SORT_TOK | GET_VALUE_TOK | GET_ASSIGNMENT_TOK | GET_ASSERTIONS_TOK | GET_PROOF_TOK | GET_UNSAT_CORE_TOK | EXIT_TOK | RESET_TOK | RESET_ASSERTIONS_TOK | SET_LOGIC_TOK | SET_INFO_TOK | GET_INFO_TOK | SET_OPTION_TOK | GET_OPTION_TOK | PUSH_TOK | POP_TOK | DECLARE_DATATYPES_TOK | GET_MODEL_TOK | ECHO_TOK | REWRITE_RULE_TOK | REDUCTION_RULE_TOK | PROPAGATION_RULE_TOK | SIMPLIFY_TOK)
     { sexpr = SExpr(SExpr::Keyword(AntlrInput::tokenText($tok))); }
   | builtinOp[k]
     { std::stringstream ss;
-      ss << Expr::setlanguage(CVC4::language::output::LANG_SMTLIB_V2) << EXPR_MANAGER->mkConst(k);
+      ss << Expr::setlanguage(CVC4::language::output::LANG_SMTLIB_V2_5) << EXPR_MANAGER->mkConst(k);
       sexpr = SExpr(ss.str());
     }
   ;
@@ -840,7 +948,6 @@ term[CVC4::Expr& expr, CVC4::Expr& expr2]
   Expr op;
   std::string name;
   std::vector<Expr> args;
-  SExpr sexpr;
   std::vector< std::pair<std::string, Type> > sortedVarNames;
   Expr f, f2;
   std::string attr;
@@ -1191,21 +1298,49 @@ attribute[CVC4::Expr& expr,CVC4::Expr& retExpr, std::string& attr]
         PARSER_STATE->warning(ss.str());
       }
       // do nothing
-    } else if(attr==":axiom" || attr==":conjecture" || attr==":sygus" || attr==":synthesis") {
+    } else if(attr==":axiom" || attr==":conjecture" || attr==":fun-def" || attr==":sygus" || attr==":synthesis") {
       if(hasValue) {
         std::stringstream ss;
         ss << "warning: Attribute " << attr << " does not take a value (ignoring)";
         PARSER_STATE->warning(ss.str());
       }
-      std::string attr_name = attr;
-      attr_name.erase( attr_name.begin() );
-      //will set the attribute on auxiliary var (preserves attribute on formula through rewriting)
-      Type t = EXPR_MANAGER->booleanType();
-      Expr avar = PARSER_STATE->mkVar(attr_name, t);
-      retExpr = MK_EXPR(kind::INST_ATTRIBUTE, avar);
-      Command* c = new SetUserAttributeCommand( attr_name, avar );
-      c->setMuted(true);
-      PARSER_STATE->preemptCommand(c);
+      bool success = true;
+      if( attr==":fun-def" ){
+        if( ( expr.getKind()!=kind::EQUAL && expr.getKind()!=kind::IFF ) || expr[0].getKind()!=kind::APPLY_UF ){
+          success = false;
+        }else{
+          FunctionType t = (FunctionType)expr[0].getOperator().getType();
+          for( unsigned i=0; i<expr[0].getNumChildren(); i++ ){
+            if( expr[0][i].getKind()!=kind::BOUND_VARIABLE || expr[0][i].getType()!=t.getArgTypes()[i] ){
+              success = false;
+              break;
+            }else{
+              for( unsigned j=0; j<i; j++ ){
+                if( expr[0][j]==expr[0][i] ){
+                  success = false;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if( !success ){
+          std::stringstream ss;
+          ss << "warning: Function definition should be an equality whose LHS is an uninterpreted function applied to unique variables.";
+          PARSER_STATE->warning(ss.str());
+        }
+      }
+      if( success ){
+        std::string attr_name = attr;
+        attr_name.erase( attr_name.begin() );
+        //will set the attribute on auxiliary var (preserves attribute on formula through rewriting)
+        Type t = EXPR_MANAGER->booleanType();
+        Expr avar = PARSER_STATE->mkVar(attr_name, t);
+        retExpr = MK_EXPR(kind::INST_ATTRIBUTE, avar);
+        Command* c = new SetUserAttributeCommand( attr_name, avar );
+        c->setMuted(true);
+        PARSER_STATE->preemptCommand(c);
+      }
     } else {
       PARSER_STATE->attributeNotSupported(attr);
     }
@@ -1328,15 +1463,15 @@ termList[std::vector<CVC4::Expr>& formulas, CVC4::Expr& expr]
  * Matches a string, and strips off the quotes.
  */
 str[std::string& s, bool fsmtlib]
-  : STRING_LITERAL
-    { s = AntlrInput::tokenText($STRING_LITERAL);
+  : STRING_LITERAL_2_0
+    { s = AntlrInput::tokenText($STRING_LITERAL_2_0);
       /* strip off the quotes */
       s = s.substr(1, s.size() - 2);
-	  for(size_t i=0; i<s.size(); i++) {
-		if((unsigned)s[i] > 127) {
-			PARSER_STATE->parseError("Extended characters are not part of SMT-LIB, and they must be encoded as esacped sequences");
-		}
-	  }
+      for(size_t i=0; i<s.size(); i++) {
+        if((unsigned)s[i] > 127) {
+          PARSER_STATE->parseError("Extended characters are not part of SMT-LIB, and they must be encoded as esacped sequences");
+        }
+      }
       if(fsmtlib) {
         /* handle SMT-LIB standard escapes '\\' and '\"' */
         char* p_orig = strdup(s.c_str());
@@ -1359,6 +1494,29 @@ str[std::string& s, bool fsmtlib]
         s = p_orig;
         free(p_orig);
       }
+    }
+  | STRING_LITERAL_2_5
+    { s = AntlrInput::tokenText($STRING_LITERAL_2_5);
+      /* strip off the quotes */
+      s = s.substr(1, s.size() - 2);
+      for(size_t i=0; i<s.size(); i++) {
+        if((unsigned)s[i] > 127) {
+          PARSER_STATE->parseError("Extended characters are not part of SMT-LIB, and they must be encoded as esacped sequences");
+        }
+      }
+      // In the 2.5 version, always handle escapes (regardless of fsmtlib flag).
+      char* p_orig = strdup(s.c_str());
+      char *p = p_orig, *q = p_orig;
+      while(*q != '\0') {
+        if(*q == '"') {
+          ++q;
+          assert(*q == '"');
+        }
+        *p++ = *q++;
+      }
+      *p = '\0';
+      s = p_orig;
+      free(p_orig);
     }
   ;
 
@@ -1718,6 +1876,7 @@ CHECKSAT_TOK : 'check-sat';
 DECLARE_FUN_TOK : 'declare-fun';
 DECLARE_SORT_TOK : 'declare-sort';
 DEFINE_FUN_TOK : 'define-fun';
+DEFINE_FUN_REC_TOK : 'define-fun-rec';
 DEFINE_SORT_TOK : 'define-sort';
 GET_VALUE_TOK : 'get-value';
 GET_ASSIGNMENT_TOK : 'get-assignment';
@@ -1725,6 +1884,8 @@ GET_ASSERTIONS_TOK : 'get-assertions';
 GET_PROOF_TOK : 'get-proof';
 GET_UNSAT_CORE_TOK : 'get-unsat-core';
 EXIT_TOK : 'exit';
+RESET_TOK : 'reset';
+RESET_ASSERTIONS_TOK : 'reset-assertions';
 ITE_TOK : 'ite';
 LET_TOK : 'let';
 ATTRIBUTE_TOK : '!';
@@ -1733,6 +1894,7 @@ RPAREN_TOK : ')';
 INDEX_TOK : '_';
 SET_LOGIC_TOK : 'set-logic';
 SET_INFO_TOK : 'set-info';
+META_INFO_TOK : 'meta-info';
 GET_INFO_TOK : 'get-info';
 SET_OPTION_TOK : 'set-option';
 GET_OPTION_TOK : 'get-option';
@@ -1960,14 +2122,28 @@ BINARY_LITERAL
   ;
 
 /**
- * Matches a double quoted string literal.  Escaping is supported, and
- * escape character '\' has to be escaped.
+ * Matches a double-quoted string literal from SMT-LIB 2.0.
+ * Escaping is supported, and * escape character '\' has to be escaped.
  *
  * You shouldn't generally use this in parser rules, as the quotes
  * will be part of the token text.  Use the str[] parser rule instead.
  */
-STRING_LITERAL
-  : '"' ('\\' . | ~('\\' | '"'))* '"'
+STRING_LITERAL_2_0
+  : { PARSER_STATE->v2_0() }?=>
+    '"' ('\\' . | ~('\\' | '"'))* '"'
+  ;
+
+/**
+ * Matches a double-quoted string literal from SMT-LIB 2.5.
+ * You escape a double-quote inside the string with "", e.g.,
+ * "This is a string literal with "" a single, embedded double quote."
+ *
+ * You shouldn't generally use this in parser rules, as the quotes
+ * will be part of the token text.  Use the str[] parser rule instead.
+ */
+STRING_LITERAL_2_5
+  : { PARSER_STATE->v2_5() }?=>
+    '"' (~('"') | '""')* '"'
   ;
 
 /**

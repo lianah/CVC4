@@ -59,30 +59,42 @@ void InstStrategyUserPatterns::processResetInstantiationRound( Theory::Effort ef
 int InstStrategyUserPatterns::process( Node f, Theory::Effort effort, int e ){
   if( e==0 ){
     return STATUS_UNFINISHED;
-  }else if( e==1 ){
-    d_counter[f]++;
-      Trace("inst-alg") << "-> User-provided instantiate " << f << "..." << std::endl;
+  }else{
+    int peffort = options::userPatternsQuant()==USER_PAT_MODE_RESORT ? 2 : 1;
+    if( e<peffort ){
+      return STATUS_UNFINISHED;
+    }else if( e==peffort ){
+      d_counter[f]++;
 
-    Debug("quant-uf-strategy") << "Try user-provided patterns..." << std::endl;
-    //Notice() << "Try user-provided patterns..." << std::endl;
-    for( int i=0; i<(int)d_user_gen[f].size(); i++ ){
-      bool processTrigger = true;
-      if( processTrigger ){
-        Trace("process-trigger") << "  Process (user) ";
-        d_user_gen[f][i]->debugPrint("process-trigger");
-        Trace("process-trigger") << "..." << std::endl;
-        InstMatch baseMatch( f );
-        int numInst = d_user_gen[f][i]->addInstantiations( baseMatch );
-        Trace("process-trigger") << "  Done, numInst = " << numInst << "." << std::endl;
-        d_quantEngine->getInstantiationEngine()->d_statistics.d_instantiations_user_patterns += numInst;
-        if( d_user_gen[f][i]->isMultiTrigger() ){
-          d_quantEngine->d_statistics.d_multi_trigger_instantiations += numInst;
+      Trace("inst-alg") << "-> User-provided instantiate " << f << "..." << std::endl;
+      if( options::userPatternsQuant()==USER_PAT_MODE_RESORT  ){
+        int matchOption = 0;
+        for( unsigned i=0; i<d_user_gen_wait[f].size(); i++ ){
+          Trigger * t = Trigger::mkTrigger( d_quantEngine, f, d_user_gen_wait[f][i], matchOption, true, Trigger::TR_RETURN_NULL, options::smartTriggers() );
+          if( t ){
+            d_user_gen[f].push_back( t );
+          }
         }
-        //d_quantEngine->d_hasInstantiated[f] = true;
+        d_user_gen_wait[f].clear();
+      }
+
+      for( unsigned i=0; i<d_user_gen[f].size(); i++ ){
+        bool processTrigger = true;
+        if( processTrigger ){
+          Trace("process-trigger") << "  Process (user) ";
+          d_user_gen[f][i]->debugPrint("process-trigger");
+          Trace("process-trigger") << "..." << std::endl;
+          InstMatch baseMatch( f );
+          int numInst = d_user_gen[f][i]->addInstantiations( baseMatch );
+          Trace("process-trigger") << "  Done, numInst = " << numInst << "." << std::endl;
+          d_quantEngine->getInstantiationEngine()->d_statistics.d_instantiations_user_patterns += numInst;
+          if( d_user_gen[f][i]->isMultiTrigger() ){
+            d_quantEngine->d_statistics.d_multi_trigger_instantiations += numInst;
+          }
+          //d_quantEngine->d_hasInstantiated[f] = true;
+        }
       }
     }
-    Debug("quant-uf-strategy") << "done." << std::endl;
-    //Notice() << "done" << std::endl;
   }
   return STATUS_UNKNOWN;
 }
@@ -106,7 +118,11 @@ void InstStrategyUserPatterns::addUserPattern( Node f, Node pat ){
     d_quantEngine->getPhaseReqTerms( f, nodes );
     //check match option
     int matchOption = 0;
-    d_user_gen[f].push_back( Trigger::mkTrigger( d_quantEngine, f, nodes, matchOption, true, Trigger::TR_MAKE_NEW, options::smartTriggers() ) );
+    if( options::userPatternsQuant()==USER_PAT_MODE_RESORT ){
+      d_user_gen_wait[f].push_back( nodes );
+    }else{
+      d_user_gen[f].push_back( Trigger::mkTrigger( d_quantEngine, f, nodes, matchOption, true, Trigger::TR_MAKE_NEW, options::smartTriggers() ) );
+    }
   }
 }
 
@@ -136,11 +152,11 @@ int InstStrategyAutoGenTriggers::process( Node f, Theory::Effort effort, int e )
   if( hasUserPatterns( f ) && options::userPatternsQuant()==USER_PAT_MODE_TRUST ){
     return STATUS_UNKNOWN;
   }else{
-    int peffort = ( hasUserPatterns( f ) && options::userPatternsQuant()!=USER_PAT_MODE_IGNORE ) ? 2 : 1;
-    //int peffort = 1;
+    int peffort = ( hasUserPatterns( f ) && options::userPatternsQuant()!=USER_PAT_MODE_IGNORE && options::userPatternsQuant()!=USER_PAT_MODE_RESORT ) ? 2 : 1;
     if( e<peffort ){
       return STATUS_UNFINISHED;
     }else{
+      Trace("inst-alg") << "-> Auto-gen instantiate " << f << "..." << std::endl;
       int status = STATUS_UNKNOWN;
       bool gen = false;
       if( e==peffort ){
@@ -160,14 +176,11 @@ int InstStrategyAutoGenTriggers::process( Node f, Theory::Effort effort, int e )
           Trace("no-trigger") << "Could not find trigger for " << f << std::endl;
         }
       }
-      Trace("inst-alg") << "-> Auto-gen instantiate " << f << "..." << std::endl;
 
       //if( e==4 ){
       //  d_processed_trigger.clear();
       //  d_quantEngine->getEqualityQuery()->setLiberal( true );
       //}
-      Debug("quant-uf-strategy")  << "Try auto-generated triggers... " << d_tr_strategy << " " << e << std::endl;
-      //Notice() << "Try auto-generated triggers..." << std::endl;
       for( std::map< Trigger*, bool >::iterator itt = d_auto_gen_trigger[f].begin(); itt != d_auto_gen_trigger[f].end(); ++itt ){
         Trigger* tr = itt->first;
         if( tr ){
@@ -195,8 +208,6 @@ int InstStrategyAutoGenTriggers::process( Node f, Theory::Effort effort, int e )
       //if( e==4 ){
       //  d_quantEngine->getEqualityQuery()->setLiberal( false );
       //}
-      Debug("quant-uf-strategy") << "done." << std::endl;
-      //Notice() << "done" << std::endl;
       return status;
     }
   }
@@ -209,7 +220,14 @@ void InstStrategyAutoGenTriggers::generateTriggers( Node f, Theory::Effort effor
     d_patTerms[0][f].clear();
     d_patTerms[1][f].clear();
     std::vector< Node > patTermsF;
-    Trigger::collectPatTerms( d_quantEngine, f, d_quantEngine->getTermDatabase()->getInstConstantBody( f ), patTermsF, d_tr_strategy, d_user_no_gen[f], true );
+    if( d_quantEngine->getTermDatabase()->isQAttrFunDef( f ) && options::quantFunWellDefined() ){
+      Node bd = d_quantEngine->getTermDatabase()->getInstConstantBody( f );
+      Assert( bd.getKind()==EQUAL || bd.getKind()==IFF );
+      Assert( bd[0].getKind()==APPLY_UF );
+      patTermsF.push_back( bd[0] );
+    }else{
+      Trigger::collectPatTerms( d_quantEngine, f, d_quantEngine->getTermDatabase()->getInstConstantBody( f ), patTermsF, d_tr_strategy, d_user_no_gen[f], true );
+    }
     Trace("auto-gen-trigger") << "Collected pat terms for " << d_quantEngine->getTermDatabase()->getInstConstantBody( f ) << ", no-patterns : " << d_user_no_gen[f].size() << std::endl;
     Trace("auto-gen-trigger") << "   ";
     for( int i=0; i<(int)patTermsF.size(); i++ ){
@@ -281,8 +299,7 @@ void InstStrategyAutoGenTriggers::generateTriggers( Node f, Theory::Effort effor
     int matchOption = 0;
     Trigger* tr = NULL;
     if( d_is_single_trigger[ patTerms[0] ] ){
-      tr = Trigger::mkTrigger( d_quantEngine, f, patTerms[0], matchOption, false, Trigger::TR_RETURN_NULL,
-                               options::smartTriggers() );
+      tr = Trigger::mkTrigger( d_quantEngine, f, patTerms[0], matchOption, false, Trigger::TR_RETURN_NULL, options::smartTriggers() );
       d_single_trigger_gen[ patTerms[0] ] = true;
     }else{
       //only generate multi trigger if effort level > 5, or if no single triggers exist
