@@ -103,7 +103,9 @@ Node CandidateGeneratorQE::getNextCandidate(){
       Node n = d_qe->getTermDatabase()->d_op_map[d_op][d_term_iter];
       d_term_iter++;
       if( isLegalCandidate( n ) ){
-        return n;
+        if( d_qe->getTermDatabase()->hasTermCurrent( n ) ){
+          return n;
+        }
       }
     }
   }else if( d_mode==cand_term_eqc ){
@@ -125,41 +127,6 @@ Node CandidateGeneratorQE::getNextCandidate(){
   }
   return Node::null();
 }
-
-//CandidateGeneratorQEDisequal::CandidateGeneratorQEDisequal( QuantifiersEngine* qe, Node eqc ) :
-//  d_qe( qe ), d_eq_class( eqc ){
-//  d_eci = NULL;
-//}
-//void CandidateGeneratorQEDisequal::resetInstantiationRound(){
-//
-//}
-////we will iterate over all terms that are disequal from eqc
-//void CandidateGeneratorQEDisequal::reset( Node eqc ){
-//  //Assert( !eqc.isNull() );
-//  ////begin iterating over equivalence classes that are disequal from eqc
-//  //d_eci = d_ith->getEquivalenceClassInfo( eqc );
-//  //if( d_eci ){
-//  //  d_eqci_iter = d_eci->d_disequal.begin();
-//  //}
-//}
-//Node CandidateGeneratorQEDisequal::getNextCandidate(){
-//  //if( d_eci ){
-//  //  while( d_eqci_iter != d_eci->d_disequal.end() ){
-//  //    if( (*d_eqci_iter).second ){
-//  //      //we have an equivalence class that is disequal from eqc
-//  //      d_cg->reset( (*d_eqci_iter).first );
-//  //      Node n = d_cg->getNextCandidate();
-//  //      //if there is a candidate in this equivalence class, return it
-//  //      if( !n.isNull() ){
-//  //        return n;
-//  //      }
-//  //    }
-//  //    ++d_eqci_iter;
-//  //  }
-//  //}
-//  return Node::null();
-//}
-
 
 CandidateGeneratorQELitEq::CandidateGeneratorQELitEq( QuantifiersEngine* qe, Node mpat ) :
   d_match_pattern( mpat ), d_qe( qe ){

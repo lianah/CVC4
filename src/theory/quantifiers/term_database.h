@@ -140,6 +140,8 @@ public:
   std::map< Node, int > d_op_nonred_count;
   /** map from APPLY_UF operators to ground terms for that operator */
   std::map< Node, std::vector< Node > > d_op_map;
+  /** has map */
+  std::map< Node, bool > d_has_map;
   /** map from APPLY_UF functions to trie */
   std::map< Node, TermArgTrie > d_func_map_trie;
   std::map< Node, TermArgTrie > d_func_map_eqc_trie;
@@ -170,17 +172,9 @@ public:
   TNode evaluateTerm( TNode n );
   /** is entailed (incomplete check) */
   bool isEntailed( TNode n, std::map< TNode, TNode >& subs, bool subsRep, bool pol );
-public:
-  /** parent structure (for efficient E-matching):
-      n -> op -> index -> L
-      map from node "n" to a list of nodes "L", where each node n' in L
-        has operator "op", and n'["index"] = n.
-      for example, d_parents[n][f][1] = { f( t1, n ), f( t2, n ), ... }
-  */
-  /* Todo replace int by size_t */
-  std::hash_map< Node, std::hash_map< Node, std::hash_map< int, std::vector< Node >  >, NodeHashFunction  > , NodeHashFunction > d_parents;
-  const std::vector<Node> & getParents(TNode n, TNode f, int arg);
-
+  /** has term */
+  bool hasTermCurrent( Node n );
+  
 //for model basis
 private:
   //map from types to model basis terms
@@ -310,7 +304,8 @@ public:
   /** filter all nodes that have instances */
   void filterInstances( std::vector< Node >& nodes );
 
-  
+private:
+  std::map< Node, bool > d_fun_defs;
 public: //general queries concerning quantified formulas wrt modules
   /** is quantifier treated as a rewrite rule? */
   static bool isRewriteRule( Node q );

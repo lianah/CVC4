@@ -123,12 +123,14 @@ private:
     //all selectors whose argument is this eqc
     context::CDO< bool > d_selectors;
   };
-  /** does eqc of n have a label? */
+  /** does eqc of n have a label (do we know its constructor)? */
   bool hasLabel( EqcInfo* eqc, Node n );
   /** get the label associated to n */
   Node getLabel( Node n );
   /** get the index of the label associated to n */
   int getLabelIndex( EqcInfo* eqc, Node n );
+  /** does eqc of n have any testers? */
+  bool hasTester( Node n );
   /** get the possible constructors for n */
   void getPossibleCons( EqcInfo* eqc, Node n, std::vector< bool >& cons );
 private:
@@ -141,7 +143,7 @@ private:
   /** map from nodes to their instantiated equivalent for each constructor type */
   std::map< Node, std::map< int, Node > > d_inst_map;
   /** which instantiation lemmas we have sent */
-  std::map< Node, std::vector< Node > > d_inst_lemmas;
+  //std::map< Node, std::vector< Node > > d_inst_lemmas;
   /** labels for each equivalence class
    * for each eqc n, d_labels[n] is testers that hold for this equivalence class, either:
    * a list of equations of the form
@@ -155,7 +157,7 @@ private:
   /** selector apps for eqch equivalence class */
   NodeListMap d_selector_apps;
   /** constructor terms */
-  BoolMap d_consEqc;
+  //BoolMap d_consEqc;
   /** Are we in conflict */
   context::CDO<bool> d_conflict;
   /** The conflict node */
@@ -166,14 +168,14 @@ private:
   std::vector< Node > d_pending;
   std::map< Node, Node > d_pending_exp;
   std::vector< Node > d_pending_merge;
-  /** expand definition skolem functions */
-  std::map< Node, Node > d_exp_def_skolem;
   /** All the constructor terms that the theory has seen */
   context::CDList<TNode> d_consTerms;
   /** All the selector terms that the theory has seen */
   context::CDList<TNode> d_selTerms;
   /** counter for forcing assignments (ensures fairness) */
   unsigned d_dtfCounter;
+  /** expand definition skolem functions */
+  std::map< Node, Node > d_exp_def_skolem;
 private:
   /** assert fact */
   void assertFact( Node fact, Node exp );
@@ -258,7 +260,7 @@ private:
   /** collect terms */
   void collectTerms( Node n );
   /** get instantiate cons */
-  Node getInstantiateCons( Node n, const Datatype& dt, int index, bool isActive );
+  Node getInstantiateCons( Node n, const Datatype& dt, int index );
   /** process new term that was created internally */
   void processNewTerm( Node n );
   /** check instantiate */

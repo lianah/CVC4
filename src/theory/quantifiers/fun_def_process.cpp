@@ -39,6 +39,12 @@ void FunDefFmf::simplify( std::vector< Node >& assertions, bool doRewrite ) {
         Assert( n.getKind()==APPLY_UF );
         Node f = n.getOperator();
         
+        //check if already defined, if so, throw error
+        if( d_sorts.find( f )!=d_sorts.end() ){
+          Message() << "Cannot define function " << f << " more than once." << std::endl;
+          exit( 0 );
+        }
+        
         //create a sort S that represents the inputs of the function
         std::stringstream ss;
         ss << "I_" << f;
@@ -65,9 +71,10 @@ void FunDefFmf::simplify( std::vector< Node >& assertions, bool doRewrite ) {
         }
         Node bd = assertions[i][1].substitute( vars.begin(), vars.end(), subs.begin(), subs.end() );
         
-        Trace("fmf-fun-def") << "FMF fun def: rewrite " << assertions[i] << " to ";
+        Trace("fmf-fun-def") << "FMF fun def: rewrite " << assertions[i] << std::endl;
+        Trace("fmf-fun-def") << "  to " << std::endl;
         assertions[i] = NodeManager::currentNM()->mkNode( FORALL, bvl, bd );
-        Trace("fmf-fun-def") << assertions[i] << std::endl;
+        Trace("fmf-fun-def") << "  " << assertions[i] << std::endl;
         fd_assertions.push_back( i );
       }
     }
@@ -80,7 +87,9 @@ void FunDefFmf::simplify( std::vector< Node >& assertions, bool doRewrite ) {
     Assert( constraints.empty() );
     if( n!=assertions[i] ){
       n = Rewriter::rewrite( n );
-      Trace("fmf-fun-def-rewrite") << "FMF fun def : rewrite " << assertions[i] << " to " << n << std::endl;
+      Trace("fmf-fun-def-rewrite") << "FMF fun def : rewrite " << assertions[i] << std::endl;
+      Trace("fmf-fun-def-rewrite") << "  to " << std::endl;
+      Trace("fmf-fun-def-rewrite") << "  " << n << std::endl;
       assertions[i] = n;
     }
   }
@@ -133,7 +142,7 @@ Node FunDefFmf::simplify( Node n, bool pol, bool hasPol, std::vector< Node >& co
       }else{
         //must add at higher level
       }
-      return c.size()==1 ? c[0] : NodeManager::currentNM()->mkNode( AND, c );
+      return c.size()==1 ? c[0] : NodeManager::currentNM()->mkNode( pol ? AND : OR, c );
     }
   }else{
     //simplify term

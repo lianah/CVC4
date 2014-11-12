@@ -44,6 +44,8 @@ private:
     Node d_base_inst;
     /** guard split */
     Node d_guard_split;
+    /** is syntax-guided */
+    bool d_syntax_guided;
     /** list of constants for quantified formula */
     std::vector< Node > d_candidates;
     /** list of variables on inner quantification */
@@ -97,6 +99,7 @@ public:
 public:
   bool needsCheck( Theory::Effort e );
   bool needsModel( Theory::Effort e );
+  bool needsFullModel( Theory::Effort e );
   /* Call during quantifier engine's check */
   void check( Theory::Effort e, unsigned quant_e );
   /* Called for new quantifiers */

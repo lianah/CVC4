@@ -1351,7 +1351,11 @@ void SmtEngine::setDefaults() {
       options::finiteModelFind.set( true );
     }
   }
-
+  if( options::finiteModelFind() ){
+    if( !options::quantConflictFind.wasSetByUser() ){
+      options::quantConflictFind.set( false );
+    }
+  }
   //until bugs 371,431 are fixed
   if( ! options::minisatUseElim.wasSetByUser()){
     if( d_logic.isQuantified() || options::produceModels() || options::produceAssignments() || options::checkModels() ){
@@ -3766,8 +3770,8 @@ CVC4::SExpr SmtEngine::getAssignment() throw(ModalException, UnsafeInterruptExce
   vector<SExpr> sexprs;
   TypeNode boolType = d_nodeManager->booleanType();
   TheoryModel* m = d_theoryEngine->getModel();
-  for(AssignmentSet::const_iterator i = d_assignments->begin(),
-        iend = d_assignments->end();
+  for(AssignmentSet::key_iterator i = d_assignments->key_begin(),
+        iend = d_assignments->key_end();
       i != iend;
       ++i) {
     Assert((*i).getType() == boolType);
