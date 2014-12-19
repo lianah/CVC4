@@ -14,7 +14,7 @@
  ** A context-sensitive list of Commands, and their cleanup.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__SMT__COMMAND_LIST_H
 #define __CVC4__SMT__COMMAND_LIST_H

@@ -14,7 +14,7 @@
  ** Simple, commonly-used routines for Boolean simplification.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__BOOLEAN_SIMPLIFICATION_H
 #define __CVC4__BOOLEAN_SIMPLIFICATION_H

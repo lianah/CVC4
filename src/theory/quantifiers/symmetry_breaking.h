@@ -12,7 +12,7 @@
  ** \brief Pre-process step for first-order reasoning
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__QUANT_SYMMETRY_BREAKING_H
 #define __CVC4__QUANT_SYMMETRY_BREAKING_H

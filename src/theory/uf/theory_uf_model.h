@@ -12,7 +12,7 @@
  ** \brief Model for Theory UF
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY_UF_MODEL_H
 #define __CVC4__THEORY_UF_MODEL_H

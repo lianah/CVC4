@@ -26,7 +26,7 @@
 // optimized into a simple pointer copy (?)
 // TODO: double-check this.
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CONVENIENCE_NODE_BUILDERS_H
 #define __CVC4__CONVENIENCE_NODE_BUILDERS_H

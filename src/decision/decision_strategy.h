@@ -14,7 +14,7 @@
  ** Decision strategy
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__DECISION__DECISION_STRATEGY_H
 #define __CVC4__DECISION__DECISION_STRATEGY_H

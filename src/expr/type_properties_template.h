@@ -14,7 +14,7 @@
  ** Template for the Type properties header.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__TYPE_PROPERTIES_H
 #define __CVC4__TYPE_PROPERTIES_H

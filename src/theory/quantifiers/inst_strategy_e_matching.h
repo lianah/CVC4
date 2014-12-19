@@ -12,7 +12,7 @@
  ** \brief E matching instantiation strategies
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__INST_STRATEGY_E_MATCHING_H
 #define __CVC4__INST_STRATEGY_E_MATCHING_H

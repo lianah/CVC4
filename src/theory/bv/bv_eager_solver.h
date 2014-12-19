@@ -14,7 +14,7 @@
  ** Eager bit-blasting solver.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "expr/node.h"
 #include "theory/theory_model.h"
 #include "theory/bv/theory_bv.h"

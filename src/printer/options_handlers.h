@@ -14,7 +14,7 @@
  ** Custom handlers and predicates for printer options.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PRINTER__OPTIONS_HANDLERS_H
 #define __CVC4__PRINTER__OPTIONS_HANDLERS_H

@@ -14,7 +14,7 @@
  ** A dagifier for CVC4 expressions.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PRINTER__DAGIFICATION_VISITOR_H
 #define __CVC4__PRINTER__DAGIFICATION_VISITOR_H

@@ -14,7 +14,7 @@
  ** The pretty-printer interface for the SMT output language.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PRINTER__SMT1_PRINTER_H
 #define __CVC4__PRINTER__SMT1_PRINTER_H

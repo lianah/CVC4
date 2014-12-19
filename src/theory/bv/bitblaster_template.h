@@ -14,7 +14,7 @@
  ** Wrapper around the SAT solver used for bitblasting.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__BITBLASTER_TEMPLATE_H
 #define __CVC4__BITBLASTER_TEMPLATE_H

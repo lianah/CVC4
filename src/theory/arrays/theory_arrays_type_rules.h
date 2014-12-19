@@ -14,7 +14,7 @@
  ** Typing and cardinality rules for the theory of arrays.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__ARRAYS__THEORY_ARRAYS_TYPE_RULES_H
 #define __CVC4__THEORY__ARRAYS__THEORY_ARRAYS_TYPE_RULES_H

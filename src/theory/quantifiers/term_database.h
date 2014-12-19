@@ -12,7 +12,7 @@
  ** \brief term database class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__QUANTIFIERS__TERM_DATABASE_H
 #define __CVC4__THEORY__QUANTIFIERS__TERM_DATABASE_H

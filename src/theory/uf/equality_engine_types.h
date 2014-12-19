@@ -15,7 +15,7 @@
  ** \todo document this file
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #include <string>
 #include <iostream>

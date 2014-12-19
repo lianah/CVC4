@@ -22,7 +22,7 @@
  ** The derived utility classes DenseSet and DenseMultiset are also defined.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once
 

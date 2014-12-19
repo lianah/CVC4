@@ -15,7 +15,7 @@
  ** by variables.  Based on Roberto Bruttomesso's PhD thesis.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__UNCONSTRAINED_SIMPLIFIER_H
 #define __CVC4__UNCONSTRAINED_SIMPLIFIER_H

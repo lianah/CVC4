@@ -14,7 +14,7 @@
  ** Theory of strings.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__STRINGS__THEORY_STRINGS_H
 #define __CVC4__THEORY__STRINGS__THEORY_STRINGS_H

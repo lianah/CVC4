@@ -12,7 +12,7 @@
  ** \brief relevant domain class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__QUANTIFIERS__RELEVANT_DOMAIN_H
 #define __CVC4__THEORY__QUANTIFIERS__RELEVANT_DOMAIN_H

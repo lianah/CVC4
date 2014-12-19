@@ -15,7 +15,7 @@
  ** \todo document this file
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__BOOLEANS__BOOLEAN_TERM_CONVERSION_MODE_H
 #define __CVC4__THEORY__BOOLEANS__BOOLEAN_TERM_CONVERSION_MODE_H

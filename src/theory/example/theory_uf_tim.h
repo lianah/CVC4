@@ -20,7 +20,7 @@
  ** This interacts heavily with the data-structures given in ecdata.h .
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__UF__TIM__THEORY_UF_TIM_H
 #define __CVC4__THEORY__UF__TIM__THEORY_UF_TIM_H

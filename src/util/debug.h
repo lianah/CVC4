@@ -18,7 +18,7 @@
  ** util/Assert.h.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__DEBUG_H
 #define __CVC4__DEBUG_H

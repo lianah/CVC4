@@ -19,24 +19,24 @@
 #ifndef __CVC4__LIB__STRTOK_R_H
 #define __CVC4__LIB__STRTOK_R_H
 
-#ifdef HAVE_STRTOK_R
+//#ifdef HAVE_STRTOK_R
 
 // available in string.h
 #include <string.h>
 
-#else /* ! HAVE_STRTOK_R */
+// #else /* ! HAVE_STRTOK_R */
 
-#include "lib/replacements.h"
+// #include "lib/replacements.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// extern "C" {
+// #endif /* __cplusplus */
 
-char* strtok_r(char *str, const char *delim, char **saveptr);
+// char* strtok_r(char *str, const char *delim, char **saveptr);
 
-#ifdef __cplusplus
-}/* extern "C" */
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// }/* extern "C" */
+// #endif /* __cplusplus */
 
-#endif /* HAVE_STRTOK_R */
+// #endif /* HAVE_STRTOK_R */
 #endif /* __CVC4__LIB__STRTOK_R_H */

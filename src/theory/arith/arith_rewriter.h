@@ -15,7 +15,7 @@
  ** arithmetic. See theory/arith/normal_form.h for more information.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__ARITH__ARITH_REWRITER_H
 #define __CVC4__THEORY__ARITH__ARITH_REWRITER_H

@@ -16,13 +16,14 @@
 
 #include "theory/bv/bv_quick_check.h"
 #include "theory/bv/theory_bv_utils.h"
-
 #include "theory/bv/bitblaster_template.h"
 
 using namespace CVC4;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv;
 using namespace CVC4::prop;
+
+typedef std::vector<Node> Bits;
 
 BVQuickCheck::BVQuickCheck(const std::string& name, theory::bv::TheoryBV* bv)
   : d_ctx(new context::Context())
@@ -37,6 +38,42 @@ bool BVQuickCheck::inConflict() { return d_inConflict.get(); }
 uint64_t BVQuickCheck::computeAtomWeight(TNode node, NodeSet& seen) {
   return d_bitblaster->computeAtomWeight(node, seen);
 }
+
+
+void BVQuickCheck::ensureBitblasted(Node atom) {
+  d_bitblaster->bbAtom(atom);
+}
+
+bool BVQuickCheck::solveWithAssumptions(std::vector<Node>& assumptions) {
+  Node conflict; 
+  
+  for (unsigned i = 0; i < assumptions.size(); ++i) {
+    TNode a = assumptions[i];
+    Assert (a.getType().isBoolean());
+    bool ok = d_bitblaster->assertToSat(a, false);
+    if (!ok) {
+      setConflict(); 
+      return false;
+    }
+  }
+  
+  bool res = d_bitblaster->solve();
+  if (!res) {
+    setConflict();
+    return false;
+  }
+  
+  return true;
+}
+
+Node BVQuickCheck::getBit(Node term, unsigned bit) {
+  Assert (term.getType().isBitVector());
+  Assert (bit < utils::getSize(term)); 
+  Bits bits;
+  d_bitblaster->getBBTerm(term, bits);
+  return bits[bit];
+}
+
 
 void BVQuickCheck::setConflict() {
   Assert (!inConflict());

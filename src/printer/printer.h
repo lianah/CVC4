@@ -14,7 +14,7 @@
  ** Base of the pretty-printer interface.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PRINTER__PRINTER_H
 #define __CVC4__PRINTER__PRINTER_H

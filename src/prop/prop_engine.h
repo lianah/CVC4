@@ -16,7 +16,7 @@
  ** between CVC4's SMT infrastructure and the SAT solver.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PROP_ENGINE_H
 #define __CVC4__PROP_ENGINE_H

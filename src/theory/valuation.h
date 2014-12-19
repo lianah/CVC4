@@ -16,7 +16,7 @@
  ** takes a Valuation, which delegates to TheoryEngine.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__VALUATION_H
 #define __CVC4__THEORY__VALUATION_H

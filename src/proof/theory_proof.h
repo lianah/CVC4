@@ -20,7 +20,7 @@
 #ifndef __CVC4__THEORY_PROOF_H
 #define __CVC4__THEORY_PROOF_H
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "util/proof.h"
 #include "expr/expr.h"
 #include <ext/hash_set>

@@ -16,7 +16,7 @@
  ** the Node DAG and want to cache results for sub-DAGs.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CACHE_H
 #define __CVC4__CACHE_H

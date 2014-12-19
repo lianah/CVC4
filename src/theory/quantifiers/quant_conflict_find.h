@@ -12,7 +12,7 @@
  ** \brief quantifiers conflict find class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef QUANT_CONFLICT_FIND
 #define QUANT_CONFLICT_FIND

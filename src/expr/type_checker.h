@@ -14,7 +14,7 @@
  ** A type checker.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 // ordering dependence
 #include "expr/node.h"

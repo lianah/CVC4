@@ -12,7 +12,7 @@
  ** \brief Pre-process step for first-order reasoning
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__FIRST_ORDER_REASONING_H
 #define __CVC4__FIRST_ORDER_REASONING_H

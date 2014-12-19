@@ -16,7 +16,7 @@
  ** and information derived from these.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #include "expr/node.h"
 

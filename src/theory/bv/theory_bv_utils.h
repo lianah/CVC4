@@ -15,7 +15,7 @@
  ** \todo document this file
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once 
 
@@ -412,7 +412,7 @@ inline Node mkConjunction(const std::vector<TNode>& nodes) {
     TNode current = *it;
 
     if (current != mkTrue()) {
-      Assert(isBVPredicate(current));
+      //      Assert(isBVPredicate(current));
       expandedNodes.push_back(current);
     }
     ++ it;

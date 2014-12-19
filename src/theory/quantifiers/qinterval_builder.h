@@ -12,7 +12,7 @@
  ** \brief qinterval model class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef QINTERVAL_BUILDER
 #define QINTERVAL_BUILDER

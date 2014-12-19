@@ -14,7 +14,7 @@
  ** Sandboxed sat solver for bv quickchecks.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__BV_QUICK_CHECK_H
 #define __CVC4__BV_QUICK_CHECK_H
@@ -50,6 +50,11 @@ public:
   ~BVQuickCheck();
   bool inConflict();
   Node getConflict() { return d_conflict; }
+
+  void ensureBitblasted(Node atom);
+  bool solveWithAssumptions(std::vector<Node>& assumptions);
+  Node getBit(Node term, unsigned bit);
+  
   /** 
    * Checks the satisfiability for a given set of assumptions.
    * 
@@ -104,7 +109,7 @@ public:
   vars_iterator endVars(); 
 
   Node getVarValue(TNode var); 
-
+  
 };
 
 

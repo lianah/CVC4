@@ -22,7 +22,7 @@
 
 // Pass 1: label the ite as (constant) or (+ constant variable)
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__ARITH__ARITH_ITE_UTILS_H
 #define __CVC4__THEORY__ARITH__ARITH_ITE_UTILS_H

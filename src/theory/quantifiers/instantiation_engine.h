@@ -12,7 +12,7 @@
  ** \brief Instantiation Engine classes
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__QUANTIFIERS__INSTANTIATION_ENGINE_H
 #define __CVC4__THEORY__QUANTIFIERS__INSTANTIATION_ENGINE_H

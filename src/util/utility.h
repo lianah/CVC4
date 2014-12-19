@@ -14,7 +14,7 @@
  ** Some standard STL-related utility functions for CVC4.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__UTILITY_H
 #define __CVC4__UTILITY_H

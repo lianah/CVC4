@@ -17,7 +17,7 @@
 #ifndef __CVC4__BITBLAST__STRATEGIES_TEMPLATE_H
 #define __CVC4__BITBLAST__STRATEGIES_TEMPLATE_H
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "expr/node.h"
 #include "theory/bv/bitblast_utils.h"
 #include "theory/bv/theory_bv_utils.h"
@@ -361,7 +361,7 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Debug("bitvector") << "theory::bv:: DefaultMultBB bitblasting "<< node << "\n";
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
-  EncodingManager::currentEM()->registerMultiplier(node);
+  //EncodingManager::currentEM()->registerMultiplier(node);
   
   // if (node.getNumChildren() == 2) {
   //   std::vector<T> a;

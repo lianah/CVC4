@@ -14,7 +14,7 @@
  ** Algebraic solver.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__BV__BV_INEQUALITY__GRAPH_H
 #define __CVC4__THEORY__BV__BV_INEQUALITY__GRAPH_H

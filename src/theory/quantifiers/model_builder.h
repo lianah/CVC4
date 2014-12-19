@@ -12,7 +12,7 @@
  ** \brief Model Builder class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__QUANTIFIERS__MODEL_BUILDER_H
 #define __CVC4__THEORY__QUANTIFIERS__MODEL_BUILDER_H

@@ -19,57 +19,57 @@
 #ifndef __CVC4__LIB__CLOCK_GETTIME_H
 #define __CVC4__LIB__CLOCK_GETTIME_H
 
-#include "lib/replacements.h"
+//#include "lib/replacements.h"
 
-#ifdef HAVE_CLOCK_GETTIME
+//#ifdef HAVE_CLOCK_GETTIME
 
 /* it should be available from <time.h> */
 #include <time.h>
 
-#else /* HAVE_CLOCK_GETTIME */
+// #else /* HAVE_CLOCK_GETTIME */
 
-/* otherwise, we have to define it */
+// /* otherwise, we have to define it */
 
-#if defined(__WIN32__) && !defined(_W64)
+// #if defined(__WIN32__) && !defined(_W64)
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// extern "C" {
+// #endif /* __cplusplus */
 
-struct timespec {
-  uint64_t tv_sec;
-  int32_t tv_nsec;
-};/* struct timespec */
+// struct timespec {
+//   uint64_t tv_sec;
+//   int32_t tv_nsec;
+// };/* struct timespec */
 
-#ifdef __cplusplus
-}/* extern "C" */
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// }/* extern "C" */
+// #endif /* __cplusplus */
 
-#else /* !__WIN32__ || _W64 */
+// #else /* !__WIN32__ || _W64 */
 
-/* get timespec from <time.h> */
-#include <time.h>
+// /* get timespec from <time.h> */
+// #include <time.h>
 
-#endif /* __WIN32__ && !_W64 */
+// #endif /* __WIN32__ && !_W64 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// extern "C" {
+// #endif /* __cplusplus */
 
-struct timespec;
+// struct timespec;
 
-typedef enum {
-  CLOCK_REALTIME,
-  CLOCK_MONOTONIC,
-  CLOCK_REALTIME_HR,
-  CLOCK_MONOTONIC_HR
-} clockid_t;
+// typedef enum {
+//   CLOCK_REALTIME,
+//   CLOCK_MONOTONIC,
+//   CLOCK_REALTIME_HR,
+//   CLOCK_MONOTONIC_HR
+// } clockid_t;
 
-long clock_gettime(clockid_t which_clock, struct timespec* tp);
+// long clock_gettime(clockid_t which_clock, struct timespec* tp);
 
-#ifdef __cplusplus
-}/* extern "C" */
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// }/* extern "C" */
+// #endif /* __cplusplus */
 
-#endif /* HAVE_CLOCK_GETTIME */
+// #endif /* HAVE_CLOCK_GETTIME */
 #endif /*__CVC4__LIB__CLOCK_GETTIME_H */

@@ -48,7 +48,7 @@
  **   These are theory valid and are currently turned into lemmas
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once
 

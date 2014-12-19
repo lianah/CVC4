@@ -15,7 +15,7 @@
  ** a CDVector<>.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CONTEXT__STACKING_VECTOR_H
 #define __CVC4__CONTEXT__STACKING_VECTOR_H

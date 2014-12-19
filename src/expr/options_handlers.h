@@ -14,7 +14,7 @@
  ** Custom handlers and predicates for expression package options.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__EXPR__OPTIONS_HANDLERS_H
 #define __CVC4__EXPR__OPTIONS_HANDLERS_H

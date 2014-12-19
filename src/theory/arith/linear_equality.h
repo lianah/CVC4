@@ -25,7 +25,7 @@
  **/
 
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once
 

@@ -24,7 +24,7 @@
  ** proper management of CVC4 components.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__INTERRUPTED_H
 #define __CVC4__THEORY__INTERRUPTED_H

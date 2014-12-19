@@ -14,7 +14,7 @@
  ** Preprocessing pass that lifts bit-vectors of size 1 to booleans. 
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "theory/bv/theory_bv_utils.h"
 #include "util/statistics_registry.h"
 

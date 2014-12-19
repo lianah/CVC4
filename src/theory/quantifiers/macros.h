@@ -12,7 +12,7 @@
  ** \brief Pre-process step for detecting quantifier macro definitions
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__QUANTIFIERS_MACROS_H
 #define __CVC4__QUANTIFIERS_MACROS_H

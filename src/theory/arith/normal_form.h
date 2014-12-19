@@ -15,7 +15,7 @@
  ** \todo document this file
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__ARITH__NORMAL_FORM_H
 #define __CVC4__THEORY__ARITH__NORMAL_FORM_H
@@ -29,9 +29,9 @@
 #include <list>
 #include <algorithm>
 
-#if IS_SORTED_IN_GNUCXX_NAMESPACE
+//#if IS_SORTED_IN_GNUCXX_NAMESPACE
 #  include <ext/algorithm>
-#endif /* IS_SORTED_IN_GNUCXX_NAMESPACE */
+//#endif /* IS_SORTED_IN_GNUCXX_NAMESPACE */
 
 namespace CVC4 {
 namespace theory {
@@ -735,11 +735,11 @@ public:
   }
 
   static bool isSorted(const std::vector<Monomial>& m) {
-#if IS_SORTED_IN_GNUCXX_NAMESPACE
+    //#if IS_SORTED_IN_GNUCXX_NAMESPACE
     return __gnu_cxx::is_sorted(m.begin(), m.end());
-#else /* IS_SORTED_IN_GNUCXX_NAMESPACE */
-    return std::is_sorted(m.begin(), m.end());
-#endif /* IS_SORTED_IN_GNUCXX_NAMESPACE */
+// #else /* IS_SORTED_IN_GNUCXX_NAMESPACE */
+     return std::is_sorted(m.begin(), m.end());
+// #endif /* IS_SORTED_IN_GNUCXX_NAMESPACE */
   }
 
   static bool isStrictlySorted(const std::vector<Monomial>& m) {

@@ -31,7 +31,7 @@
  **/
 
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #include "context/context.h"
 #include "context/cdinsert_hashmap_forward.h"

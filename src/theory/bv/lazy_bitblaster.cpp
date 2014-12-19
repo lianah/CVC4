@@ -59,9 +59,9 @@ TLazyBitblaster::TLazyBitblaster(context::Context* c, bv::TheoryBV* bv, const st
 
   d_satSolver->setNotify(notify);
 
-  EncodingManager::currentEM()->setCnfStream(d_cnfStream);
-  EncodingManager::currentEM()->setSatSolver(d_satSolver);
-  EncodingManager::currentEM()->setBitblaster(this);
+  // EncodingManager::currentEM()->setCnfStream(d_cnfStream);
+  // EncodingManager::currentEM()->setSatSolver(d_satSolver);
+  // EncodingManager::currentEM()->setBitblaster(this);
 }
 
 void TLazyBitblaster::setAbstraction(AbstractionModule* abs) {
@@ -119,6 +119,7 @@ void TLazyBitblaster::bbAtom(TNode node) {
     }
     Assert (!atom_bb.isNull()); 
     Node atom_definition = utils::mkNode(kind::IFF, node, atom_bb);
+
     storeBBAtom(node, atom_bb);
     d_cnfStream->convertAndAssert(atom_definition, false, false, RULE_INVALID, TNode::null());
     return; 
@@ -126,7 +127,6 @@ void TLazyBitblaster::bbAtom(TNode node) {
 
   // the bitblasted definition of the atom
   Node normalized = Rewriter::rewrite(node);
-
   // Node atom_bb = normalized.getKind() != kind::CONST_BOOLEAN ?
   //   Rewriter::rewrite(d_atomBBStrategies[normalized.getKind()](normalized, this)) :
   //   normalized;
@@ -142,6 +142,7 @@ void TLazyBitblaster::bbAtom(TNode node) {
 }
 
 void TLazyBitblaster::storeBBAtom(TNode atom, Node atom_bb) {
+  EncodingManager::currentEM()->registerAtom(atom, atom_bb);
   // no need to store the definition for the lazy bit-blaster
   d_bbAtoms.insert(atom); 
 }
@@ -238,7 +239,7 @@ bool TLazyBitblaster::assertToSat(TNode lit, bool propagate) {
     atom = lit;
   }
 
-  Assert (hasBBAtom(atom));
+  //  Assert (hasBBAtom(atom));
 
   prop::SatLiteral markerLit = d_cnfStream->getLiteral(atom);
 

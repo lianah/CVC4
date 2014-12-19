@@ -21,7 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SimpSolver_h
 #define Minisat_SimpSolver_h
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #include "prop/minisat/mtl/Queue.h"
 #include "prop/minisat/core/Solver.h"

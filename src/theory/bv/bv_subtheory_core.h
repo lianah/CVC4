@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "theory/bv/bv_subtheory.h"
 #include "context/cdhashmap.h"
 #include "context/cdhashset.h"

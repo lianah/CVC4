@@ -15,7 +15,7 @@
  ** to the list; on backtrack, the list is simply shortened.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CONTEXT__CDLIST_H
 #define __CVC4__CONTEXT__CDLIST_H

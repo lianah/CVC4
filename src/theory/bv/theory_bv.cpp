@@ -362,7 +362,7 @@ void TheoryBV::check(Effort e)
   // we may be getting new assertions so the model cache may not be sound
   d_invalidateModelCache.set(true);
   if (Theory::fullEffort(e)) {
-    EncodingManager::currentEM()->finalizeEncoding();
+    //EncodingManager::currentEM()->finalizeEncoding();
   }
   // if we are using the eager solver
   if (options::bitblastMode() == theory::bv::BITBLAST_MODE_EAGER) {

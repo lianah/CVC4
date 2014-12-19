@@ -14,7 +14,7 @@
  ** A non-clausal circuit propagator for Boolean simplification.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__BOOLEANS__CIRCUIT_PROPAGATOR_H
 #define __CVC4__THEORY__BOOLEANS__CIRCUIT_PROPAGATOR_H

@@ -12,7 +12,7 @@
  ** \brief Model extended classes
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__FIRST_ORDER_MODEL_H
 #define __CVC4__FIRST_ORDER_MODEL_H

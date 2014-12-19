@@ -17,7 +17,7 @@
 #ifndef __CVC4__THEORY__BV__BV_SUBTHEORY_H
 #define __CVC4__THEORY__BV__BV_SUBTHEORY_H
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "context/context.h"
 #include "context/cdqueue.h"
 #include "theory/uf/equality_engine.h"

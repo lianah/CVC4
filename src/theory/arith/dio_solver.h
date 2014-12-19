@@ -14,7 +14,7 @@
  ** A Diophantine equation solver for the theory of arithmetic.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__ARITH__DIO_SOLVER_H
 #define __CVC4__THEORY__ARITH__DIO_SOLVER_H

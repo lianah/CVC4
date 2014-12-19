@@ -18,7 +18,7 @@
  ** reference count on NodeValue instances and
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 // circular dependency
 #include "expr/metakind.h"

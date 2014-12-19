@@ -20,7 +20,7 @@
  ** internals such as the representation and translation of [??? -Chris]
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__PROP__CNF_STREAM_H
 #define __CVC4__PROP__CNF_STREAM_H

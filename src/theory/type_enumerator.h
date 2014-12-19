@@ -14,7 +14,7 @@
  ** Enumerators for types.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__TYPE_ENUMERATOR_H
 #define __CVC4__THEORY__TYPE_ENUMERATOR_H

@@ -17,7 +17,7 @@
  ** kinds files to produce the final header.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once
 

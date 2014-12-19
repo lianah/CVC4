@@ -22,7 +22,7 @@
 #include "theory/bv/theory_bv.h"
 #include "prop/cnf_stream.h"
 #include "prop/sat_solver_factory.h"
-
+#include "theory/bv/encoding_manager.h"
 
 using namespace CVC4;
 using namespace CVC4::theory;
@@ -46,9 +46,13 @@ EagerBitblaster::EagerBitblaster(TheoryBV* theory_bv)
   
   MinisatEmptyNotify* notify = new MinisatEmptyNotify();
   d_satSolver->setNotify(notify);
+  // EncodingManager::currentEM()->setBitblaster(this);
+  // EncodingManager::currentEM()->setSatSolver(d_satSolver);
+  // EncodingManager::currentEM()->setCnfStream(d_cnfStream);
 }
 
 EagerBitblaster::~EagerBitblaster() {
+  std::cout << "deleting stuff";
   delete d_cnfStream;
   delete d_satSolver;
   delete d_nullContext;
@@ -77,9 +81,13 @@ void EagerBitblaster::bbAtom(TNode node) {
 
   // the bitblasted definition of the atom
   Node normalized = Rewriter::rewrite(node);
+  // Node atom_bb = normalized.getKind() != kind::CONST_BOOLEAN ?
+  //     Rewriter::rewrite(d_atomBBStrategies[normalized.getKind()](normalized, this)) :
+  //     normalized;
+
   Node atom_bb = normalized.getKind() != kind::CONST_BOOLEAN ?
-      Rewriter::rewrite(d_atomBBStrategies[normalized.getKind()](normalized, this)) :
-      normalized;
+    d_atomBBStrategies[normalized.getKind()](normalized, this) :
+    normalized;
   // asserting that the atom is true iff the definition holds
   Node atom_definition = utils::mkNode(kind::IFF, node, atom_bb);
 
@@ -90,6 +98,7 @@ void EagerBitblaster::bbAtom(TNode node) {
 
 void EagerBitblaster::storeBBAtom(TNode atom, Node atom_bb) {
   // no need to store the definition for the lazy bit-blaster
+  EncodingManager::currentEM()->registerAtom(atom, atom_bb);
   d_bbAtoms.insert(atom); 
 }
 

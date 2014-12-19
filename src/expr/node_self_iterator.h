@@ -14,7 +14,7 @@
  ** Iterator supporting Node "self-iteration."
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__EXPR__NODE_SELF_ITERATOR_H
 #define __CVC4__EXPR__NODE_SELF_ITERATOR_H

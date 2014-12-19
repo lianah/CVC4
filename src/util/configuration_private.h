@@ -13,7 +13,7 @@
  ** CVC4 library.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CONFIGURATION_PRIVATE_H
 #define __CVC4__CONFIGURATION_PRIVATE_H

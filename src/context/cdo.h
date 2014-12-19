@@ -14,7 +14,7 @@
  ** A context-dependent object.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__CONTEXT__CDO_H
 #define __CVC4__CONTEXT__CDO_H

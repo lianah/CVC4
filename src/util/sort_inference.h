@@ -12,7 +12,7 @@
  ** \brief Pre-process step for performing sort inference
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__SORT_INFERENCE_H
 #define __CVC4__SORT_INFERENCE_H

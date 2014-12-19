@@ -13,7 +13,7 @@
  **/
 
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__INST_STRATEGT_CBQI_H
 #define __CVC4__INST_STRATEGT_CBQI_H

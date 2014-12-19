@@ -12,7 +12,7 @@
  ** \brief Abstract MBQI model builder class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef ABSTRACT_MBQI_BUILDER
 #define ABSTRACT_MBQI_BUILDER

@@ -146,7 +146,7 @@
  **     be a compile-time constant.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 /* strong dependency; make sure node is included first */
 #include "expr/node.h"

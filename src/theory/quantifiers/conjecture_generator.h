@@ -12,7 +12,7 @@
  ** \brief conjecture generator class
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef CONJECTURE_GENERATOR_H
 #define CONJECTURE_GENERATOR_H

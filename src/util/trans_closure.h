@@ -14,7 +14,7 @@
  ** The transitive closure module.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__UTIL__TRANSITIVE_CLOSURE_H
 #define __CVC4__UTIL__TRANSITIVE_CLOSURE_H

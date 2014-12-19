@@ -19,7 +19,7 @@
 #ifndef __CVC4__CNF_PROOF_H
 #define __CVC4__CNF_PROOF_H
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include "util/proof.h"
 #include "proof/sat_proof.h"
 

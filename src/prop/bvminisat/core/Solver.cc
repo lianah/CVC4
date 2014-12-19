@@ -621,11 +621,17 @@ lbool Solver::propagateAssumptions() {
 lbool Solver::assertAssumption(Lit p, bool propagate) {
   
   // assert(marker[var(p)] == 1);
+  // FIXME:
+  // CVC4::BitVector ones(64, 0u);
+  // for (unsigned i = 0; i < 64; ++i)
+  //   ones.setBit(i);
+  
+  // d_varToMarks[var(p)] = ones;
 
   if (decisionLevel() > assumptions.size()) {
     cancelUntil(assumptions.size());
   }
-
+  // std::cout << "Assert assumption " << var(p) << "\n"; 
   conflict.clear();
 
   // add to the assumptions
@@ -843,10 +849,13 @@ lbool Solver::search(int nof_conflicts, UIP uip)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level, uip);
             // TODO ENCODING: learned units?
-            if (allSameCircuit(learnt_clause)) {
-              ++(CVC4::EncodingManager::currentEM()->d_sameCircuitLearned);
-            }
-            ++(CVC4::EncodingManager::currentEM()->d_totalLearned);
+            // if (allSameCircuit(learnt_clause)) {
+            //   ++(CVC4::EncodingManager::currentEM()->d_sameCircuitLearned);
+            //   toDimacsClause(std::cout, learnt_clause);
+            // } else {
+            //   //              toDimacsClause(std::cout, learnt_clause);
+            // }
+            // ++(CVC4::EncodingManager::currentEM()->d_totalLearned);
 
             Lit p = learnt_clause[0];
             //bool assumption = marker[var(p)] == 2;
@@ -1029,9 +1038,11 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+  int orig_learnt = learnts.size();
     Debug("bvminisat") <<"BVMinisat::Solving learned clauses " << learnts.size() <<"\n";
     Debug("bvminisat") <<"BVMinisat::Solving assumptions " << assumptions.size() <<"\n";
 
+    // dumpDimacs(std::cout);
     model.clear();
     conflict.clear();
 
@@ -1072,6 +1083,7 @@ lbool Solver::solve_()
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
 
+    std::cout << "BVMinisat::learnts this round " << (int)learnts.size() - orig_learnt <<" out of " << learnts.size() <<"\n";
     return status;
 }
 
@@ -1128,6 +1140,46 @@ static Var mapVar(Var x, vec<Var>& map, Var& max)
     return map[x];
 }
 
+static int toDimacsLit(Lit lit) {
+  AlwaysAssert (lit != lit_Undef);
+  int v = var(lit);
+  bool negated = sign(lit);
+  int res = negated ? -(v + 1) : (v + 1);
+  return res; 
+}
+
+void Solver::toDimacsClause(std::ostream& os, Clause& c) {
+  for (int i = 0; i < c.size(); ++i) {
+    os << toDimacsLit(c[i]) << " ";
+  }
+  os << "0\n"; 
+}
+
+void Solver::toDimacsClause(std::ostream& os, vec<Lit>& c) {
+  for (int i = 0; i < c.size(); ++i) {
+    os << toDimacsLit(c[i]) << " ";
+  }
+  os << "0\n"; 
+}
+
+void Solver::dumpDimacs(std::ostream& os) {
+  os << "c dumping stuff \n";
+  unsigned num_var = nVars() + 1;
+  unsigned num_clauses = clauses.size() + assumptions.size();
+  os << "p cnf " << num_var << " " << num_clauses <<"\n";
+  os << "c dumping assumptions\n";
+  for (int i = 0; i < assumptions.size(); ++i) {
+    os << toDimacsLit(assumptions[i]) <<" 0\n"; 
+  }
+  os << "c dumping problem clauses\n";
+  for (int i = 0; i < clauses.size(); ++i) {
+    CRef cref = clauses[i];
+    AlwaysAssert(cref != CRef_Undef);
+    Clause& c = ca[cref];
+    toDimacsClause(os, c);
+  }
+  os << "c dumping learned clauses \n";
+}
 
 void Solver::toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max)
 {

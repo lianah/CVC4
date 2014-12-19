@@ -19,24 +19,24 @@
 #ifndef __CVC4__LIB__FFS_H
 #define __CVC4__LIB__FFS_H
 
-#ifdef HAVE_FFS
+//#ifdef HAVE_FFS
 
 // available in strings.h
 #include <strings.h>
 
-#else /* ! HAVE_FFS */
+// #else /* ! HAVE_FFS */
 
-#include "lib/replacements.h"
+// #include "lib/replacements.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// extern "C" {
+// #endif /* __cplusplus */
 
-int ffs(int i);
+// int ffs(int i);
 
-#ifdef __cplusplus
-}/* extern "C" */
-#endif /* __cplusplus */
+// #ifdef __cplusplus
+// }/* extern "C" */
+// #endif /* __cplusplus */
 
-#endif /* HAVE_FFS */
+// #endif /* HAVE_FFS */
 #endif /* __CVC4__LIB__FFS_H */

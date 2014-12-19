@@ -14,7 +14,7 @@
  ** Bitvector theory.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 
 #include <vector>

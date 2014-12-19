@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #include <string>
 #include <sstream>

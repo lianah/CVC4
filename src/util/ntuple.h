@@ -15,7 +15,7 @@
  ** can be removed in favor of (standard-provided) N-ary tuples.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__NTUPLE_H
 #define __CVC4__NTUPLE_H

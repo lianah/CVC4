@@ -19,7 +19,7 @@
 #ifndef __CVC4__THEORY__ARITH__CONSTRAINT_FORWARD_H
 #define __CVC4__THEORY__ARITH__CONSTRAINT_FORWARD_H
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 #include <vector>
 
 namespace CVC4 {

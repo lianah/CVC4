@@ -16,7 +16,7 @@
  ** Reviewed by Chris Conway, Apr 5 2010 (bug #65).
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 /* circular dependency; force node.h first */
 //#include "expr/attribute.h"

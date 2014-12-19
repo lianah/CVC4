@@ -14,7 +14,7 @@
  ** Sets theory implementation.
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__SETS__THEORY_SETS_PRIVATE_H
 #define __CVC4__THEORY__SETS__THEORY_SETS_PRIVATE_H

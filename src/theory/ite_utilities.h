@@ -17,7 +17,7 @@
  ** Burch, Jerry.  Techniques for Verifying Superscalar Microprocessors.  DAC '96
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__ITE_UTILITIES_H
 #define __CVC4__ITE_UTILITIES_H

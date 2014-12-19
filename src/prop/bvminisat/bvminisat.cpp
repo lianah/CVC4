@@ -109,7 +109,7 @@ void BVMinisatSatSolver::interrupt(){
 SatValue BVMinisatSatSolver::solve(){
   ++d_statistics.d_statCallsToSolve;
   SatValue res = toSatLiteralValue(d_minisat->solve());
-  EncodingManager::currentEM()->printResult();
+  // EncodingManager::currentEM()->printResult();
   return res;
 }
 
@@ -127,6 +127,7 @@ SatValue BVMinisatSatSolver::solve(long unsigned int& resource){
   d_minisat->clearInterrupt();
   resource = d_minisat->conflicts - conflictsBefore;
   Trace("limit") << "<MinisatSatSolver::solve(): it took " << resource << " conflicts" << std::endl;
+  // EncodingManager::currentEM()->printResult();
   return result;
 }
 

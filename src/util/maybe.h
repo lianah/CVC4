@@ -22,7 +22,7 @@
  **   Nothing using a value of T
  ** - High level of assurance that a value is not used before it is set.
  **/
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #pragma once
 
