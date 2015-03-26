@@ -216,6 +216,7 @@ if [ "$proof" = yes ]; then
     if ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--check-proofs' &>/dev/null &&
        ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--no-check-proofs' &>/dev/null &&
        ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--incremental' &>/dev/null &&
+       ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--unconstrained-simp' &>/dev/null &&
        ! expr " $CVC4_REGRESSION_ARGS $command_line" : '.* -[a-zA-Z]*i' &>/dev/null; then
       # later on, we'll run another test with --check-proofs on
       check_proofs=true
@@ -223,6 +224,7 @@ if [ "$proof" = yes ]; then
     if ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--check-unsat-cores' &>/dev/null &&
        ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--no-check-unsat-cores' &>/dev/null &&
        ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--incremental' &>/dev/null &&
+       ! expr "$CVC4_REGRESSION_ARGS $command_line" : '.*--unconstrained-simp' &>/dev/null &&
        ! expr " $CVC4_REGRESSION_ARGS $command_line" : '.* -[a-zA-Z]*i' &>/dev/null; then
       # later on, we'll run another test with --check-unsat-cores on
       check_unsat_cores=true

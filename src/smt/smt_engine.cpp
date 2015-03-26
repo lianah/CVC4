@@ -1146,11 +1146,17 @@ void SmtEngine::setDefaults() {
     options::repeatSimp.set(repeatSimp);
   }
   // Turn on unconstrained simplification for QF_AUFBV
-  if(! options::unconstrainedSimp.wasSetByUser() || options::incrementalSolving()) {
+  if(!options::unconstrainedSimp.wasSetByUser() ||
+      options::incrementalSolving()) {
     //    bool qf_sat = d_logic.isPure(THEORY_BOOL) && !d_logic.isQuantified();
     //    bool uncSimp = false && !qf_sat && !options::incrementalSolving();
-    bool uncSimp = !options::incrementalSolving() && !d_logic.isQuantified() && !options::produceModels() && !options::produceAssignments() && !options::checkModels() &&
-      (d_logic.isTheoryEnabled(THEORY_ARRAY) && d_logic.isTheoryEnabled(THEORY_BV));
+    bool uncSimp = !options::incrementalSolving() &&
+                   !d_logic.isQuantified() &&
+                   !options::produceModels() &&
+                   !options::produceAssignments() &&
+                   !options::checkModels() &&
+                   !options::unsatCores() &&
+                   (d_logic.isTheoryEnabled(THEORY_ARRAY) && d_logic.isTheoryEnabled(THEORY_BV));
     Trace("smt") << "setting unconstrained simplification to " << uncSimp << endl;
     options::unconstrainedSimp.set(uncSimp);
   }
@@ -1707,6 +1713,7 @@ Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashF
         TNode func = n.getOperator();
         SmtEngine::DefinedFunctionMap::const_iterator i =
           d_smt.d_definedFunctions->find(func);
+	Assert (i != d_smt.d_definedFunctions->end());
         DefinedFunction def = (*i).second;
         vector<Node> formals = def.getFormals();
 
@@ -3908,6 +3915,7 @@ void SmtEngine::checkUnsatCore() {
   UnsatCore core = getUnsatCore();
 
   SmtEngine coreChecker(d_exprManager);
+  coreChecker.setLogic(getLogicInfo());
   Notice() << "SmtEngine::checkUnsatCore(): pushing core assertions (size == " << core.size() << ")" << endl;
   for(UnsatCore::iterator i = core.begin(); i != core.end(); ++i) {
     Notice() << "SmtEngine::checkUnsatCore(): pushing core member " << *i << endl;
@@ -3917,6 +3925,7 @@ void SmtEngine::checkUnsatCore() {
   Result r;
   try {
     options::checkUnsatCores.set(false);
+    options::checkProofs.set(false);
     r = coreChecker.checkSat();
   } catch(...) {
     options::checkUnsatCores.set(checkUnsatCores);

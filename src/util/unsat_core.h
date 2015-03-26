@@ -23,6 +23,7 @@
 #include <iostream>
 #include <vector>
 #include "expr/expr.h"
+#include "util/output.h"
 
 namespace CVC4 {
 
@@ -43,7 +44,9 @@ public:
   UnsatCore() : d_smt(NULL) {}
 
   template <class T>
-  UnsatCore(SmtEngine* smt, T begin, T end) : d_smt(smt), d_core(begin, end) {}
+  UnsatCore(SmtEngine* smt, T begin, T end) : d_smt(smt), d_core(begin, end) {
+    Debug("core") << "UnsatCore size " << d_core.size() << std::endl;
+  }
 
   ~UnsatCore() {}
 

@@ -31,7 +31,7 @@ option dumpModels --dump-models bool :default false :link --produce-models
  output models after every SAT/INVALID/UNKNOWN response
 option proof produce-proofs --proof bool :default false :predicate CVC4::smt::proofEnabledBuild CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
  turn on proof generation
-option checkProofs check-proofs --check-proofs bool :link --proof :link-smt produce-proofs :predicate CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
+option checkProofs check-proofs --check-proofs bool :link --proof :link-smt produce-proofs :predicate CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h" :read-write
  after UNSAT/VALID, machine-check the generated proof
 option dumpProofs --dump-proofs bool :default false :link --proof
  output proofs after every UNSAT/VALID response
