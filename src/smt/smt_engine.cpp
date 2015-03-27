@@ -694,6 +694,9 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_modelGlobalCommands(),
   d_modelCommands(NULL),
   d_dumpCommands(),
+#ifdef CVC4_PROOF  
+  d_defineCommands(),
+#endif  
   d_logic(),
   d_originalOptions(em->getOptions()),
   d_pendingPops(0),
@@ -1025,6 +1028,14 @@ void SmtEngine::setDefaults() {
       Notice() << "SmtEngine: turning off bv-introduce-pow2 to support unsat-cores" << endl;
       setOption("bv-intro-pow2", false);
     }
+    if(options::repeatSimp()) {
+      if(options::repeatSimp.wasSetByUser()) {
+        throw OptionException("repeat-simp not supported with unsat cores");
+      }
+      Notice() << "SmtEngine: turning off repeat-simp to support unsat-cores" << endl;
+      setOption("repeat-simp", false);
+    }
+
   }
 
   if(options::produceAssignments() && !options::produceModels()) {
@@ -1141,7 +1152,10 @@ void SmtEngine::setDefaults() {
   // Turn on multiple-pass non-clausal simplification for QF_AUFBV
   if(! options::repeatSimp.wasSetByUser()) {
     bool repeatSimp = !d_logic.isQuantified() &&
-      (d_logic.isTheoryEnabled(THEORY_ARRAY) && d_logic.isTheoryEnabled(THEORY_UF) && d_logic.isTheoryEnabled(THEORY_BV));
+                      (d_logic.isTheoryEnabled(THEORY_ARRAY) &&
+		       d_logic.isTheoryEnabled(THEORY_UF) &&
+		       d_logic.isTheoryEnabled(THEORY_BV)) &&
+                      !options::unsatCores();
     Trace("smt") << "setting repeat simplification to " << repeatSimp << endl;
     options::repeatSimp.set(repeatSimp);
   }
@@ -1609,6 +1623,11 @@ void SmtEngine::defineFunction(Expr func,
 
   SmtScope smts(this);
 
+  PROOF( if (options::checkUnsatCores()) {
+      d_defineCommands.push_back(c.clone());
+    });
+
+  
   // Substitute out any abstract values in formula
   Expr form = d_private->substituteAbstractValues(Node::fromExpr(formula)).toExpr();
 
@@ -2982,7 +3001,7 @@ void SmtEnginePrivate::processAssertions() {
   Trace("smt") << "SmtEnginePrivate::processAssertions()" << endl;
 
   Debug("smt") << " d_assertions     : " << d_assertions.size() << endl;
-
+  
   if (d_assertions.size() == 0) {
     // nothing to do
     return;
@@ -3286,8 +3305,7 @@ void SmtEnginePrivate::processAssertions() {
           d_iteSkolemMap.erase(toErase.back());
           toErase.pop_back();
         }
-        d_assertions[d_realAssertionsEnd - 1] =
-          Rewriter::rewrite(Node(builder));
+	d_assertions[d_realAssertionsEnd - 1] = Rewriter::rewrite(Node(builder));
       }
       // For some reason this is needed for some benchmarks, such as
       // http://cvc4.cs.nyu.edu/benchmarks/smtlib2/QF_AUFBV/dwp_formulas/try5_small_difret_functions_dwp_tac.re_node_set_remove_at.il.dwp.smt2
@@ -3916,6 +3934,12 @@ void SmtEngine::checkUnsatCore() {
 
   SmtEngine coreChecker(d_exprManager);
   coreChecker.setLogic(getLogicInfo());
+
+  std::vector<Command*>::const_iterator itg = d_defineCommands.begin();
+  for (; itg != d_defineCommands.end();  ++itg) {
+    (*itg)->invoke(&coreChecker);
+  }
+  
   Notice() << "SmtEngine::checkUnsatCore(): pushing core assertions (size == " << core.size() << ")" << endl;
   for(UnsatCore::iterator i = core.begin(); i != core.end(); ++i) {
     Notice() << "SmtEngine::checkUnsatCore(): pushing core member " << *i << endl;
