@@ -74,7 +74,7 @@ void TheoryEngine::finishInit() {
   if (d_logicInfo.isQuantified()) {
     d_quantEngine->finishInit();
     Assert(d_masterEqualityEngine == 0);
-    d_masterEqualityEngine = new eq::EqualityEngine(d_masterEENotify,getSatContext(), "theory::master");
+    d_masterEqualityEngine = new eq::EqualityEngine(d_masterEENotify,getSatContext(), "theory::master", false);
 
     for(TheoryId theoryId = theory::THEORY_FIRST; theoryId != theory::THEORY_LAST; ++ theoryId) {
       if (d_theoryTable[theoryId]) {
@@ -379,6 +379,13 @@ void TheoryEngine::check(Theory::Effort effort) {
         printAssertions("theory::assertions");
       }
 
+      if(Theory::fullEffort(effort)) {
+        Trace("theory::assertions::fulleffort") << endl;
+        if (Trace.isOn("theory::assertions::fulleffort")) {
+          printAssertions("theory::assertions::fulleffort");
+        }
+      }
+        
       // Note that we've discharged all the facts
       d_factsAsserted = false;
 
@@ -410,12 +417,6 @@ void TheoryEngine::check(Theory::Effort effort) {
       if(d_logicInfo.isQuantified()) {
         // quantifiers engine must pass effort last call check
         d_quantEngine->check(Theory::EFFORT_LAST_CALL);
-        // if we have given up, then possibly flip decision
-        if(options::flipDecision()) {
-          if(d_incomplete && !d_inConflict && !needCheck()) {
-            ((theory::quantifiers::TheoryQuantifiers*) d_theoryTable[THEORY_QUANTIFIERS])->flipDecision();
-          }
-        }
         // if returning incomplete or SAT, we have ensured that the model in the quantifiers engine has been built
       } else if(options::produceModels()) {
         // must build model at this point
@@ -1194,6 +1195,7 @@ theory::EqualityStatus TheoryEngine::getEqualityStatus(TNode a, TNode b) {
 }
 
 Node TheoryEngine::getModelValue(TNode var) {
+  if (var.isConst()) return var;  // FIXME: HACK!!!
   Assert(d_sharedTerms.isShared(var));
   return theoryOf(Theory::theoryOf(var.getType()))->getModelValue(var);
 }
@@ -1213,6 +1215,14 @@ Node TheoryEngine::ensureLiteral(TNode n) {
 void TheoryEngine::printInstantiations( std::ostream& out ) {
   if( d_quantEngine ){
     d_quantEngine->printInstantiations( out );
+  }
+}
+
+void TheoryEngine::printSynthSolution( std::ostream& out ) {
+  if( d_quantEngine ){
+    d_quantEngine->printSynthSolution( out );
+  }else{
+    out << "Internal error : synth solution not available when quantifiers are not present." << std::endl;
   }
 }
 

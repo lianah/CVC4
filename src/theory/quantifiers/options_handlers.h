@@ -29,16 +29,16 @@ namespace quantifiers {
 static const std::string instWhenHelp = "\
 Modes currently supported by the --inst-when option:\n\
 \n\
-full (default)\n\
+full-last-call (default)\n\
++ Alternate running instantiation rounds at full effort and last\n\
+  call.  In other words, interleave instantiation and theory combination.\n\
+\n\
+full\n\
 + Run instantiation round at full effort, before theory combination.\n\
 \n\
 full-delay \n\
 + Run instantiation round at full effort, before theory combination, after\n\
   all other theories have finished.\n\
-\n\
-full-last-call\n\
-+ Alternate running instantiation rounds at full effort and last\n\
-  call.  In other words, interleave instantiation and theory combination.\n\
 \n\
 last-call\n\
 + Run instantiation at last call effort, after theory combination and\n\
@@ -184,6 +184,9 @@ uf-dt-size \n\
 default | dt-size \n\
 + Default, enforce fairness using size theory operator.\n\
 \n\
+dt-height-bound \n\
++ Enforce fairness by height bound predicate.\n\
+\n\
 none \n\
 + Do not enforce fairness. \n\
 \n\
@@ -192,10 +195,10 @@ static const std::string termDbModeHelp = "\
 Modes for term database, supported by --term-db-mode:\n\
 \n\
 all  \n\
-+ Consider all terms in the system.\n\
++ Quantifiers module considers all ground terms.\n\
 \n\
 relevant \n\
-+ Consider only terms connected to current assertions. \n\
++ Quantifiers module considers only ground terms connected to current assertions. \n\
 \n\
 ";
 
@@ -379,6 +382,8 @@ inline CegqiFairMode stringToCegqiFairMode(std::string option, std::string optar
     return CEGQI_FAIR_UF_DT_SIZE;
   } else if(optarg == "default" || optarg == "dt-size") {
     return CEGQI_FAIR_DT_SIZE;
+  } else if(optarg == "dt-height-bound" ){
+    return CEGQI_FAIR_DT_HEIGHT_PRED;
   } else if(optarg == "none") {
     return CEGQI_FAIR_NONE;
   } else if(optarg ==  "help") {

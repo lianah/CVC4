@@ -35,7 +35,6 @@ using namespace CVC4::theory::quantifiers;
 
 TheoryQuantifiers::TheoryQuantifiers(Context* c, context::UserContext* u, OutputChannel& out, Valuation valuation, const LogicInfo& logicInfo) :
   Theory(THEORY_QUANTIFIERS, c, u, out, valuation, logicInfo),
-  d_numRestarts(0),
   d_masterEqualityEngine(0)
 {
   d_numInstantiations = 0;
@@ -97,6 +96,10 @@ Node TheoryQuantifiers::getValue(TNode n) {
   }
 }
 
+void TheoryQuantifiers::computeCareGraph() {
+  //do nothing
+}
+
 void TheoryQuantifiers::collectModelInfo(TheoryModel* m, bool fullModel) {
   if(fullModel) {
     for(assertions_iterator i = facts_begin(); i != facts_end(); ++i) {
@@ -116,7 +119,7 @@ void TheoryQuantifiers::check(Effort e) {
     return;
   }
 
-  CodeTimer codeTimer(d_theoryTime);
+  TimerStat::CodeTimer checkTimer(d_checkTime);
 
   Trace("quantifiers-check") << "quantifiers::check(" << e << ")" << std::endl;
   while(!done()) {
@@ -126,12 +129,25 @@ void TheoryQuantifiers::check(Effort e) {
     case kind::FORALL:
       assertUniversal( assertion );
       break;
+    case kind::INST_CLOSURE:
+      getQuantifiersEngine()->addTermToDatabase( assertion[0], false, true );
+      if( !options::lteRestrictInstClosure() ){
+        getQuantifiersEngine()->getMasterEqualityEngine()->addTerm( assertion[0] );
+      }
+      break;
+    case kind::EQUAL:
+      //do nothing
+      break;
     case kind::NOT:
       {
         switch( assertion[0].getKind()) {
         case kind::FORALL:
           assertExistential( assertion );
           break;
+        case kind::EQUAL:
+          //do nothing
+          break;
+        case kind::INST_CLOSURE:
         default:
           Unhandled(assertion[0].getKind());
           break;
@@ -145,11 +161,6 @@ void TheoryQuantifiers::check(Effort e) {
   }
   // call the quantifiers engine to check
   getQuantifiersEngine()->check( e );
-}
-
-void TheoryQuantifiers::propagate(Effort level){
-  //CodeTimer codeTimer(d_theoryTime);
-  //getQuantifiersEngine()->propagate( level );
 }
 
 Node TheoryQuantifiers::getNextDecisionRequest(){
@@ -167,38 +178,6 @@ void TheoryQuantifiers::assertExistential( Node n ){
   Assert( n.getKind()== NOT && n[0].getKind()==FORALL );
   if( !options::cbqi() || options::recurseCbqi() || !TermDb::hasInstConstAttr(n[0]) ){
     getQuantifiersEngine()->assertQuantifier( n[0], false );
-  }
-}
-
-bool TheoryQuantifiers::flipDecision(){
-  //Debug("quantifiers-flip") << "No instantiation given, flip decision, level = " << d_valuation.getDecisionLevel() << std::endl;
-  //for( int i=1; i<=(int)d_valuation.getDecisionLevel(); i++ ){
-  //  Debug("quantifiers-flip") << "   " << d_valuation.getDecision( i ) << std::endl;
-  //}
-  //if( d_valuation.getDecisionLevel()>0 ){
-  //  double r = double(rand())/double(RAND_MAX);
-  //  unsigned decisionLevel = (unsigned)(r*d_valuation.getDecisionLevel());
-  //  d_out->flipDecision( decisionLevel );
-  //  return true;
-  //}else{
-  //  return false;
-  //}
-
-  if( !d_out->flipDecision() ){
-    return restart();
-  }
-  return true;
-}
-
-bool TheoryQuantifiers::restart(){
-  static const int restartLimit = 0;
-  if( d_numRestarts==restartLimit ){
-    Debug("quantifiers-flip") << "No more restarts." << std::endl;
-    return false;
-  }else{
-    d_numRestarts++;
-    Debug("quantifiers-flip") << "Do restart." << std::endl;
-    return true;
   }
 }
 

@@ -753,6 +753,10 @@ public:
     return d_theoryTable[theoryId];
   }
 
+  inline bool isTheoryEnabled(theory::TheoryId theoryId) const {
+    return d_logicInfo.isTheoryEnabled(theoryId);
+  }
+  
   /**
    * Returns the equality status of the two terms, from the theory
    * that owns the domain type.  The types of a and b must be the same.
@@ -775,6 +779,11 @@ public:
    */
   void printInstantiations( std::ostream& out );
 
+  /**
+   * Print solution for synthesis conjectures found by ce_guided_instantiation module
+   */
+  void printSynthSolution( std::ostream& out );
+  
   /**
    * Forwards an entailment check according to the given theoryOfMode.
    * See theory.h for documentation on entailmentCheck().

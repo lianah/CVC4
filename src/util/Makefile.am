@@ -60,7 +60,6 @@ libutil_la_SOURCES = \
 	channel.h \
 	language.cpp \
 	ntuple.h \
-	recursion_breaker.h \
 	subrange_bound.h \
 	dump.h \
 	dump.cpp \
@@ -70,8 +69,6 @@ libutil_la_SOURCES = \
 	cardinality.cpp \
 	cache.h \
 	utility.h \
-	trans_closure.h \
-	trans_closure.cpp \
 	boolean_simplification.h \
 	boolean_simplification.cpp \
 	ite_removal.h \
@@ -100,6 +97,8 @@ libutil_la_SOURCES = \
 	didyoumean.cpp \
 	unsat_core.h \
 	unsat_core.cpp \
+	floatingpoint.h \
+	floatingpoint.cpp \
 	resource_manager.h \
 	resource_manager.cpp \
 	unsafe_interrupt_exception.h
@@ -162,8 +161,10 @@ EXTRA_DIST = \
 	chain.i \
 	regexp.i \
 	resource_manager.i \
+	unsafe_interrupt_exception.i \
 	proof.i \
-	unsat_core.i
+	unsat_core.i \
+	floatingpoint.i
 
 DISTCLEANFILES = \
 	integer.h.tmp \

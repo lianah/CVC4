@@ -34,6 +34,7 @@
 #include "expr/command.h"
 #include "util/configuration.h"
 #include "options/options.h"
+#include "theory/quantifiers/options.h"
 #include "main/command_executor.h"
 
 #ifdef PORTFOLIO_BUILD
@@ -198,12 +199,23 @@ int runCvc4(int argc, char* argv[], Options& opts) {
       } else if(( len >= 4 && !strcmp(".cvc", filename + len - 4) )
                 || ( len >= 5 && !strcmp(".cvc4", filename + len - 5) )) {
         opts.set(options::inputLanguage, language::input::LANG_CVC4);
+      } else if((len >= 3 && !strcmp(".sy", filename + len - 3))
+                || (len >= 3 && !strcmp(".sl", filename + len - 3))) {
+        opts.set(options::inputLanguage, language::input::LANG_SYGUS);
+        //since there is no sygus output language, set this to SMT lib 2
+        opts.set(options::outputLanguage, language::output::LANG_SMTLIB_V2_0);
       }
     }
   }
 
   if(opts[options::outputLanguage] == language::output::LANG_AUTO) {
     opts.set(options::outputLanguage, language::toOutputLanguage(opts[options::inputLanguage]));
+  }
+
+  // if doing sygus, turn on CEGQI by default
+  if(opts[options::inputLanguage] == language::input::LANG_SYGUS &&
+     !opts.wasSetByUser(options::ceGuidedInst)) {
+    opts.set(options::ceGuidedInst, true);
   }
 
   // Determine which messages to show based on smtcomp_mode and verbosity
@@ -438,7 +450,8 @@ int runCvc4(int argc, char* argv[], Options& opts) {
              dynamic_cast<GetInstantiationsCommand*>(cmd) == NULL &&
              dynamic_cast<GetAssertionsCommand*>(cmd) == NULL &&
              dynamic_cast<GetInfoCommand*>(cmd) == NULL &&
-             dynamic_cast<GetOptionCommand*>(cmd) == NULL) {
+             dynamic_cast<GetOptionCommand*>(cmd) == NULL &&
+             dynamic_cast<EchoCommand*>(cmd) == NULL) {
             Command* copy = cmd->clone();
             allCommands.back().push_back(copy);
           }

@@ -22,8 +22,8 @@
 #include "theory/theory.h"
 #include "util/datatype.h"
 #include "util/hash.h"
-#include "util/trans_closure.h"
 #include "theory/uf/equality_engine.h"
+#include "theory/datatypes/datatypes_sygus.h"
 
 #include <ext/hash_set>
 #include <iostream>
@@ -34,10 +34,7 @@ namespace CVC4 {
 namespace theory {
 namespace datatypes {
 
-class EqualityQueryTheory;
-
 class TheoryDatatypes : public Theory {
-  friend class EqualityQueryTheory;
 private:
   typedef context::CDChunkList<Node> NodeList;
   typedef context::CDHashMap<Node, NodeList*, NodeHashFunction> NodeListMap;
@@ -133,6 +130,8 @@ private:
   bool hasTester( Node n );
   /** get the possible constructors for n */
   void getPossibleCons( EqcInfo* eqc, Node n, std::vector< bool >& cons );
+  /** mkExpDefSkolem */
+  void mkExpDefSkolem( Node sel, TypeNode dt, TypeNode rt );
 private:
   /** The notify class */
   NotifyClass d_notify;
@@ -160,6 +159,8 @@ private:
   //BoolMap d_consEqc;
   /** Are we in conflict */
   context::CDO<bool> d_conflict;
+  /** Added lemma ? */
+  bool d_addedLemma;
   /** The conflict node */
   Node d_conflictNode;
   /** cache for which terms we have called collectTerms(...) on */
@@ -176,6 +177,14 @@ private:
   unsigned d_dtfCounter;
   /** expand definition skolem functions */
   std::map< Node, Node > d_exp_def_skolem;
+  /** sygus utilities */
+  SygusSplit * d_sygus_split;
+  SygusSymBreak * d_sygus_sym_break;
+private:
+  /** singleton lemmas (for degenerate co-datatype case) */
+  std::map< TypeNode, Node > d_singleton_lemma[2];
+  /** Cache for singleton equalities processed */
+  BoolMap d_singleton_eq;
 private:
   /** assert fact */
   void assertFact( Node fact, Node exp );
@@ -224,6 +233,7 @@ public:
 
   void check(Effort e);
   void preRegisterTerm(TNode n);
+  void finishInit();
   Node expandDefinition(LogicRequest &logicRequest, Node n);
   Node ppRewrite(TNode n);
   void presolve();
@@ -257,6 +267,8 @@ private:
                           std::map< Node, std::map< Node, int > >& dni, int dniLvl, bool mkExp );
   /** build model */
   Node getCodatatypesValue( Node n, std::map< Node, Node >& eqc_cons, std::map< Node, Node >& eqc_mu, std::map< Node, Node >& vmap, std::vector< Node >& fv );
+  /** get singleton lemma */
+  Node getSingletonLemma( TypeNode tn, bool pol );
   /** collect terms */
   void collectTerms( Node n );
   /** get instantiate cons */

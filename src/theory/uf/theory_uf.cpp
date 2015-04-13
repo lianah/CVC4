@@ -34,7 +34,7 @@ TheoryUF::TheoryUF(context::Context* c, context::UserContext* u, OutputChannel& 
   /* The strong theory solver can be notified by EqualityEngine::init(),
    * so make sure it's initialized first. */
   d_thss(NULL),
-  d_equalityEngine(d_notify, c, "theory::uf::TheoryUF"),
+  d_equalityEngine(d_notify, c, "theory::uf::TheoryUF", true),
   d_conflict(c, false),
   d_literalsToPropagate(c),
   d_literalsToPropagateIndex(c, 0),
@@ -92,6 +92,8 @@ void TheoryUF::check(Effort level) {
   if (done() && !fullEffort(level)) {
     return;
   }
+
+  TimerStat::CodeTimer checkTimer(d_checkTime);
 
   while (!done() && !d_conflict)
   {
