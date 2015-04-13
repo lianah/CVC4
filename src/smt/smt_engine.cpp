@@ -3486,6 +3486,12 @@ void SmtEnginePrivate::addFormula(TNode n, bool inUnsatCore, bool inInput)
       // n is the result of an unknown preprocessing step, add it to dependency map to null
       ProofManager::currentPM()->addDependence(n, Node::null());
     }
+    // rewrite rules are by default in the unsat core because
+    // they need to be applied until saturation
+    if(options::unsatCores() && 
+       n.getKind() == kind::REWRITE_RULE ){
+      ProofManager::currentPM()->addUnsatCore(n.toExpr());
+    }
   );
 
   // Add the normalized formula to the queue

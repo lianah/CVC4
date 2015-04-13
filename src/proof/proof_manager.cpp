@@ -221,6 +221,11 @@ void ProofManager::addDependence(TNode n, TNode dep) {
   }
 }
 
+void ProofManager::addUnsatCore(Expr formula) {
+  Assert (d_inputCoreFormulas.find(formula) != d_inputCoreFormulas.end());
+  d_outputCoreFormulas.insert(formula);
+}
+
 void ProofManager::setLogic(const LogicInfo& logic) {
   d_logic = logic;
 }
