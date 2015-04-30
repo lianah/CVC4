@@ -664,7 +664,7 @@ public:
   }
 };
 
-void printTermEncodingSharing(Kind k, std::vector<TBitblaster<Node>::TermBBStrategy>& e, std::string name,
+void printTermEncodingSharing(Kind k, std::vector<TBitblaster<Node>::TermBBStrategy>& es, std::string name,
                               unsigned n, bool auxiliaries = false, bool truncated = true) {
 
   std::ostringstream os;
@@ -678,7 +678,9 @@ void printTermEncodingSharing(Kind k, std::vector<TBitblaster<Node>::TermBBStrat
   unsigned bitwidth = truncated ? n : 2*n;
 
   EncodingBitblaster eb(new context::Context(), name);
-  eb.setTermBBStrategy(k, e);
+  for (unsigned i = 0; i < es.size(); ++i) {
+    eb.setTermBBStrategy(k, es[i]);
+  }
   Node a = utils::mkVar("a", bitwidth);
   Node b = utils::mkVar("b", bitwidth);
   Node c = utils::mkVar("c", bitwidth);
@@ -1196,6 +1198,11 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /********* Equivalence Check Mult ****************/
 
+  equivalenceCheckerTerm(ZooMultBB<Node>, "zoo-add-mult",
+			 DefaultMultBB<Node>, "default-mult",
+   			 kind::BITVECTOR_MULT, width);
+
+  
   // equivalenceCheckerTerm(OptimalAddMultBB<Node>, "optimal-add-mult",
   // 			 DefaultMultBB<Node>, "default-mult",
   // 			 kind::BITVECTOR_MULT, width);

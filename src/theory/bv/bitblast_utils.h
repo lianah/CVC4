@@ -22,6 +22,7 @@
 
 #include <ostream>
 #include "expr/node.h"
+#include "prop/cnf_stream.h"
 
 #ifdef CVC4_USE_ABC
 #include "base/main/main.h"
@@ -44,7 +45,7 @@ template <class T>
 std::string toString (const std::vector<T>& bits);
 
 template <> inline
-std::string toString<Node> (const std::vector<Node>& bits) {
+std::string toString<Node>(const std::vector<Node>& bits) {
   std::ostringstream os;
   for (int i = bits.size() - 1; i >= 0; --i) {
     TNode bit = bits[i];
@@ -58,7 +59,7 @@ std::string toString<Node> (const std::vector<Node>& bits) {
   return os.str();
 } 
 
-template <class T> T mkVar();
+template <class T> T mkBitVar() {Unreachable(); return T();}
 template <class T> T mkTrue();  
 template <class T> T mkFalse(); 
 template <class T> T mkNot(T a);
@@ -71,8 +72,9 @@ template <class T> T mkIff(T a, T b);
 template <class T> T mkIte(T cond, T a, T b);
 
 template <> inline
-Node mkVar<Node>() {
-  return nm->mkSkolem("bit", nm->mkBooleanType(), "bit-blast bool variable"); 
+Node mkBitVar<Node>() {
+  NodeManager* nm = NodeManager::currentNM();
+  return nm->mkSkolem("bit", nm->booleanType(), "bit-blast bool variable"); 
 }
  
 template <> inline
@@ -145,6 +147,7 @@ void inline extractBits(const std::vector<T>& b, std::vector<T>& dest, unsigned 
   }
 }
 
+
 template <class T>
 void inline negateBits(const std::vector<T>& bits, std::vector<T>& negated_bits) {
   for(unsigned i = 0; i < bits.size(); ++i) {
@@ -190,6 +193,48 @@ void inline makeZero(std::vector<T>& bits, unsigned width) {
   }
 }
 
+template <class T>
+void inline zeroExtendBits(const std::vector<T>& a,
+			   std::vector<T>& dest,
+			   unsigned amount) {
+  for (unsigned i = 0; i < a.size() ; ++i) {
+    dest.push_back(a[i]); 
+  }
+  for (unsigned i = 0; i < amount; ++i) {
+    dest.push_back(mkFalse<T>());
+  }
+}
+
+template <class T>
+void inline zeroExtendBits(std::vector<T>& a,
+			   unsigned amount) {
+  for (unsigned i = 0; i < amount; ++i) {
+    a.push_back(mkFalse<T>());
+  }
+}
+ 
+ 
+template <class T>
+void inline orBits(const std::vector<T>& a,
+		   const std::vector<T>& b,
+		   std::vector<T>& res) {
+  Assert(res.size() == 0 && a.size() == b.size()); 
+  for(unsigned i = 0; i < a.size(); ++i) {
+    res.push_back(mkOr<T>(a[i], b[i])); 
+  }
+}
+
+template <class T>
+void inline andBit(const T& a,
+		   const std::vector<T>& b,
+		   std::vector<T>& res) {
+  Assert(res.size() == 0); 
+  for(unsigned i = 0; i < b.size(); ++i) {
+    res.push_back(mkAnd<T>(a, b[i])); 
+  }
+}
+ 
+ 
 template <class T>
 std::pair<T,T> inline fullAdder(const T a, const T b, const T cin) {
   T cout = mkOr(mkAnd(a, b),
@@ -294,12 +339,6 @@ T inline sLessThanBB(const std::vector<T>&a, const std::vector<T>& b, bool orEqu
   return res;
 }
 
- 
-}
-}
-}
-
-
 /****
   Martin Code Sketch
  ****/
@@ -328,19 +367,21 @@ typedef enum _fullAdderEncoding {
   MINISAT_SUM_AND_CARRY,
   MINISAT_COMPLETE,          // With the 6 additional clauses
   MARTIN_OPTIMAL             // Current CBMC
-} fullAdderEncoding;
+} FullAdderEncoding;
 
 template <class T>
-T makeCarry(const fullAdderEncoding &fullAdderStyle,
+T makeCarry(const FullAdderEncoding &fullAdderStyle,
 	    const T& a, const T& b, const T& c,
-	    prop::CnfStream* cnf) {
-  if (fullAdderEncoding == DANIEL_COMPACT_CARRY) {
-    T x = mkVar<T>();
+	    CVC4::prop::CnfStream* cnf) {
+  if (fullAdderStyle == DANIEL_COMPACT_CARRY) {
+    T x = mkBitVar<T>();
 
     T nx = mkNot<T>(x);
     T na = mkNot<T>(a);
     T nb = mkNot<T>(b);
     T nc = mkNot<T>(c);
+
+    NodeManager* nm = NodeManager::currentNM();
     
     cnf->convertAndAssert(nm->mkNode(kind::OR, a, b, nx),
 			  false, false, RULE_INVALID, TNode::null());
@@ -363,7 +404,7 @@ T makeCarry(const fullAdderEncoding &fullAdderStyle,
 
 
 template <class T>
-std::pair<T, T> inline fullAdder(const fullAdderEncoding &fullAdderStyle,
+std::pair<T, T> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
 				 const T &a,
 				 const T &b,
 				 const T &c,
@@ -375,43 +416,44 @@ std::pair<T, T> inline fullAdder(const fullAdderEncoding &fullAdderStyle,
   case DANIEL_COMPACT_CARRY:
     carry = makeCarry(fullAdderStyle, a, b, c);
     sum = mkXor(mkXor(a, b), c);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_NAIVE_AC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c);
     sum = mkXor(mkXor(a, c), b);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_NAIVE_BC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c);
     sum = mkXor(mkXor(b, c), a);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_SHARED_AB_CIRCUIT: {
     T cross = mkXor(a, b);
     carry = mkOr(mkAnd(a,b),mkAnd(cross, c));
     sum = mkXor(cross, c);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case TSEITIN_SHARED_AC_CIRCUIT: {
     T cross = mkXor(a, c);
     carry = mkOr(mkAnd(a,c),mkAnd(cross, b));
     sum = mkXor(cross, b);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case TSEITIN_SHARED_BC_CIRCUIT: {
     T cross = mkXor(b, c);
     carry = mkOr(mkAnd(b,c),mkAnd(cross, a));
     sum = mkXor(cross, a);
-    return make_pair<T, T>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case MINISAT_SUM_AND_CARRY:
   case MINISAT_COMPLETE: {
-      sum = mkVar<T>();
-      carry = mkVar<T>();
-      na = mkNot(a);
-      nb = mkNot(b);
-      nc = mkNot(c);
-      ncarry = mkNot(carry);
-      nsum = mkNot(sum);
+      sum = mkBitVar<T>();
+      carry = mkBitVar<T>();
+      T na = mkNot(a);
+      T nb = mkNot(b);
+      T nc = mkNot(c);
+      T ncarry = mkNot(carry);
+      T nsum = mkNot(sum);
       
+      NodeManager* nm = NodeManager::currentNM();
       cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, c, nsum),
 			    false, false, RULE_INVALID, TNode::null());
       cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, nc, sum),
@@ -455,9 +497,9 @@ std::pair<T, T> inline fullAdder(const fullAdderEncoding &fullAdderStyle,
 	cnf->convertAndAssert(nm->mkNode(kind::OR, carry, sum, nc),
 			      false, false, RULE_INVALID, TNode::null());
       }
-      return make_pair<T, T>(sum, carry);
+      return std::make_pair<T, T>(sum, carry);
     }
-  case: MARTIN_OPTIMAL: {
+  case MARTIN_OPTIMAL: {
     return optimalFullAdder(a, b, c, cnf);
     }
   default:
@@ -470,10 +512,10 @@ typedef enum _halfAdderEncoding {
   // How many others are there...
   DEFAULT
   // \todo optimal half_adder
-} halfAdderEncoding;
+} HalfAdderEncoding;
 
 template <class T>
-T inline halfAdder(const halfAdderEncoding &halfAdderStyle,
+T inline halfAdder(const HalfAdderEncoding &halfAdderStyle,
 		   const T &a,
 		   const T &b) {
   Assert (halfAdderStyle == DEFAULT);
@@ -481,31 +523,44 @@ T inline halfAdder(const halfAdderEncoding &halfAdderStyle,
 }
 
 
-struct add2Encoding {
-  fullAdderEncoding fullAdderStyle;
+struct Add2Encoding {
+  FullAdderEncoding fullAdderStyle;
+  typedef enum _Style {
+    RIPPLE_CARRY,         // A common default
+    CARRY_LOOKAHEAD,
+    CARRY_SELECT
+  } Style;
+  Style style;
   size_t carrySelectMinimum;
   size_t carrySelectSplit;
-  enum {
-    RIPPLE_CARRY,         // A common default
-    CARRY_LOOKAHEAD
-  } style;
+
+  Add2Encoding(FullAdderEncoding fAS,
+	       Add2Encoding::Style sty,
+	       size_t csMin = -1,
+	       size_t csSplit = -1)
+  : fullAdderStyle(fAS)
+  , style(sty)
+  , carrySelectMinimum(csMin)
+  , carrySelectSplit(csSplit)
+  {}
 };
 
 
 template <class T>
-std::vector<T> inline add2(const add2Encoding &add2Style,
+std::vector<T> inline add2(const Add2Encoding &add2Style,
 			   const std::vector<T> &a,
 			   const std::vector<T> &b,
 			   const T &cin) {
   Assert(a.length() == b.length());
-  std::vector result(a.length() + 1);
+  std::vector<T> result(a.length() + 1);
 
   if (a.length() > add2Style.carrySelectMinimum) {
-      Unimplemented("Carry select unimplemented");
+    // carry select basically duplicates steps in the adder
+    // one assuming the carry is 0 and one it is 1 and then muxes between the two 
+    Unimplemented("Carry select unimplemented");
   } else {
-
     switch (add2Style.style) {
-    case RIPPLE_CARRY :
+    case Add2Encoding::RIPPLE_CARRY :
       {
 	T carry = cin;
 	std::vector<T> tmp;
@@ -518,38 +573,45 @@ std::vector<T> inline add2(const add2Encoding &add2Style,
       }
       break;
 
-    case CARRY_LOOKAHEAD :
+    case Add2Encoding::CARRY_LOOKAHEAD :
     default :
       Unimplemented("Add2 style not implemented");
     }
-
   }
 
   Assert(result.length() == a.length() + 1);
   return result;
 }
 
-struct add3Encoding {
-  fullAdderEncoding fullAdderStyle;
-  add2Encoding add2Style;
-  enum {
-    // \todo Optimal add3
+struct Add3Encoding {
+  typedef enum _style{
+    OPTIMAL_ADD3, 
     THREE_TO_TWO_THEN_ADD
-  } style;
+  } Style;
+  Style style;
+  FullAdderEncoding fullAdderStyle;
+  Add2Encoding add2Style;
+  Add3Encoding(const Add3Encoding::Style sty,
+	       const FullAdderEncoding& fAS,
+	       const Add2Encoding& add2Sty)
+  : style(sty)
+  , fullAdderStyle(fAS)
+  , add2Style(add2Sty)
+  {}
 };
-
+ 
 template <class T>
-std::vector<T> inline add3 (const add3Encoding &add3Style,
-					       const std::vector<T> &a,
-					       const std::vector<T> &b,
-					       const std::vector<T> &c,
-					       const T &cin) {
+std::vector<T> inline add3 (const Add3Encoding &add3Style,
+			    const std::vector<T> &a,
+			    const std::vector<T> &b,
+			    const std::vector<T> &c,
+			    const T &cin) {
   Assert(a.length() == b.length());
   Assert(a.length() == c.length());
-  std::vector result();
+  std::vector<T> result();
 
   switch (add3Style.style) {
-  case THREE_TO_TWO_THEN_ADD :
+  case Add3Encoding::THREE_TO_TWO_THEN_ADD :
     {
       std::vector<T> sum(a.length() + 1);
       std::vector<T> carry(a.length() + 1);
@@ -563,10 +625,10 @@ std::vector<T> inline add3 (const add3Encoding &add3Style,
 	carry[i + 1] = tmp[1];
       }
 
-      sum[a.length()] = mkFalse();
+      sum[a.length()] = mkFalse<T>();
 
       // \todo We can add in a second carry here...
-      result = add2(add3Style.add2Style, sum, carry, mkFalse());
+      result = add2(add3Style.add2Style, sum, carry, mkFalse<T>());
 
     }
     break;
@@ -579,28 +641,36 @@ std::vector<T> inline add3 (const add3Encoding &add3Style,
 }
 
 
-struct accumulateEncoding {
-  add2Encoding add2Style;
-  add3Encoding add3Style;
+struct AccumulateEncoding {
+  Add2Encoding add2Style;
+  Add3Encoding add3Style;
 
-  enum {
+  typedef enum _style {
     LINEAR_FORWARDS,    // Most solvers
     LINEAR_BACKWARDS,
     TREE_REDUCTION,
 
     ADD3_LINEAR_FORWARDS,
     ADD3_LINEAR_BACKWARDS,
-    ADD3_TREE
-  } style;
+    ADD3_TREE_REDUCTION
+  } Style;
+  Style style;
+  AccumulateEncoding(const Add2Encoding& add2,
+		     const Add3Encoding& add3,
+		     AccumulateEncoding::Style sty)
+  : add2Style(add2)
+  , add3Style(add3)
+  , style(sty)
+  {}
 };
 
-template <class T> std::vector<T> inline accumulate (const accumulateEncoding &accumulateStyle,
+template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &accumulateStyle,
 						     const std::vector<std::vector<T> > &set) {
   size_t inputCount = set.length();
   size_t inputLength = set[0].length();
 
   assert(inputCount != 0);
-  for (i = 0; i < inputCount; ++i) {
+  for (unsigned i = 0; i < inputCount; ++i) {
     assert(set[i].length() == inputLength);
   }
 
@@ -610,37 +680,41 @@ template <class T> std::vector<T> inline accumulate (const accumulateEncoding &a
 
   std::vector<T> sum;
 
-  switch (accumulateEncoding.style) {
-  case LINEAR_FORWARDS :
-    {
-      sum = set[0];
+  switch (accumulateStyle.style) {
+  case AccumulateEncoding::LINEAR_FORWARDS: {
+    sum = set[0];
+    
+    for (int i = 1; i < inputCount; ++i) {
+      // \todo We can sneak in lots of carrys in accumulation...
+      sum = add2(accumulateStyle.add2Style,
+		 sum,
+		 extend(set[i], sum.length() - set[i].length()),
+		 mkFalse<T>());
+    }
+    break;  
+  }
 
-      for (int i = 1; i < inputCount; ++i) {
-	// \todo We can sneak in lots of carrys in accumulation...
-	sum = add2(accumulateStyle.add2Style, sum, extend(set[i], sum.length() - set[i].length()), mkFalse());
-      }
-
+  case AccumulateEncoding::LINEAR_BACKWARDS: {
+    sum = set[inputCount - 1];
+    
+    for (int i = inputCount - 2; i >= 0; --i) {
+      sum = add2(accumulateStyle.add2Style,
+		 sum,
+		 extend(set[i], sum.length() - set[i].length()),
+		 mkFalse<T>());
     }
     break;
-
-  case LINEAR_BACKWARDS :
-    {
-      sum = set[inputCount - 1];
-
-      for (int i = inputCount - 2; i >= 0; --i) {
-	sum = add2(accumulateStyle.add2Style, sum, extend(set[i], sum.length() - set[i].length()), mkFalse());
-      }
-
-    }
-    break;
-
-  case TREE_REDUCTION :
+  }
+  case AccumulateEncoding::TREE_REDUCTION: {
     std::vector<std::vector<T> > input = set;
     std::vector<std::vector<T> > output;
 
     while (input.length() >= 2) {
       for (int i = 0; i + 1< input.length(); i += 2) {
-	output.push_back(add2(accumulateStyle.add2Style, input[i], input[i + 1], mkFalse()));
+	output.push_back(add2(accumulateStyle.add2Style,
+			      input[i],
+			      input[i + 1],
+			      mkFalse<T>()));
       }
       if ((input.length() & 1) == 1) {
 	output.push_back[extend(input[input.length() - 1], 1)];
@@ -652,49 +726,45 @@ template <class T> std::vector<T> inline accumulate (const accumulateEncoding &a
 
     sum = input[0];
     break;
+  }
+  case AccumulateEncoding::ADD3_LINEAR_FORWARDS: {
+    sum = set[0];
 
-  case ADD3_LINEAR_FORWARDS :
-    {
-      sum = set[0];
-
-      for (int i = 1; i < inputCount; i += 2) {
-	sum = add3(accumulateStyle.add3Style,
-		   sum,
-		   extend(set[i], sum.length() - set[i].length()),
-		   extend(set[i + 1], sum.length() - set[i + 1].length()),
-		   mkFalse());
-      }
-      if ((inputCount & 1) == 0) {
-	sum = add2(accumulateStyle.add2Style,
-		   sum,
-		   extend(set[inputCount - 1], sum.length() - set[inputCount - 1].length()),
-		   mkFalse());
-      }
-
+    for (int i = 1; i < inputCount; i += 2) {
+      sum = add3(accumulateStyle.add3Style,
+		 sum,
+		 extend(set[i], sum.length() - set[i].length()),
+		 extend(set[i + 1], sum.length() - set[i + 1].length()),
+		 mkFalse<T>());
+    }
+    if ((inputCount & 1) == 0) {
+      sum = add2(accumulateStyle.add2Style,
+		 sum,
+		 extend(set[inputCount - 1], sum.length() - set[inputCount - 1].length()),
+		 mkFalse<T>());
     }
     break;
-
-  case ADD3_LINEAR_BACKWARDS :
-    {
-      sum = set[inputCount - 1];
-
-      for (int i = inputCount - 2; i >= 1; i -= 2) {
-	sum = add3(accumulateStyle.add3Style,
-		   sum,
-		   extend(set[i], sum.length() - set[i].length()),
-		   extend(set[i - 1], sum.length() - set[i - 1].length()),
-		   mkFalse());
-      }
-      if ((inputCount & 1) == 0) {
-	sum = add2(accumulateStyle.add2Style,
-		   sum,
-		   extend(set[0], sum.length() - set[0].length()),
-		   mkFalse());
-      }
+  }
+  case AccumulateEncoding::ADD3_LINEAR_BACKWARDS: {
+    sum = set[inputCount - 1];
+    
+    for (int i = inputCount - 2; i >= 1; i -= 2) {
+      sum = add3(accumulateStyle.add3Style,
+		 sum,
+		 extend(set[i], sum.length() - set[i].length()),
+		 extend(set[i - 1], sum.length() - set[i - 1].length()),
+		 mkFalse<T>());
+    }
+    if ((inputCount & 1) == 0) {
+      sum = add2(accumulateStyle.add2Style,
+		 sum,
+		 extend(set[0], sum.length() - set[0].length()),
+		 mkFalse<T>());
     }
     break;
+  }
 
-  case ADD3_TREE_REDUCTION :
+  case AccumulateEncoding::ADD3_TREE_REDUCTION: {
     std::vector<std::vector<T> > input = set;
     std::vector<std::vector<T> > output;
 
@@ -705,7 +775,7 @@ template <class T> std::vector<T> inline accumulate (const accumulateEncoding &a
 			      input[i],
 			      input[i + 1],
 			      input[i + 2],
-			      mkFalse()));
+			      mkFalse<T>()));
       }
       while (i < input.length()) {
 	output.push_back[extend(input[i], 1)];
@@ -720,12 +790,13 @@ template <class T> std::vector<T> inline accumulate (const accumulateEncoding &a
       sum = add2(accumulateStyle.add2Style,
 		 input[0],
 		 input[1],
-		 mkFalse());
+		 mkFalse<T>());
     } else {
       sum = input[0];
     }
 
     break;
+  }
 
  default:
     Unimplemented("Accumulate style not implemented");
@@ -741,9 +812,9 @@ template <class T> std::vector<T> inline accumulate (const accumulateEncoding &a
 }
 
 typedef enum _recursiveMultiplicationEncoding {
-  DEFAULT,
+  DEFAULT_REC,
   KARATSUBA
-} recursiveMultiplicationEncoding;
+} RecursiveMultiplicationEncoding;
 
 typedef enum _partialProductEncoding {
   CONVENTIONAL,
@@ -759,33 +830,34 @@ typedef enum _partialProductEncoding {
   OPTIMAL_3_BY_3,
   OPTIMAL_4_BY_4,
   OPTIMAL_5_BY_5,
-} partialProductEncoding;
+} PartialProductEncoding;
 
 
 typedef enum _reductionEncoding {
-  /\** Word level reductions **\/
+  /** Word level reductions **/
   WORD_LEVEL,
   
-  /\** Bit level reductions **\/
+  /** Bit level reductions **/
   WALLACE_TREE,               // Boolector
   DADDA_TREE,
   
-  /\** Carry-save reductions **\/
+  /** Carry-save reductions **/
   // \todo these
-  /\*
+
   UNARY_TO_BINARY_REDUCTION,   // Not sure about how best to use this
   CARRY_SAVE_LINEAR_REDUCTION, // Needs more parameters
   CARRY_SAVE_TREE_REDUCTION    // Needs more parameters
-  *\/
-} reductionEncoding;
 
-struct multiplyEncoding {
+} ReductionEncoding;
+
+struct MultiplyEncoding {
+  RecursiveMultiplicationEncoding recursionStyle;
+  PartialProductEncoding partialProductStyle;
+  ReductionEncoding reductionStyle;
+  AccumulateEncoding accumulateStyle;
+
   size_t recursiveMinimum;
-  recursiveMultiplicationEncoding recursionStyle;
-  partialProductEncoding partialProductStyle;
-  reductionEncoding reductionStyle;
-  accumulateEncoding accumulateStyle;
-
+  
   bool isWordLevelReduction (void) const {
     return this->reductionStyle == WORD_LEVEL;
   }
@@ -794,45 +866,72 @@ struct multiplyEncoding {
     return this->reductionStyle == WALLACE_TREE ||
       this->reductionStyle == DADDA_TREE;
   }
+
+  MultiplyEncoding(const RecursiveMultiplicationEncoding& recSty,
+		   const PartialProductEncoding& ppSty,
+		   const ReductionEncoding& reSty,
+		   const AccumulateEncoding accSty,
+		   size_t recMin = -1)
+  : recursionStyle(recSty)
+  , partialProductStyle(ppSty)
+  , reductionStyle(reSty)
+  , accumulateStyle(accSty)
+  , recursiveMinimum(recMin)
+  {}
 };
 
 
-template <class T> std::vector<T> inline multiply (const multiplyEncoding &multiplyStyle,
-						   const std::vector<T> &a,
-						   const std::vector<T> &b) {
-  Assert(a.length() == b.length());
+template <class T>
+std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
+				const std::vector<T> &a,
+				const std::vector<T> &b,
+				prop::CnfStream* cnf) {
+  Assert(a.size() == b.size());
 
   std::vector<T> product;
 
-  if (a.length() > multiplyStyle.recursiveMinimum) {
+  if (a.size() > multiplyStyle.recursiveMinimum) {
 
-    size_t splitPoint = a.length() / 2;  // Rounding down...
-    std::vector<T> &ah(a.extract(a.length() - 1, splitPoint + 1));
-    std::vector<T> &al(a.extract(splitPoint, 0));
+    size_t splitLength = a.size() / 2;  // Rounding down...
+    std::vector<T> ah;
+    extractBits(a, ah, splitLength + 1, a.size() - 1);
+    std::vector<T> al;
+    extractBits(a, al, 0, splitLength);
 
-    std::vector<T> &bh(b.extract(b.length() - 1, splitPoint + 1));
-    std::vector<T> &bl(b.extract(splitPoint, 0));
+    std::vector<T> bh;
+    extractBits(b, bh, splitLength + 1, b.size());
+    std::vector<T> bl;
+    extractBits(b, bl, 0, splitLength);
 
     switch (multiplyStyle.recursionStyle) {
-    case DEFAULT :
-      std::vector<T> hh(multiply(multiplyStyle, ah, bh));
-      std::vector<T> hl(multiply(multiplyStyle, ah, bl));
-      std::vector<T> lh(multiply(multiplyStyle, al, bh));
-      std::vector<T> ll(multiply(multiplyStyle, al, bl));
+    case DEFAULT : {
+      std::vector<T> hh(multiply(multiplyStyle, ah, bh, cnf));
+      std::vector<T> hl(multiply(multiplyStyle, ah, bl, cnf));
+      std::vector<T> lh(multiply(multiplyStyle, al, bh, cnf));
+      std::vector<T> ll(multiply(multiplyStyle, al, bl, cnf));
 
-      hh.extend(a.length() * 2);
-      hl.extend(a.length() * 2);
-      lh.extend(a.length() * 2);
-      ll.extend(a.length() * 2);
+      zeroExtendBits(hh, a.size());
+      zeroExtendBits(hl, a.size());
+      zeroExtendBits(lh, a.size());
+      zeroExtendBits(ll, a.size()); 
 
       // \todo : check for off-by-one errors when width is odd
 
+      std::vector<T> hhll;
+      lshift(hh, splitLength * 2);
+      
+      orBits(hh, ll, hhll);
+      lshift(hl, splitLength);
+      lshift(lh, splitLength);
+	
       product = add3(multiplyStyle.accumulateStyle.add3Style,
-		     or(lshift(hh, splitLength * 2), ll),
-		     lshift(hl, splitLength),
-		     lshift(lh, splitLength)).trim(a.length() * 2);
+		     hhll,
+		     hl,
+		     lh,
+		     mkFalse<T>());
 
       break;
+    }
     case KARATSUBA :
     default :
       Unimplemented("Recursion style unimplemented");
@@ -841,45 +940,44 @@ template <class T> std::vector<T> inline multiply (const multiplyEncoding &multi
 
 
 
-
   if (multiplyStyle.isWordLevelReduction() ||
       multiplyStyle.isBitLevelReduction()) {
 
     // Generate the grid
-    std::vector< std::vector<T> > grid(a.length());
+    std::vector< std::vector<T> > grid(a.size());
     size_t blockSize;
     size_t blockEntryWidth;
 
     switch (multiplyStyle.partialProductStyle) {
     case CONVENTIONAL :
       blockSize = 1;
-      for (int i = 0; i < b.length(); ++i) {
-	grid[i] = and(b[i], a);
+      for (int i = 0; i < b.size(); ++i) {
+	andBit(b[i], a, grid[i]);
       }
       break;
 
-    case BLOCK2_BY_ADDITION : blockSize = 2; blockEntryWidth = a.length() + 1;
-    case BLOCK3_BY_ADDITION : blockSize = 3; blockEntryWidth = a.length() + 2;
-    case BLOCK4_BY_ADDITION : blockSize = 4; blockEntryWidth = a.length() + 2; // shouldn't this be blockSize*2?
-    case BLOCK5_BY_ADDITION : blockSize = 5; blockEntryWidth = a.length() + 3;
+    case BLOCK2_BY_ADDITION : blockSize = 2; blockEntryWidth = a.size() + 1;
+    case BLOCK3_BY_ADDITION : blockSize = 3; blockEntryWidth = a.size() + 2;
+    case BLOCK4_BY_ADDITION : blockSize = 4; blockEntryWidth = a.size() + 3; 
+    case BLOCK5_BY_ADDITION : blockSize = 5; blockEntryWidth = a.size() + 4;
       // Build blocks
-      // each block[i] represents the result of multiplying the constant i by a
+      // each block[i] represents the result of multiplying the constant i by a (IDIOT!!)
       std::vector< std::vector<T> > block(1 << blockSize);
-
-      block[0] = zero(blockEntryWidth);
+      
+      block[0] = makeZero<T>(blockEntryWidth);
       block[1] = a;
       block[2] = lshift(a.extend(1), 1);
       block[3] = add2(multiplyStyle.accumulateStyle.add2Style,
 		      block[1].extend(1),
 		      block[2],
-		      mkFalse());
+		      mkFalse<T>());
       if (blockSize == 2) goto trim;
 
       block[4] = lshift(a.extend(2), 2);
       block[5] = add2(multiplyStyle.accumulateStyle.add2Style,
 		      block[1].extend(2),
 		      block[4],
-		      mkFalse());
+		      mkFalse<T>());
       block[6] = lshift(block[3].extend(1), 1);
       block[8] = lshift(a.extend(3), 3);
       block[7] = subtract(block[8], block[1]);
@@ -890,31 +988,32 @@ template <class T> std::vector<T> inline multiply (const multiplyEncoding &multi
 
     trim :
       // Set block width
-      for (int i = 0; i < block.length(); ++i) {
+      for (int i = 0; i < block.size(); ++i) {
 	setLength(block[i], blockEntryWidth); // LSH: why do you need this?
       }
 
       // LSH: this does not work. You should get 4 bits from each block
+      // and they can overflow in the next block
       // Select to build grid
       if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION) {
-	for (int i = 0; i < b.length(); i += 2) {
+	for (int i = 0; i < b.size(); i += 2) {
 	  // \todo This is not optimal!
 	  grid[i / 2] = ite(b[i + 1],
 			    ite(b[i], block[3], block[2]),
 			    ite(b[i], block[1], block[0]));
 	}
 
-	Unimplemented("Fix up for when b.length() is odd");
+	Unimplemented("Fix up for when b.size() is odd");
 
       } else {
 	Unimplemented("other selects work similarly");
       }
 
       break;
-    case BLOCK2_BY_CONSTANT_MULTIPLICATION : blockSize = 2; blockEntryWidth = a.length() + 1;
-    case BLOCK3_BY_CONSTANT_MULTIPLICATION : blockSize = 3; blockEntryWidth = a.length() + 2;
-    case BLOCK4_BY_CONSTANT_MULTIPLICATION : blockSize = 4; blockEntryWidth = a.length() + 2;
-    case BLOCK5_BY_CONSTANT_MULTIPLICATION : blockSize = 5; blockEntryWidth = a.length() + 3;
+    case BLOCK2_BY_CONSTANT_MULTIPLICATION : blockSize = 2; blockEntryWidth = a.size() + 1;
+    case BLOCK3_BY_CONSTANT_MULTIPLICATION : blockSize = 3; blockEntryWidth = a.size() + 2;
+    case BLOCK4_BY_CONSTANT_MULTIPLICATION : blockSize = 4; blockEntryWidth = a.size() + 2;
+    case BLOCK5_BY_CONSTANT_MULTIPLICATION : blockSize = 5; blockEntryWidth = a.size() + 3;
 
       Unimplemented("Need the multiply by constant function.");
       break;
@@ -934,21 +1033,22 @@ template <class T> std::vector<T> inline multiply (const multiplyEncoding &multi
     if (multiplyStyle.isWordLevelReduction()) {
       Assert(multiplyStyle.reductionStyle == WORD_LEVEL);
 
-      for (int i = 0; i < grid.length(); ++i) {
-	lshift(grid[i].extend(a.length() * 2 - grid[i].length()), i * blocksize);
+      for (int i = 0; i < grid.size(); ++i) {
+	lshift(grid[i].extend(a.size() * 2 - grid[i].size()), i * blockSize);
       }
 
-      return accumulate(multiplyStyle.accumulateStyle, grid).trim(something);
+      // LSH why do we need a trim?
+      return accumulate(multiplyStyle.accumulateStyle, grid);
 
     } else {
       Assert(multiplyStyle.isBitLevelReduction());
 
-      std::vector < std::vector<T> > antiDiagonals(a.length() * 2);
+      std::vector < std::vector<T> > antiDiagonals(a.size() * 2);
 
       // Load anti-diagonals correctly
-      for (int i = 0; i < grid.length(); ++i) {
-	for (int j = 0; j < grid[i].length(); ++j) {
-	  antiDiagonal[i * blocksize + j].push_back(grid[i][j]);
+      for (int i = 0; i < grid.size(); ++i) {
+	for (int j = 0; j < grid[i].size(); ++j) {
+	  antiDiagonals[i * blockSize + j].push_back(grid[i][j]);
 	}
       }
 
@@ -957,31 +1057,31 @@ template <class T> std::vector<T> inline multiply (const multiplyEncoding &multi
       do {
 
 	// One reduction round
-	for (int i = antiDiagonals.length() - 1 ; i > 0; --i) {
-	  if (antiDiagonal[i].length() >= 3) { // Or maybe 2 ...
+	for (int i = antiDiagonals.size() - 1 ; i > 0; --i) {
+	  if (antiDiagonals[i].size() >= 3) { // Or maybe 2 ...
 
-	    std::vector<T> tmp = antiDiagonal[i];
-	    antiDiagonal[i].clear();
+	    std::vector<T> tmp = antiDiagonals[i];
+	    antiDiagonals[i].clear();
 
-	    for (int j = 0; j < tmp.length(); j += 3) {
+	    for (int j = 0; j < tmp.size(); j += 3) {
 	      // Should this be add2Style.fullAdderStyle?  Does it matter?
 	      std::vector<T> result(fullAdder(multiplyStyle.accumulateStyle.add3Style.fullAdderStyle,
 					      tmp[j],
 					      tmp[j+1],
 					      tmp[j+2]));
-	      antiDiagonal[i].push_back(result[0]);
-	      antiDiagonal[i+1].push_back(result[1]);
+	      antiDiagonals[i].push_back(result[0]);
+	      antiDiagonals[i+1].push_back(result[1]);
 				    
 	    }
 	    Unimplemented("Half adder if the remainder is two");
 
 
-	    maximumInDiagonal = (maximumInDiagonal < antiDiagonal[i+1].length()) ?
-	      antiDiagonal[i+1].length : maximumInDiagonal;
+	    maximumInDiagonal = (maximumInDiagonal < antiDiagonals[i+1].size()) ?
+	      antiDiagonals[i+1].length : maximumInDiagonal;
 	  }
 
-	  maximumInDiagonal = (maximumInDiagonal < antiDiagonal[i].length()) ?
-	    antiDiagonal[i].length : maximumInDiagonal;
+	  maximumInDiagonal = (maximumInDiagonal < antiDiagonals[i].size()) ?
+	    antiDiagonals[i].length : maximumInDiagonal;
 	}
 
       } while (maximumInDiagonal > 3);  // Or maybe 2 ...
@@ -996,5 +1096,10 @@ template <class T> std::vector<T> inline multiply (const multiplyEncoding &multi
   }
 }
 
+ 
+}
+}
+}
+ 
 
 #endif

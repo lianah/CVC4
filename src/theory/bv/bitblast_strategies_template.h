@@ -429,6 +429,39 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
     Debug("bitvector-bb") << "with bits: " << toString(res)  << "\n";
   }
 }
+
+template <class T>
+void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
+  Debug("bitvector") << "theory::bv:: DefaultMultBB bitblasting "<< node << "\n";
+  Assert(res.size() == 0 &&
+         node.getKind() == kind::BITVECTOR_MULT);
+
+
+  Add2Encoding add2Enc(TSEITIN_NAIVE_AB_CIRCUIT, Add2Encoding::RIPPLE_CARRY);
+  Add3Encoding add3Enc(Add3Encoding::THREE_TO_TWO_THEN_ADD, TSEITIN_NAIVE_AB_CIRCUIT, add2Enc);
+  AccumulateEncoding accEncoding(add2Enc, add3Enc, AccumulateEncoding::LINEAR_FORWARDS); 
+  MultiplyEncoding multStyle(DEFAULT_REC, CONVENTIONAL, WORD_LEVEL, accEncoding);
+  
+ 
+  std::vector<T> newres; 
+  bb->bbTerm(node[0], res); 
+  for(unsigned i = 1; i < node.getNumChildren(); ++i) {
+    std::vector<T> current;
+    bb->bbTerm(node[i], current);
+    newres.clear(); 
+    // constructs a simple shift and add multiplier building the result
+    // in res
+    newres = multiply(multStyle, current, res, bb->getCnfStream());
+
+    Assert (newres.size()); 
+    res = newres;
+  }
+  
+  if(Debug.isOn("bitvector-bb")) {
+    Debug("bitvector-bb") << "with bits: " << toString(res)  << "\n";
+  }
+}
+ 
  
 
 template <class T>
