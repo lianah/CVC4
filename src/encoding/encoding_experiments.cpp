@@ -1142,15 +1142,15 @@ void checkZooMultipliers(Options& opts) {
   unsigned width = opts[options::encodingBitwidth];
   std::vector<FullAdderEncoding> fullAdderEncodings;
   fullAdderEncodings.push_back(TSEITIN_NAIVE_AB_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
-  fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
-  fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
-  fullAdderEncodings.push_back(MINISAT_COMPLETE);
-  fullAdderEncodings.push_back(MARTIN_OPTIMAL);
+  // fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
+  // fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
+  // fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
+  // fullAdderEncodings.push_back(MINISAT_COMPLETE);
+  // fullAdderEncodings.push_back(MARTIN_OPTIMAL);
 
   std::vector<Add2Encoding::Style> add2Styles;
   add2Styles.push_back(Add2Encoding::RIPPLE_CARRY);   
@@ -1164,14 +1164,14 @@ void checkZooMultipliers(Options& opts) {
   accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
   accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
   accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
-  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
-  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
-  // accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
+  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
+  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
+  accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
 
   std::vector<PartialProductEncoding> partialProductEncodings;
   partialProductEncodings.push_back(CONVENTIONAL);
   partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
-  // partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
+  partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK5_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);

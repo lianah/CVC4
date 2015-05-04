@@ -324,8 +324,8 @@ std::vector<T> inline add3 (const Add3Encoding &add3Style,
   switch (add3Style.style) {
   case Add3Encoding::THREE_TO_TWO_THEN_ADD :
     {
-      std::vector<T> sum(a.size() + 1);
-      std::vector<T> carry(a.size() + 1);
+      std::vector<T> sum(a.size());
+      std::vector<T> carry(a.size()+1);
 
       carry[0] = cin;
 
@@ -340,18 +340,17 @@ std::vector<T> inline add3 (const Add3Encoding &add3Style,
 	carry[i + 1] = tmp.second;
       }
 
-      sum[a.size()] = mkFalse<T>();
-
-      // \todo We can add in a second carry here...
+      // sum[a.size()] = mkFalse<T>();
+      // T interm_carry = carry.back();
+      carry.pop_back();
       result = add2(add3Style.add2Style, sum, carry, mkFalse<T>(), cnf);
-
     }
     break;
   default :
     Unimplemented("Add3 style not implemented");
   }
 
-  Assert(result.size() == a.size() + 2);
+  Assert(result.size() == a.size());
   return result;
 }
 
@@ -453,7 +452,7 @@ template <class T> std::vector<T> inline accumulate(const AccumulateEncoding &ac
   case AccumulateEncoding::ADD3_LINEAR_FORWARDS: {
     sum = grid[0];
 
-    for (int i = 1; i < inputCount; i += 2) {
+    for (int i = 1; i < inputCount - 1; i += 2) {
       sum = add3(accumulateStyle.add3Style,
 		 sum,
 		 grid[i], 
@@ -706,70 +705,84 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       }
       break;
 
-    case BLOCK2_BY_ADDITION : blockSize = 2; blockEntryWidth = a.size() + 1;
-    case BLOCK3_BY_ADDITION : blockSize = 3; blockEntryWidth = a.size() + 2;
-    case BLOCK4_BY_ADDITION : blockSize = 4; blockEntryWidth = a.size() + 3; 
-    case BLOCK5_BY_ADDITION : blockSize = 5; blockEntryWidth = a.size() + 4; {
-	// Build blocks
-	// each block[i] represents the result of multiplying the constant i by a (IDIOT!!)
-	std::vector< std::vector<T> > block(1 << blockSize);
-	block[0] = makeZero<T>(blockEntryWidth);
-	block[1] = a;
-	block[2] = makeLShift(makeZeroExtend(a, 1), 1);
-	block[3] = add2(multiplyStyle.accumulateStyle.add2Style,
-			makeZeroExtend(block[1], 1),
-			block[2],
-			mkFalse<T>(), cnf);
-	if (blockSize == 2) goto trim;
+    case BLOCK2_BY_ADDITION : 
+    case BLOCK3_BY_ADDITION : 
+    case BLOCK4_BY_ADDITION : 
+    case BLOCK5_BY_ADDITION :  {
+      if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION)
+        blockSize = 2;
+      if (multiplyStyle.partialProductStyle == BLOCK3_BY_ADDITION)
+        blockSize = 3;
+      if (multiplyStyle.partialProductStyle == BLOCK4_BY_ADDITION)
+        blockSize = 4;
+      if (multiplyStyle.partialProductStyle == BLOCK5_BY_ADDITION)
+        blockSize = 5;
+      
+      // Build blocks
+      // each block[i] represents the result of multiplying the constant i by a (IDIOT!!)
+      Assert (a.size() >= 2);
+      blockEntryWidth = a.size();
+      std::vector< std::vector<T> > block(1 << blockSize);
+      block[0] = makeZero<T>(blockEntryWidth);
+      block[1] = a;
+      block[2] = makeLShift(a, 1);
+      block[3] = add2(multiplyStyle.accumulateStyle.add2Style,
+                      block[1],
+                      block[2],
+                      mkFalse<T>(), cnf);
 
-	block[4] = makeLShift(makeZeroExtend(a, 2), 2);
-	block[5] = add2(multiplyStyle.accumulateStyle.add2Style,
-			makeZeroExtend(block[1], 2), 
-			block[4],
-			mkFalse<T>(), cnf);
-	block[6] = makeLShift(makeZeroExtend(block[3], 1), 1);
-	block[8] = makeLShift(makeZeroExtend(a, 3), 3);
-	block[7] = sub2(multiplyStyle.accumulateStyle.add2Style,
-			block[8],
-			block[1], cnf);
+      if (blockSize == 2) goto trim;
+      Assert (a.size() >= 3);      
 
-	if (blockSize == 3) goto trim;
+      block[4] = makeLShift(a, 2);
+      block[5] = add2(multiplyStyle.accumulateStyle.add2Style,
+                      block[1], 
+                      block[4],
+                      mkFalse<T>(), cnf);
+      block[6] = makeLShift(block[3], 1);
+      block[7] = sub2(multiplyStyle.accumulateStyle.add2Style,
+                      makeLShift(a, 3), // 8 * a
+                      block[1], cnf);
 
-	Unimplemented("... and so on ...");
+      if (blockSize == 3) goto trim;
 
+      Assert (a.size() >= 4);
+      Unimplemented("... and so on ...");
+      
       trim :
-	// Set block width
-	for (int i = 0; i < block.size(); ++i) {
-	  block[i].resize(blockEntryWidth); // LSH: why do you need this?
-	}
-
-	// LSH: this does not work. You should get 4 bits from each block
-	// and they can overflow in the next block
-	// Select to build grid
-	if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION) {
-	  for (int i = 0; i < b.size(); i += 2) {
-	    // \todo This is not optimal!
-	    grid.push_back(makeIte(b[i + 1],
-				   makeIte(b[i], block[3], block[2]),
-				   makeIte(b[i], block[1], block[0])));
-	  }
-	  // LSH TODO!!
-	  Unimplemented("Fix up for when b.size() is odd");
-
-	} else {
-	  Unimplemented("other selects work similarly");
-	}
-
-	break;
+      // Select to build grid
+      if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION) {
+        for (int i = 0; i <= b.size() -2; i += 2) {
+          // \todo This is not optimal!
+          grid.push_back(makeIte(b[i + 1],
+                                 makeIte(b[i], block[3], block[2]),
+                                 makeIte(b[i], block[1], block[0])));
+        }
+        
+      } else if (multiplyStyle.partialProductStyle == BLOCK3_BY_ADDITION) {
+        for (int i = 0; i <= b.size() -3; i += 3) {
+          grid.push_back(makeIte(b[i+2],
+                                 (makeIte(b[i + 1],
+                                         makeIte(b[i], block[7], block[6]),
+                                         makeIte(b[i], block[5], block[4]))),
+                                 makeIte(b[i + 1],
+                                         makeIte(b[i], block[3], block[2]),
+                                         makeIte(b[i], block[1], block[0]))));
+        }
+      } else {
+        Unimplemented("other selects work similarly");
       }
-    case BLOCK2_BY_CONSTANT_MULTIPLICATION : blockSize = 2; blockEntryWidth = a.size() + 1;
-    case BLOCK3_BY_CONSTANT_MULTIPLICATION : blockSize = 3; blockEntryWidth = a.size() + 2;
-    case BLOCK4_BY_CONSTANT_MULTIPLICATION : blockSize = 4; blockEntryWidth = a.size() + 2;
-    case BLOCK5_BY_CONSTANT_MULTIPLICATION : blockSize = 5; blockEntryWidth = a.size() + 3;
-
+      
+      break;
+    }
+    case BLOCK2_BY_CONSTANT_MULTIPLICATION : 
+    case BLOCK3_BY_CONSTANT_MULTIPLICATION : 
+    case BLOCK4_BY_CONSTANT_MULTIPLICATION : 
+    case BLOCK5_BY_CONSTANT_MULTIPLICATION : {
       Unimplemented("Need the multiply by constant function.");
       break;
-
+    }
+      
     case OPTIMAL_2_BY_2 :
     case OPTIMAL_3_BY_3 :
     case OPTIMAL_4_BY_4 :
@@ -786,10 +799,14 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       Assert(multiplyStyle.reductionStyle == WORD_LEVEL);
 
       for (int i = 0; i < grid.size(); ++i) {
-	/* std::vector<T> extended_grid = makeZeroExtend(grid[i], a.size()*2 - grid[i].size()); */
-	/* grid[i].swap(extended_grid); */
 	lshift(grid[i], i * blockSize);
       }
+      // if the width is not divisible by blockSize
+      for (int i = b.size() % blockSize ; i > 0; --i) {
+        grid.push_back(makeAndBit(b[b.size() - i], a));
+        lshift(grid.back(), b.size() - i);
+      }
+
 
       // LSH try not to assert unnecessary clauses
       std::vector<T> res = accumulate(multiplyStyle.accumulateStyle, grid, cnf);
