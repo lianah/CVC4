@@ -17,6 +17,7 @@
 #include "expr/node.h"
 #include "theory/bv/theory_bv_utils.h"
 #include "theory/bv/bitblaster_template.h"
+#include "theory/bv/multiplier_zoo.h"
 #include "smt/smt_engine.h"
 #include "smt/smt_engine_scope.h"
 #include "main/options.h"
@@ -29,6 +30,8 @@ using namespace CVC4;
 using namespace CVC4::prop;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv;
+
+CVC4::theory::bv::MultiplyEncoding CVC4::theory::bv::MultiplyEncoding::s_current; 
 
 // fixed are literals that represent the fixed values of the bits
 // according to some heuristic
@@ -1134,6 +1137,114 @@ void generateReferenceEncodings(unsigned k, Options& opts) {
   }
 }
 
+
+void checkZooMultipliers(Options& opts) {
+  unsigned width = opts[options::encodingBitwidth];
+  std::vector<FullAdderEncoding> fullAdderEncodings;
+  fullAdderEncodings.push_back(TSEITIN_NAIVE_AB_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
+  fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
+  fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
+  fullAdderEncodings.push_back(MINISAT_COMPLETE);
+  fullAdderEncodings.push_back(MARTIN_OPTIMAL);
+
+  std::vector<Add2Encoding::Style> add2Styles;
+  add2Styles.push_back(Add2Encoding::RIPPLE_CARRY);   
+  // add2Styles.push_back(CARRY_LOOKAHEAD);
+  // add2Styles.push_back(CARRY_SELECT); 
+  std::vector<Add3Encoding::Style> add3Styles;
+  // add3Styles.push_back(Add3Encoding::OPTIMAL_ADD3);
+  add3Styles.push_back(Add3Encoding::THREE_TO_TWO_THEN_ADD);
+
+  std::vector<AccumulateEncoding::Style> accStyles;
+  accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
+  accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
+
+  std::vector<PartialProductEncoding> partialProductEncodings;
+  partialProductEncodings.push_back(CONVENTIONAL);
+  partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK5_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);
+  // partialProductEncodings.push_back(BLOCK3_BY_CONSTANT_MULTIPLICATION);
+  // partialProductEncodings.push_back(BLOCK4_BY_CONSTANT_MULTIPLICATION);
+  // partialProductEncodings.push_back(BLOCK5_BY_CONSTANT_MULTIPLICATION);
+  // partialProductEncodings.push_back(OPTIMAL_2_BY_2);
+  // partialProductEncodings.push_back(OPTIMAL_3_BY_3);
+  // partialProductEncodings.push_back(OPTIMAL_4_BY_4);
+  // partialProductEncodings.push_back(OPTIMAL_5_BY_);
+
+  std::vector<ReductionEncoding> reductionStyles;
+  reductionStyles.push_back(WORD_LEVEL);
+  // reductionStyles.push_back(WALLACE_TREE); Unimplemted code expection now
+  // reductionStyle.push_back(DADDA_TREE);
+  // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);
+  // reductionStyle.push_back(CARRY_SAVE_LINEAR_REDUCTION);
+  // reductionStyle.push_back(CARRY_SAVE_TREE_REDUCTION);
+  for (unsigned fa = 0; fa < fullAdderEncodings.size(); ++fa) {
+    for (unsigned add2 = 0; add2 < add2Styles.size(); ++add2) {
+      for (unsigned add3 = 0; add3 < add3Styles.size(); ++add3) {
+	for (unsigned acc = 0; acc < accStyles.size(); ++acc) {
+	  for (unsigned pp = 0; pp < partialProductEncodings.size(); ++pp) {
+	    for (unsigned red = 0; red< reductionStyles.size(); ++red) {
+	     
+	      FullAdderEncoding fullAdderEncoding = fullAdderEncodings[fa];
+	      Add2Encoding::Style add2Style = add2Styles[add2];
+	      size_t carrySelectMin = -1;
+	      size_t carrySelectSplit = -1;
+
+	      Add2Encoding add2Enc(fullAdderEncoding,
+				   add2Style,
+				   carrySelectMin,
+				   carrySelectSplit);
+
+	      Add3Encoding::Style add3Style = add3Styles[add3];
+	      Add3Encoding add3Enc(add3Style,
+				   fullAdderEncoding,
+				   add2Enc);
+  
+	      AccumulateEncoding::Style accStyle = accStyles[acc];
+
+	      AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
+
+	      RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
+	      PartialProductEncoding partialProductEncoding = partialProductEncodings[pp];
+	      ReductionEncoding reductionStyle = reductionStyles[red];
+
+	      std::cout << "checkZooMultipliers for " << fullAdderEncoding << " "
+			<< "  add2Style " << add2Style <<" " << std::endl
+			<< "  add3Style " << add3Style <<" " << std::endl
+			<< "  accStyle " << accStyle << " " << std::endl
+			<< "  partialProductEncoding " << partialProductEncoding << " " << std::endl
+			<< "  reductionStyle " << reductionStyle << std::endl;
+	     
+	      MultiplyEncoding multStyle(recursionStyle,
+					 partialProductEncoding,
+					 reductionStyle,
+					 accEncoding);
+
+	      MultiplyEncoding::setCurrent(multStyle);
+	      equivalenceCheckerTerm(ZooMultBB<Node>, "zoo-add-mult",
+				     DefaultMultBB<Node>, "default-mult",
+				     kind::BITVECTOR_MULT, width);
+
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
 void CVC4::runEncodingExperiment(Options& opts) {
   ExprManager em;
   SmtEngine smt(&em);
@@ -1147,7 +1258,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   /**** Generating CNF encoding files for operations ****/
 
   // makeFullAdder();
-  generateReferenceEncodings(width, opts);
+  // generateReferenceEncodings(width, opts);
 
   // printTermEncoding(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>, "mult2", 2);
   // printTermEncoding(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>, "mult3", 3);
@@ -1198,10 +1309,9 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /********* Equivalence Check Mult ****************/
 
-  equivalenceCheckerTerm(ZooMultBB<Node>, "zoo-add-mult",
-			 DefaultMultBB<Node>, "default-mult",
-   			 kind::BITVECTOR_MULT, width);
 
+  checkZooMultipliers(opts); 
+  
   
   // equivalenceCheckerTerm(OptimalAddMultBB<Node>, "optimal-add-mult",
   // 			 DefaultMultBB<Node>, "default-mult",

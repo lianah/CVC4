@@ -438,11 +438,7 @@ void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
          node.getKind() == kind::BITVECTOR_MULT);
 
 
-  Add2Encoding add2Enc(TSEITIN_NAIVE_AB_CIRCUIT, Add2Encoding::RIPPLE_CARRY);
-  Add3Encoding add3Enc(Add3Encoding::THREE_TO_TWO_THEN_ADD, TSEITIN_NAIVE_AB_CIRCUIT, add2Enc);
-  AccumulateEncoding accEncoding(add2Enc, add3Enc, AccumulateEncoding::LINEAR_FORWARDS); 
-  MultiplyEncoding multStyle(DEFAULT_REC, CONVENTIONAL, WORD_LEVEL, accEncoding);
-  
+  MultiplyEncoding multStyle = MultiplyEncoding::current();
  
   std::vector<T> newres; 
   bb->bbTerm(node[0], res); 

@@ -220,6 +220,7 @@ libcvc4_la_SOURCES = \
 	theory/bv/bitblast_mode.cpp \
 	theory/bv/bitblast_utils.h \
 	theory/bv/multiplier_zoo.h \
+	theory/bv/multiplier_zoo.cpp \
 	theory/bv/bvintropow2.h \
 	theory/bv/bvintropow2.cpp \
 	theory/idl/idl_model.h \

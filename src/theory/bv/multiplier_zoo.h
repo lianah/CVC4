@@ -61,6 +61,8 @@ typedef enum _fullAdderEncoding {
   MARTIN_OPTIMAL             // Current CBMC
 } FullAdderEncoding;
 
+
+ 
 template <class T>
 T makeCarry(const FullAdderEncoding &fullAdderStyle,
 	    const T& a, const T& b, const T& c,
@@ -206,6 +208,8 @@ typedef enum _halfAdderEncoding {
   // \todo optimal half_adder
 } HalfAdderEncoding;
 
+
+ 
 template <class T>
 T inline halfAdder(const HalfAdderEncoding &halfAdderStyle,
 		   const T &a,
@@ -238,6 +242,7 @@ struct Add2Encoding {
 };
 
 
+ 
 template <class T>
 std::vector<T> inline add2(const Add2Encoding &add2Style,
 			   const std::vector<T> &a,
@@ -245,7 +250,7 @@ std::vector<T> inline add2(const Add2Encoding &add2Style,
 			   const T &cin,
 			   prop::CnfStream* cnf) {
   Assert(a.size() == b.size());
-  std::vector<T> result(a.size() + 1);
+  std::vector<T> result(a.size());
 
   if (a.size() > add2Style.carrySelectMinimum) {
     // carry select basically duplicates steps in the adder
@@ -262,7 +267,7 @@ std::vector<T> inline add2(const Add2Encoding &add2Style,
 	  result[i] =  tmp.first;
 	  carry = tmp.second;
 	}
-	result[a.size()] = carry;
+	// result[a.size()] = carry;
       }
       break;
 
@@ -272,7 +277,7 @@ std::vector<T> inline add2(const Add2Encoding &add2Style,
     }
   }
 
-  Assert(result.size() == a.size() + 1);
+  Assert(result.size() == a.size());
   return result;
 }
 
@@ -302,6 +307,8 @@ struct Add3Encoding {
   , add2Style(add2Sty)
   {}
 };
+
+
  
 template <class T>
 std::vector<T> inline add3 (const Add3Encoding &add3Style,
@@ -372,52 +379,56 @@ struct AccumulateEncoding {
   {}
 };
 
-template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &accumulateStyle,
-						     const std::vector<std::vector<T> > &set,
-						     prop::CnfStream* cnf) {
-  size_t inputCount = set.size();
-  size_t inputLength = set[0].size();
 
-  assert(inputCount != 0);
+ 
+template <class T> std::vector<T> inline accumulate(const AccumulateEncoding &accumulateStyle,
+						    const std::vector<std::vector<T> > &grid,
+						    prop::CnfStream* cnf) {
+  size_t inputCount = grid.size();
+  size_t inputLength = grid[0].size();
+
+  Assert(inputCount != 0);
   for (unsigned i = 0; i < inputCount; ++i) {
-    assert(set[i].size() == inputLength);
+    Assert(grid[i].size() == inputLength);
   }
 
   if (inputCount == 1) {
-    return set[0];
+    return grid[0];
   }
 
   std::vector<T> sum;
 
   switch (accumulateStyle.style) {
   case AccumulateEncoding::LINEAR_FORWARDS: {
-    sum = set[0];
+    sum = grid[0];
     
     for (int i = 1; i < inputCount; ++i) {
       // \todo We can sneak in lots of carrys in accumulation...
       sum = add2(accumulateStyle.add2Style,
 		 sum,
-		 makeZeroExtend(set[i], sum.size() - set[i].size()),
+		 grid[i],
 		 mkFalse<T>(),
 		 cnf);
+      // discard carry from add2
+      // sum.resize(inputLength);
     }
     break;  
   }
 
   case AccumulateEncoding::LINEAR_BACKWARDS: {
-    sum = set[inputCount - 1];
+    sum = grid[inputCount - 1];
     
     for (int i = inputCount - 2; i >= 0; --i) {
       sum = add2(accumulateStyle.add2Style,
 		 sum,
-		 makeZeroExtend(set[i], sum.size() - set[i].size()),
+		 grid[i],
 		 mkFalse<T>(),
 		 cnf);
     }
     break;
   }
   case AccumulateEncoding::TREE_REDUCTION: {
-    std::vector<std::vector<T> > input = set;
+    std::vector<std::vector<T> > input = grid;
     std::vector<std::vector<T> > output;
 
     while (input.size() >= 2) {
@@ -429,7 +440,7 @@ template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &a
 			      cnf));
       }
       if ((input.size() & 1) == 1) {
-	output.push_back(makeZeroExtend(input[input.size() - 1], 1));
+	output.push_back(input[input.size() - 1]);
       }
 
       input = output;
@@ -440,46 +451,46 @@ template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &a
     break;
   }
   case AccumulateEncoding::ADD3_LINEAR_FORWARDS: {
-    sum = set[0];
+    sum = grid[0];
 
     for (int i = 1; i < inputCount; i += 2) {
       sum = add3(accumulateStyle.add3Style,
 		 sum,
-		 makeZeroExtend(set[i], sum.size() - set[i].size()),
-		 makeZeroExtend(set[i + 1], sum.size() - set[i + 1].size()),
+		 grid[i], 
+		 grid[i + 1],
 		 mkFalse<T>(),
 		 cnf);
     }
     if ((inputCount & 1) == 0) {
       sum = add2(accumulateStyle.add2Style,
 		 sum,
-		 makeZeroExtend(set[inputCount - 1], sum.size() - set[inputCount - 1].size()),
+		 grid[inputCount - 1],
 		 mkFalse<T>(),
 		 cnf);
     }
     break;
   }
   case AccumulateEncoding::ADD3_LINEAR_BACKWARDS: {
-    sum = set[inputCount - 1];
+    sum = grid[inputCount - 1];
     
     for (int i = inputCount - 2; i >= 1; i -= 2) {
       sum = add3(accumulateStyle.add3Style,
 		 sum,
-		 makeZeroExtend(set[i], sum.size() - set[i].size()),
-		 makeZeroExtend(set[i - 1], sum.size() - set[i - 1].size()),
+		 grid[i],
+		 grid[i - 1],
 		 mkFalse<T>(), cnf);
     }
     if ((inputCount & 1) == 0) {
       sum = add2(accumulateStyle.add2Style,
 		 sum,
-		 makeZeroExtend(set[0], sum.size() - set[0].size()),
+		 grid[0],
 		 mkFalse<T>(), cnf);
     }
     break;
   }
 
   case AccumulateEncoding::ADD3_TREE_REDUCTION: {
-    std::vector<std::vector<T> > input = set;
+    std::vector<std::vector<T> > input = grid;
     std::vector<std::vector<T> > output;
 
     while (input.size() >= 3) {
@@ -492,7 +503,7 @@ template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &a
 			      mkFalse<T>(), cnf));
       }
       while (i < input.size()) {
-	output.push_back(makeZeroExtend(input[i], 1));
+	output.push_back(input[i]);
 	++i;
       }
 
@@ -517,12 +528,12 @@ template <class T> std::vector<T> inline accumulate (const AccumulateEncoding &a
   }
 
   // Trim to the correct length
-  size_t lengthIncrement = 0;
-  while ((1 << lengthIncrement) < inputCount) {
-    ++lengthIncrement;
-  }
+  /* size_t lengthIncrement = 0; */
+  /* while ((1 << lengthIncrement) < inputCount) { */
+  /*   ++lengthIncrement; */
+  /* } */
 
-  sum.resize(inputLength + lengthIncrement);
+  /* sum.resize(inputLength + lengthIncrement); */
   return sum;
 }
 
@@ -548,6 +559,8 @@ typedef enum _partialProductEncoding {
 } PartialProductEncoding;
 
 
+
+
 typedef enum _reductionEncoding {
   /** Word level reductions **/
   WORD_LEVEL,
@@ -565,6 +578,9 @@ typedef enum _reductionEncoding {
 
 } ReductionEncoding;
 
+
+        
+ 
 struct MultiplyEncoding {
   RecursiveMultiplicationEncoding recursionStyle;
   PartialProductEncoding partialProductStyle;
@@ -593,6 +609,25 @@ struct MultiplyEncoding {
   , accumulateStyle(accSty)
   , recursiveMinimum(recMin)
   {}
+
+ MultiplyEncoding()
+  : recursionStyle(DEFAULT_REC)
+  , partialProductStyle(CONVENTIONAL)
+  , reductionStyle(WORD_LEVEL)
+  , accumulateStyle(AccumulateEncoding(Add2Encoding(TSEITIN_NAIVE_AB_CIRCUIT,
+						    Add2Encoding::RIPPLE_CARRY),
+				       Add3Encoding(Add3Encoding::THREE_TO_TWO_THEN_ADD,
+						    TSEITIN_NAIVE_AB_CIRCUIT,
+						    Add2Encoding(TSEITIN_NAIVE_AB_CIRCUIT,
+								 Add2Encoding::RIPPLE_CARRY)),
+				       AccumulateEncoding::LINEAR_FORWARDS))
+  , recursiveMinimum(-1)
+  {}
+
+  
+  static MultiplyEncoding s_current;
+  static MultiplyEncoding current() { return s_current; }
+  static void setCurrent(const MultiplyEncoding& enc) { s_current = enc; }
 };
 
 
@@ -659,7 +694,7 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       multiplyStyle.isBitLevelReduction()) {
 
     // Generate the grid
-    std::vector< std::vector<T> > grid(a.size());
+    std::vector< std::vector<T> > grid;
     size_t blockSize;
     size_t blockEntryWidth;
 
@@ -667,7 +702,7 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
     case CONVENTIONAL :
       blockSize = 1;
       for (int i = 0; i < b.size(); ++i) {
-	grid[i] = makeAndBit(b[i], a);
+	grid.push_back(makeAndBit(b[i], a));
       }
       break;
 
@@ -714,9 +749,9 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 	if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION) {
 	  for (int i = 0; i < b.size(); i += 2) {
 	    // \todo This is not optimal!
-	    grid[i / 2] = makeIte(b[i + 1],
-				  makeIte(b[i], block[3], block[2]),
-				  makeIte(b[i], block[1], block[0]));
+	    grid.push_back(makeIte(b[i + 1],
+				   makeIte(b[i], block[3], block[2]),
+				   makeIte(b[i], block[1], block[0])));
 	  }
 	  // LSH TODO!!
 	  Unimplemented("Fix up for when b.size() is odd");
@@ -751,13 +786,16 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       Assert(multiplyStyle.reductionStyle == WORD_LEVEL);
 
       for (int i = 0; i < grid.size(); ++i) {
-	std::vector<T> extended_grid = makeZeroExtend(grid[i], a.size()*2 - grid[i].size());
-	grid[i].swap(extended_grid);
+	/* std::vector<T> extended_grid = makeZeroExtend(grid[i], a.size()*2 - grid[i].size()); */
+	/* grid[i].swap(extended_grid); */
 	lshift(grid[i], i * blockSize);
       }
 
-      // LSH why do we need a trim?
-      return accumulate(multiplyStyle.accumulateStyle, grid, cnf);
+      // LSH try not to assert unnecessary clauses
+      std::vector<T> res = accumulate(multiplyStyle.accumulateStyle, grid, cnf);
+      Assert (res.size() == a.size());
+      //      res.resize(a.size());
+      return res;
 
     } else {
       Assert(multiplyStyle.isBitLevelReduction());
@@ -821,6 +859,13 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 }
 }
 }
- 
+
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::PartialProductEncoding e);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::ReductionEncoding e);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::FullAdderEncoding fa);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::HalfAdderEncoding e);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::Add2Encoding::Style e);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::Add3Encoding::Style e);
+std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::AccumulateEncoding::Style e);
 
 #endif
