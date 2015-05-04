@@ -211,7 +211,7 @@ typedef enum _halfAdderEncoding {
 
  
 template <class T>
-T inline halfAdder(const HalfAdderEncoding &halfAdderStyle,
+std::pair<T,T> inline halfAdder(const HalfAdderEncoding &halfAdderStyle,
 		   const T &a,
 		   const T &b) {
   Assert (halfAdderStyle == DEFAULT);
@@ -793,18 +793,21 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
     }
 
 
+    // if the width is not divisible by blockSize add more rows
+    for (int i = b.size() % blockSize ; i > 0; --i) {
+      grid.push_back(makeAndBit(b[b.size() - i], a));
+    }
+    
     // Now reduce...
-
     if (multiplyStyle.isWordLevelReduction()) {
       Assert(multiplyStyle.reductionStyle == WORD_LEVEL);
 
       for (int i = 0; i < grid.size(); ++i) {
 	lshift(grid[i], i * blockSize);
       }
-      // if the width is not divisible by blockSize
+      // if the width is not divisible by blockSize shift remaining rows accordingly
       for (int i = b.size() % blockSize ; i > 0; --i) {
-        grid.push_back(makeAndBit(b[b.size() - i], a));
-        lshift(grid.back(), b.size() - i);
+        lshift(grid[b.size() - i], b.size() - i);
       }
 
 
@@ -817,12 +820,14 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
     } else {
       Assert(multiplyStyle.isBitLevelReduction());
 
-      std::vector < std::vector<T> > antiDiagonals(a.size() * 2);
-
+      std::vector < std::vector<T> > antiDiagonals(a.size());
       // Load anti-diagonals correctly
+      // grid has not been shifted
       for (int i = 0; i < grid.size(); ++i) {
-	for (int j = 0; j < grid[i].size(); ++j) {
-	  antiDiagonals[i * blockSize + j].push_back(grid[i][j]);
+	for (int j = 0; j <= i; ++j) {
+          // TODO LSH make sure it works with blocks?
+          antiDiagonals[i].push_back(grid[j][i-j]);
+	  //antiDiagonals[i * blockSize + j].push_back(grid[i][j]);
 	}
       }
 
@@ -830,14 +835,16 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       size_t maximumInDiagonal = 0;
       do {
 
+        maximumInDiagonal = 0;
 	// One reduction round
-	for (int i = antiDiagonals.size() - 1 ; i > 0; --i) {
-	  if (antiDiagonals[i].size() >= 3) { // Or maybe 2 ...
+	for (int i = 0; i < antiDiagonals.size(); ++i) {
+	  if (antiDiagonals[i].size() >= 2) { // Or maybe 2 ...
 
-	    std::vector<T> tmp = antiDiagonals[i];
+	    std::vector<T> tmp;
+            tmp.swap(antiDiagonals[i]);
 	    antiDiagonals[i].clear();
 
-	    for (int j = 0; j < tmp.size(); j += 3) {
+	    for (int j = 0; j < tmp.size()-2; j += 3) {
 	      // Should this be add2Style.fullAdderStyle?  Does it matter?
 	      std::pair<T, T> result(fullAdder(multiplyStyle.accumulateStyle.add3Style.fullAdderStyle,
 					      tmp[j],
@@ -845,26 +852,55 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 					      tmp[j+2],
 					      cnf));
 	      antiDiagonals[i].push_back(result.first);
-	      antiDiagonals[i+1].push_back(result.second);
-				    
+              if (i < antiDiagonals.size() - 1) {
+                antiDiagonals[i+1].push_back(result.second);
+              }
 	    }
-	    Unimplemented("Half adder if the remainder is two");
-
-
-	    maximumInDiagonal = (maximumInDiagonal < antiDiagonals[i+1].size()) ?
-	      antiDiagonals[i+1].size() : maximumInDiagonal;
+            if (tmp.size() % 3 == 1) {
+              antiDiagonals[i].push_back(tmp.back());
+            } else if (tmp.size() % 3 == 2) {
+	      std::pair<T, T> result(halfAdder(DEFAULT,
+                                               tmp[tmp.size() - 2],
+                                               tmp[tmp.size() - 1]));
+	      antiDiagonals[i].push_back(result.first);
+              if (i < antiDiagonals.size() - 1) {
+                antiDiagonals[i+1].push_back(result.second);
+              }
+            }
 	  }
 
 	  maximumInDiagonal = (maximumInDiagonal < antiDiagonals[i].size()) ?
 	    antiDiagonals[i].size() : maximumInDiagonal;
 	}
+      } while (maximumInDiagonal > 2);  // Or maybe 2 ...
 
-      } while (maximumInDiagonal > 3);  // Or maybe 2 ...
-
-      Unimplemented("The final add2 or add3");
-
+      std::vector<T> final_result;
+      for (int i = 0; i < antiDiagonals.size(); ++i) {
+        if (antiDiagonals[i].size() == 1) {
+          final_result.push_back(antiDiagonals[i][0]);
+        } else if (antiDiagonals[i].size() == 2) {
+          std::pair<T, T> result = halfAdder(DEFAULT,
+                                             antiDiagonals[i][0],
+                                             antiDiagonals[i][1]);
+          final_result.push_back(result.first);
+          if (i < antiDiagonals.size() - 1) {
+            antiDiagonals[i+1].push_back(result.second);
+          }
+        } else {
+          Assert (antiDiagonals[i].size() == 3);
+          std::pair<T, T> result(fullAdder(multiplyStyle.accumulateStyle.add3Style.fullAdderStyle,
+                                           antiDiagonals[i][0],
+                                           antiDiagonals[i][1],
+                                           antiDiagonals[i][2],
+                                           cnf));
+          final_result.push_back(result.first);
+          if (i < antiDiagonals.size() - 1) {
+            antiDiagonals[i+1].push_back(result.second);
+          }
+        }
+      }
+      return final_result;
     }
-
   } else {
     Unimplemented("Carry-save not implemented just yet");
 

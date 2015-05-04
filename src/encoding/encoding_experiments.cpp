@@ -1162,16 +1162,16 @@ void checkZooMultipliers(Options& opts) {
 
   std::vector<AccumulateEncoding::Style> accStyles;
   accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
-  accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
-  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
-  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
-  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
-  accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
 
   std::vector<PartialProductEncoding> partialProductEncodings;
   partialProductEncodings.push_back(CONVENTIONAL);
-  partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
-  partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK5_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);
@@ -1184,8 +1184,8 @@ void checkZooMultipliers(Options& opts) {
   // partialProductEncodings.push_back(OPTIMAL_5_BY_);
 
   std::vector<ReductionEncoding> reductionStyles;
-  reductionStyles.push_back(WORD_LEVEL);
-  // reductionStyles.push_back(WALLACE_TREE); Unimplemted code expection now
+  // reductionStyles.push_back(WORD_LEVEL);
+  reductionStyles.push_back(WALLACE_TREE);
   // reductionStyle.push_back(DADDA_TREE);
   // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);
   // reductionStyle.push_back(CARRY_SAVE_LINEAR_REDUCTION);
