@@ -20,6 +20,7 @@
 #include "cvc4_private.h"
 #include "expr/node.h"
 #include "theory/bv/bitblast_utils.h"
+#include "theory/bv/multiplier_zoo.h"
 #include "theory/bv/theory_bv_utils.h"
 #include "prop/cnf_stream.h"
 #include "theory/bv/options.h"
