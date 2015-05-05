@@ -745,9 +745,39 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
                       block[1], cnf);
 
       if (blockSize == 3) goto trim;
-
       Assert (a.size() >= 4);
-      Unimplemented("... and so on ...");
+      // TODO: maybe better combinations
+      block[8] = makeLShift(a, 3);
+
+      block[9] = add2(multiplyStyle.accumulateStyle.add2Style,
+                      a, 
+                      block[8],
+                      mkFalse<T>(), cnf);
+      block[10] = add2(multiplyStyle.accumulateStyle.add2Style,
+                      block[2], 
+                      block[8],
+                      mkFalse<T>(), cnf);
+      block[11] = add2(multiplyStyle.accumulateStyle.add2Style,
+		       block[3],
+		       block[8],
+		       mkFalse<T>(), cnf);
+      
+   
+      block[12] = makeLShift(block[3], 2);
+      block[13] = add2(multiplyStyle.accumulateStyle.add2Style,
+		       block[8],
+		       block[5],
+		       mkFalse<T>(), cnf);
+      block[14] = sub2(multiplyStyle.accumulateStyle.add2Style,
+		       makeLShift(a, 4),
+		       block[2], cnf);
+      block[15] = sub2(multiplyStyle.accumulateStyle.add2Style,
+		       makeLShift(a, 4),
+		       block[1], cnf);
+
+      if (blockSize == 4) goto trim; 
+      Assert (a.size() >= 5);
+      Unimplemented("No 5 blocking yet");
       
       trim :
       // Select to build grid
@@ -769,6 +799,59 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
                                          makeIte(b[i], block[3], block[2]),
                                          makeIte(b[i], block[1], block[0]))));
         }
+      } else if (multiplyStyle.partialProductStyle == BLOCK4_BY_ADDITION) {
+        for (int i = 0; i <= b.size() -4; i += 4) {
+          grid.push_back(makeIte(b[i+3],
+				 makeIte(b[i+2],
+					 (makeIte(b[i + 1],
+						  makeIte(b[i], block[15], block[14]),
+						  makeIte(b[i], block[13], block[12]))),
+					 makeIte(b[i + 1],
+						 makeIte(b[i], block[11], block[10]),
+						 makeIte(b[i], block[9], block[8]))),				 
+				 makeIte(b[i+2],
+					 (makeIte(b[i + 1],
+						  makeIte(b[i], block[7], block[6]),
+						  makeIte(b[i], block[5], block[4]))),
+					 makeIte(b[i + 1],
+						 makeIte(b[i], block[3], block[2]),
+						 makeIte(b[i], block[1], block[0])))));
+	}
+      } else if (multiplyStyle.partialProductStyle == BLOCK5_BY_ADDITION) {
+	Unimplemented(); 
+        /* for (int i = 0; i <= b.size() -5; i += 5) { */
+        /*   grid.push_back(makeIte(b[i+4], */
+	/* 			 makeIte(b[i+3], */
+	/* 				 makeIte(b[i+2], */
+	/* 					 (makeIte(b[i + 1], */
+	/* 						  makeIte(b[i], block[31], block[30]), */
+	/* 						  makeIte(b[i], block[29], block[28]))), */
+	/* 					 makeIte(b[i + 1], */
+	/* 						 makeIte(b[i], block[27], block[26]), */
+	/* 						 makeIte(b[i], block[25], block[24]))),				  */
+	/* 				 makeIte(b[i+2], */
+	/* 					 (makeIte(b[i + 1], */
+	/* 						  makeIte(b[i], block[23], block[22]), */
+	/* 						  makeIte(b[i], block[21], block[20]))), */
+	/* 					 makeIte(b[i + 1], */
+	/* 						 makeIte(b[i], block[19], block[18]), */
+	/* 						 makeIte(b[i], block[17], block[16])))), */
+	/* 			 makeIte(b[i+3], */
+	/* 				 makeIte(b[i+2], */
+	/* 					 (makeIte(b[i + 1], */
+	/* 						  makeIte(b[i], block[15], block[14]), */
+	/* 						  makeIte(b[i], block[13], block[12]))), */
+	/* 					 makeIte(b[i + 1], */
+	/* 						 makeIte(b[i], block[11], block[10]), */
+	/* 						 makeIte(b[i], block[9], block[8]))),				  */
+	/* 				 makeIte(b[i+2], */
+	/* 					 (makeIte(b[i + 1], */
+	/* 						  makeIte(b[i], block[7], block[6]), */
+	/* 						  makeIte(b[i], block[5], block[4]))), */
+	/* 					 makeIte(b[i + 1], */
+	/* 						 makeIte(b[i], block[3], block[2]), */
+	/* 						 makeIte(b[i], block[1], block[0])))))); */
+	/* } */
       } else {
         Unimplemented("other selects work similarly");
       }
@@ -828,43 +911,29 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       	// (taking into account width not divisible by block-size)
       	for (int i = 0; i < blockSize && (k*blockSize + i < a.size()); ++i) {
       	  int num_diagonal = k*blockSize + i;
-      	  //std::cout << "Diagonal " << num_diagonal << std::endl;
+      	  // std::cout << "Diagonal " << num_diagonal << std::endl;
       	  // number of elements we are adding in the diagonal is k
       	  for (int j = 0; j <= k; ++j) {
-      	    //std::cout << "  el " << j <<" " << (k-j)*blockSize + i << std::endl;
+      	    // std::cout << "  el " << j <<" " << (k-j)*blockSize + i << std::endl;
       	    antiDiagonals[num_diagonal].push_back(grid[j][(k-j)*blockSize + i]);
       	  }
       	}
       }
 
       
-      //std::cout << "Adding remainder " << std::endl;
+      std::cout << "Adding remainder " << std::endl;
       int rem_rows = b.size() % blockSize - 1; // the first one is added in above loop
       int rows_offset = grid.size() - rem_rows;
       for (int i = 0; i < rem_rows; ++i) {
       	int num_diagonal = b.size() - rem_rows + i;
-      	//std::cout << "Diagonal " << num_diagonal << std::endl;
+      	// std::cout << "Diagonal " << num_diagonal << std::endl;
       	for (int j = 0; j <= i; ++j) {
       	  int row = rows_offset + j;
-      	  //std::cout << "  el " << row <<" " << j << std::endl;
-      	  antiDiagonals[num_diagonal].push_back(grid[row][j]);
+      	  // std::cout << "  el " << row <<" " << j+i << std::endl;
+      	  antiDiagonals[num_diagonal].push_back(grid[row][i-j]);
       	}
       }
       
-      /* for (int k = 0; k < a.size()/ blockSize + 1; ++k) { */
-      /* 	// each element on of the block is on its own diagonal */
-      /* 	// (taking into account width not divisible by block-size) */
-      /* 	for (int i = 0; i < blockSize && (k*blockSize + i < a.size()); ++i) { */
-      /* 	  int num_diagonal = k*blockSize + i; */
-      /* 	  std::cout << "Diagonal " << num_diagonal << std::endl; */
-      /* 	  // number of elements we are adding in the diagonal is k */
-      /* 	  for (int j = 0; j <= k; ++j) { */
-      /* 	    std::cout << "  el " << j <<" " << (k-j)*blockSize + i << std::endl; */
-      /* 	    antiDiagonals[num_diagonal].push_back(grid[j][(k-j)*blockSize + i]); */
-      /* 	  } */
-      /* 	} */
-      /* } */
-
       
       // Reduce
       size_t maximumInDiagonal = 0;
