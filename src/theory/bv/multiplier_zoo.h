@@ -794,7 +794,8 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 
 
     // if the width is not divisible by blockSize add more rows
-    for (int i = b.size() % blockSize ; i > 0; --i) {
+    unsigned rem_rows =  b.size() % blockSize;
+    for (int i = rem_rows ; i > 0; --i) {
       grid.push_back(makeAndBit(b[b.size() - i], a));
     }
     
@@ -802,12 +803,12 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
     if (multiplyStyle.isWordLevelReduction()) {
       Assert(multiplyStyle.reductionStyle == WORD_LEVEL);
 
-      for (int i = 0; i < grid.size(); ++i) {
+      for (int i = 0; i < grid.size() - rem_rows ; ++i) {
 	lshift(grid[i], i * blockSize);
       }
       // if the width is not divisible by blockSize shift remaining rows accordingly
-      for (int i = b.size() % blockSize ; i > 0; --i) {
-        lshift(grid[b.size() - i], b.size() - i);
+      for (int i =  rem_rows; i > 0 ; --i) {
+        lshift(grid[grid.size() - i], b.size() - i);
       }
 
 
@@ -821,16 +822,50 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       Assert(multiplyStyle.isBitLevelReduction());
 
       std::vector < std::vector<T> > antiDiagonals(a.size());
-      // Load anti-diagonals correctly
-      // grid has not been shifted
-      for (int i = 0; i < grid.size(); ++i) {
-	for (int j = 0; j <= i; ++j) {
-          // TODO LSH make sure it works with blocks?
-          antiDiagonals[i].push_back(grid[j][i-j]);
-	  //antiDiagonals[i * blockSize + j].push_back(grid[i][j]);
-	}
+
+      for (int k = 0; k < a.size()/ blockSize + 1; ++k) {
+      	// each element on of the block is on its own diagonal
+      	// (taking into account width not divisible by block-size)
+      	for (int i = 0; i < blockSize && (k*blockSize + i < a.size()); ++i) {
+      	  int num_diagonal = k*blockSize + i;
+      	  //std::cout << "Diagonal " << num_diagonal << std::endl;
+      	  // number of elements we are adding in the diagonal is k
+      	  for (int j = 0; j <= k; ++j) {
+      	    //std::cout << "  el " << j <<" " << (k-j)*blockSize + i << std::endl;
+      	    antiDiagonals[num_diagonal].push_back(grid[j][(k-j)*blockSize + i]);
+      	  }
+      	}
       }
 
+      
+      //std::cout << "Adding remainder " << std::endl;
+      int rem_rows = b.size() % blockSize - 1; // the first one is added in above loop
+      int rows_offset = grid.size() - rem_rows;
+      for (int i = 0; i < rem_rows; ++i) {
+      	int num_diagonal = b.size() - rem_rows + i;
+      	//std::cout << "Diagonal " << num_diagonal << std::endl;
+      	for (int j = 0; j <= i; ++j) {
+      	  int row = rows_offset + j;
+      	  //std::cout << "  el " << row <<" " << j << std::endl;
+      	  antiDiagonals[num_diagonal].push_back(grid[row][j]);
+      	}
+      }
+      
+      /* for (int k = 0; k < a.size()/ blockSize + 1; ++k) { */
+      /* 	// each element on of the block is on its own diagonal */
+      /* 	// (taking into account width not divisible by block-size) */
+      /* 	for (int i = 0; i < blockSize && (k*blockSize + i < a.size()); ++i) { */
+      /* 	  int num_diagonal = k*blockSize + i; */
+      /* 	  std::cout << "Diagonal " << num_diagonal << std::endl; */
+      /* 	  // number of elements we are adding in the diagonal is k */
+      /* 	  for (int j = 0; j <= k; ++j) { */
+      /* 	    std::cout << "  el " << j <<" " << (k-j)*blockSize + i << std::endl; */
+      /* 	    antiDiagonals[num_diagonal].push_back(grid[j][(k-j)*blockSize + i]); */
+      /* 	  } */
+      /* 	} */
+      /* } */
+
+      
       // Reduce
       size_t maximumInDiagonal = 0;
       do {
