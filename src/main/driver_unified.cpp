@@ -36,7 +36,7 @@
 #include "options/options.h"
 #include "theory/quantifiers/options.h"
 #include "main/command_executor.h"
-#include "encoding/encoding_experiments.h"
+#include "theory/bv/encoding_experiments.h"
 #ifdef PORTFOLIO_BUILD
 #  include "main/command_executor_portfolio.h"
 #endif
@@ -134,7 +134,7 @@ int runCvc4(int argc, char* argv[], Options& opts) {
   vector<string> filenames = opts.parseOptions(argc, argv);
 
   if (opts[options::encodingExperiment]) {
-    runEncodingExperiment(opts);
+    CVC4::runEncodingExperiment(opts);
     exit(0);
   }
   

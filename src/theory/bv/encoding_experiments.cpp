@@ -13,7 +13,7 @@
  ** \todo document this file
 **/
 
-#include "encoding/encoding_experiments.h"
+#include "theory/bv/encoding_experiments.h"
 #include "expr/node.h"
 #include "theory/bv/theory_bv_utils.h"
 #include "theory/bv/bitblaster_template.h"
@@ -1162,11 +1162,11 @@ void checkZooMultipliers(Options& opts) {
 
   std::vector<AccumulateEncoding::Style> accStyles;
   accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
-  // accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
-  // accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
-  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
-  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
-  // accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
+   accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
+  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
+  accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
 
   std::vector<PartialProductEncoding> partialProductEncodings;
   partialProductEncodings.push_back(CONVENTIONAL);
@@ -1184,7 +1184,7 @@ void checkZooMultipliers(Options& opts) {
   // partialProductEncodings.push_back(OPTIMAL_5_BY_);
 
   std::vector<ReductionEncoding> reductionStyles;
-  //  reductionStyles.push_back(WORD_LEVEL);
+  reductionStyles.push_back(WORD_LEVEL);
   reductionStyles.push_back(WALLACE_TREE);
   // reductionStyle.push_back(DADDA_TREE);
   // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);

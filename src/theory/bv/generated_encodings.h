@@ -60,6 +60,23 @@ T inline optimalSignGadget (const T& a, const T& b, const T &aLTbRec,
   return res;
 }
 
+
+/* template <class T> */
+/* std::pair<T, std::pair<T, T> > inline add3Gadget(const T& a, */
+/* 						 const T& b, */
+/* 						 const T& c, */
+/* 						 std::pair<T, T> carry, */
+/* 						 CVC4::prop::CnfStream* cnf) { */
+/*   std::pair<T, T> fa_res = fullAdder(a, b, c); */
+/*   std::vector<T> sum; */
+/*   sum.push_back(fa_res.first); */
+/*   sum.push_back(fa_res.second); */
+/*   sum.push_back(mkFalse<T>());  */
+/*   std::vector<T> total; */
+/*   return res; */
+/* } */
+
+ 
 template <class T>
 std::pair<T,T> inline optimalFullAdder(const T a, const T b, const T cin,
                                        CVC4::prop::CnfStream* cnf) {

@@ -20,8 +20,6 @@
 #include <iostream>
 #include <vector>
 
-#include "expr/expr.h"
-#include "util/cardinality.h"
 #include "options/options.h"
 
 namespace CVC4 {
