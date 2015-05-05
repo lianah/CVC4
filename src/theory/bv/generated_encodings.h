@@ -61,20 +61,45 @@ T inline optimalSignGadget (const T& a, const T& b, const T &aLTbRec,
 }
 
 
-/* template <class T> */
-/* std::pair<T, std::pair<T, T> > inline add3Gadget(const T& a, */
-/* 						 const T& b, */
-/* 						 const T& c, */
-/* 						 std::pair<T, T> carry, */
-/* 						 CVC4::prop::CnfStream* cnf) { */
-/*   std::pair<T, T> fa_res = fullAdder(a, b, c); */
-/*   std::vector<T> sum; */
-/*   sum.push_back(fa_res.first); */
-/*   sum.push_back(fa_res.second); */
-/*   sum.push_back(mkFalse<T>());  */
-/*   std::vector<T> total; */
-/*   return res; */
-/* } */
+template <class T>
+std::pair<T, std::pair<T, T> >
+inline add3DoubleCarryGadget(const T a,
+                             const T b,
+                             const T c,
+                             const std::pair<T, T>& carry,
+                             CVC4::prop::CnfStream* cnf) {
+  std::pair<T, T> fa_res = fullAdder(a, b, c);
+  std::vector<T> tmp;
+  tmp.push_back(fa_res.first);
+  tmp.push_back(fa_res.second);
+  std::vector<T> carry_vec;
+  carry_vec.push_back(carry.first);
+  carry_vec.push_back(carry.second);
+  std::vector<T> total;
+  T tmp_carry = rippleCarryAdder(tmp, carry_vec, total, mkFalse<T>());
+  T sum = total[0];
+  std::pair<T, T> carry_out = std::make_pair(total[1], tmp_carry);
+  Unreachable();
+  return std::make_pair(sum, carry_out);
+}
+
+template<class T>
+std::vector<T> add3Optimal(const std::vector<T>& a,
+                          const std::vector<T>& b,
+                          const std::vector<T>& c,
+                          CVC4::prop::CnfStream* cnf) {
+  std::pair<T, T> carry(mkFalse<T>(), mkFalse<T>());
+  std::vector<T> result(a.size());
+  for (unsigned i = 0; i < a.size(); ++i) {
+    std::pair<T, std::pair<T, T> > res = add3DoubleCarryGadget(a[i],
+                                                               b[i],
+                                                               c[i],
+                                                               carry, cnf);
+    carry = res.second;
+    result[i] = res.first; 
+  }
+  return result;
+}
 
  
 template <class T>
@@ -160,6 +185,14 @@ void optimalMult4Aux(const std::vector<T>&a,
  
 std::pair<Node, Node> optimalFullAdder(const Node a, const Node b, const Node cin,
 					      CVC4::prop::CnfStream* cnf);
+
+template <>
+std::pair<Node, std::pair<Node, Node> >
+add3DoubleCarryGadget(const Node x1,
+                      const Node x2,
+                      const Node x3,
+                      const std::pair<Node, Node>& carry,
+                      CVC4::prop::CnfStream* cnf);
 
 template <class T>
 T optimalUltGadget(const T &a, const T &b, const T &rest,

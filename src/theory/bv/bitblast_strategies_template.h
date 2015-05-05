@@ -1220,7 +1220,23 @@ void DebugMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
     Debug("bitvector-bb") << "with bits: " << toString(res)  << "\n";
   }
 }
- 
+
+template <class T>
+void Add3PlusBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
+  Debug("bitvector-bb") << "theory::bv::Add3PlusBB bitblasting " << node << "\n";
+  Assert(node.getKind() == kind::BITVECTOR_PLUS &&
+         node.getNumChildren() == 3 &&
+         res.size() == 0);
+
+  std::vector<T> a,  b, c;
+  bb->bbTerm(node[0], a);
+  bb->bbTerm(node[1], b);
+  bb->bbTerm(node[2], c);
+  
+  res = add3Optimal(a, b, c, bb->getCnfStream());
+  Assert(res.size() == utils::getSize(node));
+}
+
  
 
 }

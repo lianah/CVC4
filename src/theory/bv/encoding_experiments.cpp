@@ -908,6 +908,65 @@ void makeLTNewGadget() {
   eb.printProblemClauses(std::cout);
 }
 
+void makeAdd3DoubleCarryGadget() {
+  EncodingBitblaster eb(new context::Context(), "Add3DoubleCarryGadget");
+  NodeManager* nm = NodeManager::currentNM();
+  Node x1 = nm->mkSkolem("x1", nm->booleanType());
+  Node x2 = nm->mkSkolem("x2", nm->booleanType());
+  Node x3 = nm->mkSkolem("x3", nm->booleanType());
+
+  Node carry0 = nm->mkSkolem("carry0", nm->booleanType());
+  Node carry1 = nm->mkSkolem("carry1", nm->booleanType());
+
+  pair<Node, Node> carry_pair(carry0, carry1);
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  pair<Node, pair<Node, Node> > res = theory::bv::add3DoubleCarryGadget(x1,
+                                                                      x2,
+                                                                      x3,
+                                                                      carry_pair,
+                                                                      cnf);
+  Node sum = res.first;
+  Node carry_out0 = res.second.first;
+  Node carry_out1 = res.second.second;
+  
+  eb.getCnfStream()->ensureLiteral(sum);
+  eb.getCnfStream()->ensureLiteral(carry_out0);
+  eb.getCnfStream()->ensureLiteral(carry_out1);
+
+  // auxiliary mayhem!
+  std::vector<Node> aux;
+  aux.push_back(utils::mkAnd(x1, x2));
+  aux.push_back(utils::mkAnd(x3, utils::mkAnd(x1, x2)));
+
+  aux.push_back(utils::mkAnd(carry0, carry1));
+  aux.push_back(utils::mkAnd(carry_out0, utils::mkAnd(carry0, carry1)));
+
+
+  for (unsigned i = 0; i < aux.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(aux[i]);
+  }
+  CVC4::prop::SatLiteral sum_lit = eb.getCnfStream()->getLiteral(sum);
+  std::cout << "c " << sum_lit << " : sum" << std::endl;
+  CVC4::prop::SatLiteral carry_out0_lit = eb.getCnfStream()->getLiteral(carry_out0);
+  std::cout << "c " << carry_out0_lit << " : carry_out0" << std::endl;
+  CVC4::prop::SatLiteral carry_out1_lit = eb.getCnfStream()->getLiteral(carry_out1);
+  std::cout << "c " << carry_out1_lit << " : carry_out1" << std::endl;
+  
+  NodeSet inputs;
+  inputs.insert(sum);
+  inputs.insert(carry_out0);
+  inputs.insert(carry_out1);
+  
+  inputs.insert(x1);
+  inputs.insert(x2);
+  inputs.insert(x3);
+  inputs.insert(carry0);
+  inputs.insert(carry1);
+  eb.printCnfMapping(std::cout, inputs, true);
+  eb.printProblemClauses(std::cout);
+}
+
+
 void makeFullAdder() {
   EncodingBitblaster eb(new context::Context(), "FullAdder");
   NodeManager* nm = NodeManager::currentNM();
@@ -1017,44 +1076,52 @@ void makeSignedGadget() {
 
 void equivalenceCheckerTerm(TBitblaster<Node>::TermBBStrategy e1, std::string name1, 
 			    TBitblaster<Node>::TermBBStrategy e2, std::string name2,
-			    Kind k, unsigned bitwidth) {
+			    Kind k, unsigned bitwidth, unsigned num_children = 2) {
 
   context::Context ctx;
 
   EncodingBitblaster eb(&ctx, name1+"_vs_"+name2);
 
   eb.setTermBBStrategy(k, e1);
-  Node a1 = utils::mkVar("a1", bitwidth);
-  Node b1 = utils::mkVar("b1", bitwidth);
-  Node c1 = utils::mkVar("c1", bitwidth);
-  Node a1_op_b1 = utils::mkNode(k, a1, b1);
-  Node eq1 = utils::mkNode(kind::EQUAL, c1, a1_op_b1);
+  std::vector<Node> children1;
+  for (unsigned i = 0; i < num_children; ++i) {
+    children1.push_back(utils::mkVar("x1", bitwidth));
+  }
+  Node res1 = utils::mkVar("res1", bitwidth);
+  Node op_ch1 = utils::mkNode(k, children1);
+  Node eq1 = utils::mkNode(kind::EQUAL, res1, op_ch1);
   eb.assertFact(eq1);
   
   eb.setTermBBStrategy(k, e2);
-  Node a2 = utils::mkVar("a2", bitwidth);
-  Node b2 = utils::mkVar("b2", bitwidth);
-  Node c2 = utils::mkVar("c2", bitwidth);
-  Node a2_op_b2 = utils::mkNode(k, a2, b2);
-  Node eq2 = utils::mkNode(kind::EQUAL, c2, a2_op_b2);
+  std::vector<Node> children2;
+  for (unsigned i = 0; i < num_children; ++i) {
+    children2.push_back(utils::mkVar("x2", bitwidth));
+  }
+  Node res2 = utils::mkVar("res2", bitwidth);
+  Node op_ch2 = utils::mkNode(k, children2);
+  Node eq2 = utils::mkNode(kind::EQUAL, res2, op_ch2);
   eb.assertFact(eq2);
 
-  
-  eb.assertFact(utils::mkNode(kind::EQUAL, a1, a2));
-  eb.assertFact(utils::mkNode(kind::EQUAL, b1, b2));
-  eb.assertFact(utils::mkNode(kind::NOT, utils::mkNode(kind::EQUAL, c1, c2)));
+  for(unsigned i = 0; i < num_children; ++i) {
+    eb.assertFact(utils::mkNode(kind::EQUAL, children1[i], children2[i]));
+  }
+  eb.assertFact(utils::mkNode(kind::NOT, utils::mkNode(kind::EQUAL, res1, res2)));
 
   bool res = eb.solve();
   if (res) {
     std::cout << "NOT EQUIVALENT " << name1 << "  " << name2 << std::endl;
     std::cout << "Model from "<< name1 <<":"<< std::endl;
-    std::cout <<"  "<< a1 <<": " << eb.getModelFromSatSolver(a1, false) << std::endl;
-    std::cout <<"  "<< b1 <<": " << eb.getModelFromSatSolver(b1, false) << std::endl;
-    std::cout <<"  "<< c1 <<": " << eb.getModelFromSatSolver(c1, false) << std::endl;
+    for (unsigned i = 0; i < num_children; ++i) {
+      std::cout <<"  "<< children1[i] <<": "
+                << eb.getModelFromSatSolver(children1[i], false) << std::endl;
+    }
+    std::cout <<"  "<< res1 <<": " << eb.getModelFromSatSolver(res1, false) << std::endl;
     std::cout << "Model from "<< name2 <<":"<< std::endl;
-    std::cout <<"  "<< a2 <<": " << eb.getModelFromSatSolver(a2, false) << std::endl;
-    std::cout <<"  "<< b2 <<": " << eb.getModelFromSatSolver(b2, false) << std::endl;
-    std::cout <<"  "<< c2 <<": " << eb.getModelFromSatSolver(c2, false) << std::endl;
+    for (unsigned i = 0; i < num_children; ++i) {
+      std::cout <<"  "<< children2[i] <<": "
+                << eb.getModelFromSatSolver(children2[i], false) << std::endl;
+    }
+    std::cout <<"  "<< res2 <<": " << eb.getModelFromSatSolver(res2, false) << std::endl;
   } else {
     std::cout << "EQUIVALENT bw"<<bitwidth<< " " << name1 << "  " << name2 << std::endl;
   }
@@ -1157,13 +1224,13 @@ void checkZooMultipliers(Options& opts) {
   // add2Styles.push_back(CARRY_LOOKAHEAD);
   // add2Styles.push_back(CARRY_SELECT); 
   std::vector<Add3Encoding::Style> add3Styles;
-  // add3Styles.push_back(Add3Encoding::OPTIMAL_ADD3);
+  add3Styles.push_back(Add3Encoding::OPTIMAL_ADD3);
   add3Styles.push_back(Add3Encoding::THREE_TO_TWO_THEN_ADD);
 
   std::vector<AccumulateEncoding::Style> accStyles;
-  accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
-   accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
-  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
+  // accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
   accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
   accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
   accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
@@ -1257,6 +1324,8 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
+  // makeAdd3DoubleCarryGadget();
+  
   // makeFullAdder();
   // generateReferenceEncodings(width, opts);
 
@@ -1306,13 +1375,18 @@ void CVC4::runEncodingExperiment(Options& opts) {
   // 			 DefaultPlusBB<Node>, "default-add",
   // 			 kind::BITVECTOR_PLUS, width);
 
+  equivalenceCheckerTerm(Add3PlusBB<Node>, "add3-plus",
+  			 DefaultPlusBB<Node>, "default-plus",
+  			 kind::BITVECTOR_PLUS, width, 3);
+
   
   /********* Equivalence Check Mult ****************/
 
 
   checkZooMultipliers(opts); 
   
-  
+
+
   // equivalenceCheckerTerm(OptimalAddMultBB<Node>, "optimal-add-mult",
   // 			 DefaultMultBB<Node>, "default-mult",
   // 			 kind::BITVECTOR_MULT, width);

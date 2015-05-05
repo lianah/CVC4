@@ -344,8 +344,13 @@ std::vector<T> inline add3 (const Add3Encoding &add3Style,
       // T interm_carry = carry.back();
       carry.pop_back();
       result = add2(add3Style.add2Style, sum, carry, mkFalse<T>(), cnf);
+      break;
     }
+
+  case Add3Encoding::OPTIMAL_ADD3: {
+    result = add3Optimal(a, b, c, cnf);
     break;
+  }
   default :
     Unimplemented("Add3 style not implemented");
   }
