@@ -95,57 +95,64 @@ T makeCarry(const FullAdderEncoding &fullAdderStyle,
   return mkOr(mkOr(mkAnd(a,b), mkAnd(a,c)), mkAnd(b, c));
 }
 
-
-
 template <class T>
 std::pair<T, T> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
 				 const T &a,
 				 const T &b,
 				 const T &c,
 				 prop::CnfStream* cnf) {
-  T sum, carry;
+  Unreachable();
+}
+
+template <>
+std::pair<Node, Node> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
+				 const Node &a,
+				 const Node &b,
+				 const Node &c,
+				 prop::CnfStream* cnf) {
+  Node sum, carry;
   
   switch(fullAdderStyle) {
   case TSEITIN_NAIVE_AB_CIRCUIT:
   case DANIEL_COMPACT_CARRY:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(a, b), c);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   case TSEITIN_NAIVE_AC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(a, c), b);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   case TSEITIN_NAIVE_BC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(b, c), a);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   case TSEITIN_SHARED_AB_CIRCUIT: {
-    T cross = mkXor(a, b);
+    Node cross = mkXor(a, b);
     carry = mkOr(mkAnd(a,b),mkAnd(cross, c));
     sum = mkXor(cross, c);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   }
   case TSEITIN_SHARED_AC_CIRCUIT: {
-    T cross = mkXor(a, c);
+    Node cross = mkXor(a, c);
     carry = mkOr(mkAnd(a,c),mkAnd(cross, b));
     sum = mkXor(cross, b);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   }
   case TSEITIN_SHARED_BC_CIRCUIT: {
-    T cross = mkXor(b, c);
+    Node cross = mkXor(b, c);
     carry = mkOr(mkAnd(b,c),mkAnd(cross, a));
     sum = mkXor(cross, a);
-    return std::make_pair<T, T>(sum, carry);
+    return std::make_pair<Node, Node>(sum, carry);
   }
   case MINISAT_SUM_AND_CARRY:
   case MINISAT_COMPLETE: {
-      sum = mkBitVar<T>();
-      carry = mkBitVar<T>();
-      T na = mkNot(a);
-      T nb = mkNot(b);
-      T nc = mkNot(c);
-      T ncarry = mkNot(carry);
-      T nsum = mkNot(sum);
+      sum = mkBitVar<Node>();
+      carry = mkBitVar<Node>();
+      Node na = mkNot(a);
+      Node nb = mkNot(b);
+      Node nc = mkNot(c);
+      Node ncarry = mkNot(carry);
+      Node nsum = mkNot(sum);
       
       NodeManager* nm = NodeManager::currentNM();
       cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, c, nsum),
@@ -191,7 +198,7 @@ std::pair<T, T> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
 	cnf->convertAndAssert(nm->mkNode(kind::OR, carry, sum, nc),
 			      false, false, RULE_INVALID, TNode::null());
       }
-      return std::make_pair<T, T>(sum, carry);
+      return std::make_pair<Node, Node>(sum, carry);
     }
   case MARTIN_OPTIMAL: {
     return optimalFullAdder(a, b, c, cnf);
@@ -348,7 +355,7 @@ std::vector<T> inline add3 (const Add3Encoding &add3Style,
     }
 
   case Add3Encoding::OPTIMAL_ADD3: {
-    result = add3Optimal(a, b, c, cnf);
+    result = add3OptimalGadget(a, b, c, cnf);
     break;
   }
   default :
@@ -926,7 +933,7 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       }
 
       
-      std::cout << "Adding remainder " << std::endl;
+      // std::cout << "Adding remainder " << std::endl;
       int rem_rows = b.size() % blockSize - 1; // the first one is added in above loop
       int rows_offset = grid.size() - rem_rows;
       for (int i = 0; i < rem_rows; ++i) {

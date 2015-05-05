@@ -405,6 +405,27 @@ T inline sLessThanBB(const std::vector<T>&a, const std::vector<T>& b, bool orEqu
   return res;
 }
 
+template<class T>
+std::vector<T> multByConst(const std::vector<T>& a,
+                           unsigned K,
+                           CVC4::prop::CnfStream* cnf) {
+  Assert (1 << a.size() > K);
+  BitVector val(a.size(), K);
+
+  std::vector<T> val_bits(a.size());
+  for (int i = 0; i < a.size(); ++i) {
+    if (val.isBitSet(i)) {
+      val_bits[i] = mkTrue<T>();
+    } else {
+      val_bits[i] = mkFalse<T>();
+    }
+  }
+  std::vector<T> res;
+  shiftAddMultiplier(a, val_bits, res);
+  return res;
+}
+
+
  
 }
 }

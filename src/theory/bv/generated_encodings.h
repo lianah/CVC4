@@ -84,10 +84,10 @@ inline add3DoubleCarryGadget(const T a,
 }
 
 template<class T>
-std::vector<T> add3Optimal(const std::vector<T>& a,
-                          const std::vector<T>& b,
-                          const std::vector<T>& c,
-                          CVC4::prop::CnfStream* cnf) {
+std::vector<T> add3OptimalGadget(const std::vector<T>& a,
+                                 const std::vector<T>& b,
+                                 const std::vector<T>& c,
+                                 CVC4::prop::CnfStream* cnf) {
   std::pair<T, T> carry(mkFalse<T>(), mkFalse<T>());
   std::vector<T> result(a.size());
   for (unsigned i = 0; i < a.size(); ++i) {
@@ -99,6 +99,12 @@ std::vector<T> add3Optimal(const std::vector<T>& a,
     result[i] = res.first; 
   }
   return result;
+}
+
+template<class T>
+std::vector<T> optimalMultBy3Gadget(const std::vector<T>& a,
+                                    CVC4::prop::CnfStream* cnf) {
+  Unreachable();
 }
 
  
@@ -216,6 +222,10 @@ Node optimalUltGadget(const Node &a, const Node &b, const Node &rest,
 template<>
 Node optimalSignGadget(const Node& a, const Node& b, const Node &aLTb,
 			      CVC4::prop::CnfStream* cnf);
+
+template<>
+std::vector<Node> optimalMultBy3Gadget(const std::vector<Node>& a,
+                                       CVC4::prop::CnfStream* cnf);
 
 template<>
 void optimalMult2(const std::vector<Node>&a,

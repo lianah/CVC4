@@ -845,6 +845,80 @@ void printTermEncoding(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string 
   outfile.close();
 }
 
+void printTermEncodingConst(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string name,
+                            unsigned n, unsigned K, bool truncated = true) {
+
+  std::ostringstream os;
+  os << name << "_const"<<K<<"_" << (truncated? "": "2n") << "_" << n;
+  name = os.str();
+
+  std::cout << "Writing file " << name << ".dimacs"<<std::endl;
+  ofstream outfile;
+  outfile.open ((name+".dimacs").c_str());
+
+  unsigned bitwidth = truncated ? n : 2*n;
+
+  EncodingBitblaster eb(new context::Context(), name);
+  eb.setTermBBStrategy(k, e);
+  Node a = utils::mkVar("a", bitwidth);
+  Node b = utils::mkConst(bitwidth, K);
+  Node c = utils::mkVar("c", bitwidth);
+
+  Node a_op_b = utils::mkNode(k, a, b);
+  Node assertion = utils::mkNode(kind::EQUAL, a_op_b, c);
+
+  eb.assertFact(assertion);
+
+  EncodingBitblaster::Bits bits;
+  NodeSet all_bits;
+  eb.getBBTerm(a, bits);
+  bits.resize(n); // for not truncated
+  all_bits.insert(bits.begin(), bits.end());
+
+  // eb.getBBTerm(b, bits);
+  // bits.resize(n);
+  // all_bits.insert(bits.begin(), bits.end());
+
+  eb.getBBTerm(c, bits);
+  all_bits.insert(bits.begin(), bits.end());
+
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  EncodingBitblaster::Bits a_bits, b_bits;
+  eb.getBBTerm(a, a_bits);
+  eb.getBBTerm(b, b_bits);
+
+
+  outfile << "c " << eb.getName() << std::endl;
+  outfile << "c i ";
+  // print variables that should be decided
+  NodeSet::const_iterator it = all_bits.begin();
+  for (; it != all_bits.end(); ++it) {
+    
+    CVC4::prop::SatLiteral var = cnf->getLiteral(*it);
+    Assert (!var.isNegated());
+    outfile << var <<" ";
+  }
+  outfile << "0" << std::endl;
+
+  eb.printCnfMapping(outfile, all_bits);
+  eb.printProblemClauses(outfile);
+
+  // assert that the top n bits are zero as units
+  if (!truncated) {
+    for(unsigned i = n; i < 2*n; ++i) {
+      if (cnf->hasLiteral(a_bits[i])) {
+        CVC4::prop::SatLiteral lit_a = cnf->getLiteral(a_bits[i]);
+        //CVC4::prop::SatLiteral lit_b = cnf->getLiteral(b_bits[i]);
+      outfile << (~lit_a) <<" 0"<< std::endl;
+      //outfile << (~lit_b) <<" 0"<< std::endl;
+      }
+    }
+  }
+
+  outfile.close();
+}
+
+
 void printAtomEncoding(Kind k, TBitblaster<Node>::AtomBBStrategy e, std::string name, unsigned bitwidth) {
   std::ostringstream os;
   os << name << "_" << bitwidth;
@@ -966,7 +1040,6 @@ void makeAdd3DoubleCarryGadget() {
   eb.printProblemClauses(std::cout);
 }
 
-
 void makeFullAdder() {
   EncodingBitblaster eb(new context::Context(), "FullAdder");
   NodeManager* nm = NodeManager::currentNM();
@@ -996,6 +1069,8 @@ void makeFullAdder() {
   eb.printCnfMapping(std::cout);
   eb.printProblemClauses(std::cout);
 }
+
+
 
 
 // void testUltGadget() {
@@ -1324,6 +1399,16 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 2, 3, false);
+
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 5, false);
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 6, false);
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
+
+  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
+  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
+  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
+  
   // makeAdd3DoubleCarryGadget();
   
   // makeFullAdder();
@@ -1375,15 +1460,15 @@ void CVC4::runEncodingExperiment(Options& opts) {
   // 			 DefaultPlusBB<Node>, "default-add",
   // 			 kind::BITVECTOR_PLUS, width);
 
-  equivalenceCheckerTerm(Add3PlusBB<Node>, "add3-plus",
-  			 DefaultPlusBB<Node>, "default-plus",
-  			 kind::BITVECTOR_PLUS, width, 3);
+  // equivalenceCheckerTerm(Add3PlusBB<Node>, "add3-plus",
+  // 			 DefaultPlusBB<Node>, "default-plus",
+  // 			 kind::BITVECTOR_PLUS, width, 3);
 
   
   /********* Equivalence Check Mult ****************/
 
 
-  checkZooMultipliers(opts); 
+  // checkZooMultipliers(opts); 
   
 
 

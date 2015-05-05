@@ -392,7 +392,10 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
 
- 
+  if(options::multStyle() != 0 && utils::getSize(node) >= 2) {
+    ZooMultBB(node, res, bb);
+    return;
+  }
   std::vector<T> newres; 
   bb->bbTerm(node[0], res); 
   for(unsigned i = 1; i < node.getNumChildren(); ++i) {
@@ -418,7 +421,7 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
     } else if (utils::getSize(node) >=2 &&
 	       (options::bvBlock2Mult() || options::bvBlock2MultOpt())) {
       optimalBlock2Mult(res, current, newres,bb->getCnfStream());
-    } else {
+    }  else {
       shiftAddMultiplier(res, current, newres);
     }
 
@@ -433,13 +436,19 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
 
 template <class T>
 void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
-  Debug("bitvector") << "theory::bv:: DefaultMultBB bitblasting "<< node << "\n";
+  Debug("bitvector") << "theory::bv::ZooMultBB bitblasting "<< node << "\n";
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
 
-
   MultiplyEncoding multStyle = MultiplyEncoding::current();
- 
+
+  Debug("encodings") << "zooMult with multStyle " << multStyle.reductionStyle << std::endl
+                     << multStyle.accumulateStyle.style << std::endl
+                     << multStyle.accumulateStyle.add2Style.style << std::endl
+                     << multStyle.accumulateStyle.add3Style.style << std::endl
+                     << multStyle.partialProductStyle << std::endl;
+    
+  
   std::vector<T> newres; 
   bb->bbTerm(node[0], res); 
   for(unsigned i = 1; i < node.getNumChildren(); ++i) {
@@ -1233,11 +1242,12 @@ void Add3PlusBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   bb->bbTerm(node[1], b);
   bb->bbTerm(node[2], c);
   
-  res = add3Optimal(a, b, c, bb->getCnfStream());
+  res = add3OptimalGadget(a, b, c, bb->getCnfStream());
   Assert(res.size() == utils::getSize(node));
 }
 
- 
+
+
 
 }
 }

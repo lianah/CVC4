@@ -74,7 +74,7 @@ CVC4::theory::bv::add3DoubleCarryGadget(const Node x1,
                                         CVC4::prop::CnfStream* cnf) {
   NodeManager* nm = NodeManager::currentNM();
 
-  Debug("generated-encodings") << "add3DoubleCarryGadget" << std::endl;
+  Debug("encoding-generated") << "add3DoubleCarryGadget" << std::endl;
   Node sum = nm->mkSkolem("sum", nm->booleanType());
   Node carry_out0 = nm->mkSkolem("cout0", nm->booleanType());
   Node carry_out1 = nm->mkSkolem("cout1", nm->booleanType());
@@ -375,6 +375,34 @@ Node CVC4::theory::bv::optimalSignGadget(const Node& a,
 			false, false, RULE_INVALID, TNode::null());
 
   return aSLTb;
+}
+
+template<>
+std::vector<Node> CVC4::theory::bv::optimalMultBy3Gadget(const std::vector<Node>& a,
+                                                         CVC4::prop::CnfStream* cnf) {
+  NodeManager* nm = NodeManager::currentNM();
+  Debug("encoding-generated") << "optimalMultBy3Gadget" <<std::endl;
+
+  Assert (a.size() == 2);
+  std::vector<Node> c(4);
+  for (unsigned i = 0; i < c.size(); ++i) {
+    c[i] = nm->mkSkolem("c", nm->booleanType());
+  }
+  
+  
+  cnf->convertAndAssert(nm->mkNode(kind::OR, c[0], utils::mkNot(a[0])), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a[0]), utils::mkNot(c[2])), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[1]), utils::mkNot(c[3])), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[0]), a[0]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a[0], utils::mkNot(c[3])), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[3]), a[1]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[2]), a[1]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[2]), c[1]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a[0]), a[1], c[1]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(c[1]), a[0], c[2]), false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, c[3], utils::mkNot(a[1]), c[2]), false, false, RULE_INVALID, TNode::null());
+
+  return c;
 }
 
 template<>
