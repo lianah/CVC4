@@ -99,7 +99,7 @@ expert-option bvBlock2Mult --bv-mult-block2 bool :default false
 expert-option bvBlock2MultOpt --bv-mult-block2-opt bool :default false
  bit-blast mult with optimal 2x2x4 multiplier
 
-expert-option multStyle --bv-mult-style int :default 0
+expert-option multStyle --bv-mult-style int :default -1
  what style to use to bit-blast multiplier
  
  

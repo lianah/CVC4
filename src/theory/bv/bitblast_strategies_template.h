@@ -392,7 +392,7 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
 
-  if(options::multStyle() != 0 && utils::getSize(node) >= 2) {
+  if(options::multStyle() != -1 && utils::getSize(node) >= 2) {
     ZooMultBB(node, res, bb);
     return;
   }
@@ -442,11 +442,12 @@ void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
 
   MultiplyEncoding multStyle = MultiplyEncoding::current();
 
-  Debug("encodings") << "zooMult with multStyle " << multStyle.reductionStyle << std::endl
-                     << multStyle.accumulateStyle.style << std::endl
-                     << multStyle.accumulateStyle.add2Style.style << std::endl
-                     << multStyle.accumulateStyle.add3Style.style << std::endl
-                     << multStyle.partialProductStyle << std::endl;
+  Debug("encodings") << "zooMult with multStyle " << std::endl
+		     << "      " << multStyle.reductionStyle << std::endl
+                     << "      " << multStyle.accumulateStyle.style << std::endl
+                     << "      " << multStyle.accumulateStyle.add2Style.style << std::endl
+                     << "      " << multStyle.accumulateStyle.add3Style.style << std::endl
+                     << "      " << multStyle.partialProductStyle << std::endl;
     
   
   std::vector<T> newres; 

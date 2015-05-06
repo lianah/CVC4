@@ -1024,11 +1024,6 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
   Unreachable();
 }
 
- 
-}
-}
-}
-
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::PartialProductEncoding e);
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::ReductionEncoding e);
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::FullAdderEncoding fa);
@@ -1036,5 +1031,11 @@ std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::HalfAdderEncoding 
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::Add2Encoding::Style e);
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::Add3Encoding::Style e);
 std::ostream& operator<<(std::ostream& out, CVC4::theory::bv::AccumulateEncoding::Style e);
+ 
+ 
+}
+}
+}
+
 
 #endif

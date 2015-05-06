@@ -22,7 +22,7 @@ using namespace CVC4::theory::bv;
 using namespace std;
 using namespace CVC4::theory::bv::utils;
 
- std::ostream& operator<<(std::ostream& out, FullAdderEncoding fa) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, FullAdderEncoding fa) {
    switch(fa) {
    case TSEITIN_NAIVE_AB_CIRCUIT: out << ""; break;
    case TSEITIN_NAIVE_AC_CIRCUIT: out << "TSEITIN_NAIVE_AC_CIRCUIT"; break;
@@ -40,7 +40,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, HalfAdderEncoding e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, HalfAdderEncoding e) {
    switch(e) {
    case DEFAULT: out << "DEFAULT"; break;
    default:
@@ -49,7 +49,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, Add2Encoding::Style e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, Add2Encoding::Style e) {
    switch(e) {
    case Add2Encoding::RIPPLE_CARRY: out << "Add2Encoding::RIPPLE_CARRY"; break;
    case Add2Encoding::CARRY_LOOKAHEAD: out << "Add2Encoding::CARRY_LOOKAHEAD"; break; 
@@ -60,7 +60,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, Add3Encoding::Style e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, Add3Encoding::Style e) {
    switch(e) {
    case Add3Encoding::OPTIMAL_ADD3: out << "Add3Encoding::OPTIMAL_ADD3"; break;
    case Add3Encoding::THREE_TO_TWO_THEN_ADD: out <<"Add3Encoding::THREE_TO_TWO_THEN_ADD"; break;
@@ -69,7 +69,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, AccumulateEncoding::Style e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, AccumulateEncoding::Style e) {
    switch(e) {
    case AccumulateEncoding::LINEAR_FORWARDS: out << "AccumulateEncoding::LINEAR_FORWARDS"; break;
    case AccumulateEncoding::LINEAR_BACKWARDS: out << "AccumulateEncoding::LINEAR_BACKWARDS"; break;
@@ -82,7 +82,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, PartialProductEncoding e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, PartialProductEncoding e) {
    switch(e) {
    case CONVENTIONAL: out << "CONVENTIONAL"; break;
    case BLOCK2_BY_ADDITION: out << "BLOCK2_BY_ADDITION"; break;
@@ -102,7 +102,7 @@ using namespace CVC4::theory::bv::utils;
    return out;
  }
 
- std::ostream& operator<<(std::ostream& out, ReductionEncoding e) {
+ std::ostream& CVC4::theory::bv::operator<<(std::ostream& out, ReductionEncoding e) {
    switch(e) {
    case WORD_LEVEL: out << "WORD_LEVEL"; break;
    case WALLACE_TREE: out << "WALLACE_TREE"; break;

@@ -66,7 +66,38 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   size_t carrySelectSplit = -1;
 
   switch(options::multStyle()) {
-  case 0: break; // the default
+  case -1: break; // the default
+  case 0: {
+    // default but via multiply
+    // just optimal adder now part of the multiplication too
+    FullAdderEncoding fullAdderEncoding = TSEITIN_NAIVE_AB_CIRCUIT;
+
+    Add2Encoding add2Enc(fullAdderEncoding,
+                         add2Style,
+                         carrySelectMin,
+                         carrySelectSplit);
+
+    Add3Encoding::Style add3Style = Add3Encoding::THREE_TO_TWO_THEN_ADD;
+    Add3Encoding add3Enc(add3Style,
+                         fullAdderEncoding,
+                         add2Enc);
+  
+    AccumulateEncoding::Style accStyle = AccumulateEncoding::LINEAR_FORWARDS;
+
+    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
+
+    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
+    PartialProductEncoding partialProductEncoding = CONVENTIONAL;
+    ReductionEncoding reductionStyle = WORD_LEVEL;
+
+    MultiplyEncoding multStyle(recursionStyle,
+                               partialProductEncoding,
+                               reductionStyle,
+                               accEncoding);
+
+    MultiplyEncoding::setCurrent(multStyle);
+    break;
+  }
   case 1: {
     // just optimal adder now part of the multiplication too
     FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
