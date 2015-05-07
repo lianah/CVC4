@@ -1168,6 +1168,117 @@ void makeAdd3Optimal(unsigned width, std::ostream&out) {
   eb.printProblemClauses(out);
 }
 
+void makeBase4FullAddOptimal(std::ostream&out) {
+    
+  EncodingBitblaster eb(new context::Context(), "Base4FullAddOptimal");
+  NodeManager* nm = NodeManager::currentNM();
+
+  unsigned  width = 2;
+  out << "c " << eb.getName() << std::endl;
+  std::vector<Node> bits_a1(width);
+  std::vector<Node> bits_a2(width);
+  std::vector<Node> bits_carry(width);
+
+  NodeSet inputs;
+  
+  for (unsigned  i = 0; i < width; ++i){
+    bits_a1[i] = nm->mkSkolem("a", nm->booleanType());
+    bits_a2[i] = nm->mkSkolem("b", nm->booleanType());
+    bits_carry[i] = nm->mkSkolem("carry", nm->booleanType());
+    inputs.insert(bits_a1[i]);
+    inputs.insert(bits_a2[i]);
+    inputs.insert(bits_carry[i]);
+  }
+
+  std::pair<std::vector<Node>, std::vector<Node> > res = theory::bv::base4FullAdder(bits_a1,
+										    bits_a2,
+										    bits_carry,
+										    eb.getCnfStream());
+
+  std::vector<Node> sum = res.first;
+  std::vector<Node> carry_out = res.second;
+  for (unsigned i = 0; i < sum.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(sum[i]);
+    eb.getCnfStream()->ensureLiteral(carry_out[i]);
+    
+    CVC4::prop::SatLiteral sum_lit = eb.getCnfStream()->getLiteral(sum[i]);
+    out << "c " << sum_lit << " : sum" << i << std::endl;
+    inputs.insert(sum[i]);
+
+    CVC4::prop::SatLiteral carry_out_lit = eb.getCnfStream()->getLiteral(carry_out[i]);
+    out << "c " << carry_out_lit << " : carry_out" << i << std::endl;
+    inputs.insert(carry_out[i]);
+  }
+
+  out << "c i " ;
+  for (unsigned i = 0; i < sum.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(bits_a1[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_a2[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_carry[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(sum[i]) <<" "
+      	<< eb.getCnfStream()->getLiteral(carry_out[i]) <<" ";
+  }
+  out << "0" << std::endl;
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+void makeBase8FullAddOptimal(std::ostream&out) {
+    
+  EncodingBitblaster eb(new context::Context(), "Base4FullAddOptimal");
+  NodeManager* nm = NodeManager::currentNM();
+
+  unsigned  width = 3;
+  out << "c " << eb.getName() << std::endl;
+  std::vector<Node> bits_a1(width);
+  std::vector<Node> bits_a2(width);
+  std::vector<Node> bits_carry(width);
+
+  NodeSet inputs;
+  
+  for (unsigned  i = 0; i < width; ++i){
+    bits_a1[i] = nm->mkSkolem("a", nm->booleanType());
+    bits_a2[i] = nm->mkSkolem("b", nm->booleanType());
+    bits_carry[i] = nm->mkSkolem("carry", nm->booleanType());
+    inputs.insert(bits_a1[i]);
+    inputs.insert(bits_a2[i]);
+    inputs.insert(bits_carry[i]);
+  }
+
+  std::pair<std::vector<Node>, std::vector<Node> > res = theory::bv::base8FullAdder(bits_a1,
+										    bits_a2,
+										    bits_carry,
+										    eb.getCnfStream());
+
+  std::vector<Node> sum = res.first;
+  std::vector<Node> carry_out = res.second;
+  for (unsigned i = 0; i < sum.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(sum[i]);
+    eb.getCnfStream()->ensureLiteral(carry_out[i]);
+    
+    CVC4::prop::SatLiteral sum_lit = eb.getCnfStream()->getLiteral(sum[i]);
+    out << "c " << sum_lit << " : sum" << i << std::endl;
+    inputs.insert(sum[i]);
+
+    CVC4::prop::SatLiteral carry_out_lit = eb.getCnfStream()->getLiteral(carry_out[i]);
+    out << "c " << carry_out_lit << " : carry_out" << i << std::endl;
+    inputs.insert(carry_out[i]);
+  }
+
+  out << "c i " ;
+  for (unsigned i = 0; i < sum.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(bits_a1[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_a2[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_carry[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(sum[i]) <<" "
+      	<< eb.getCnfStream()->getLiteral(carry_out[i]) <<" ";
+  }
+  out << "0" << std::endl;
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
 
 void equivalenceCheckerTerm(TBitblaster<Node>::TermBBStrategy e1, std::string name1, 
 			    TBitblaster<Node>::TermBBStrategy e2, std::string name2,
@@ -1325,12 +1436,25 @@ void generateReferenceEncodingsSAT15() {
     outfile.close();
   }
 
+  {
+    ofstream outfile;
+    outfile.open ("cvc-base4-full-add.cnf");
+    makeBase4FullAddOptimal(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-base8-full-add.cnf");
+    makeBase8FullAddOptimal(outfile);
+    outfile.close();
+  }
+
+  
   printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
 			 2, 3, false);
   printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
 			 3, 5, false);
-  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
-			 3, 6, false);
   printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
 			 3, 7, false);
 
@@ -1492,7 +1616,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
-  // generateReferenceEncodingsSAT15();
+  generateReferenceEncodingsSAT15();
   // generateReferenceEncodings(width, opts);
 
 
@@ -1539,7 +1663,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   /********* Equivalence Check Mult ****************/
 
 
-  checkZooMultipliers(opts); 
+  // checkZooMultipliers(opts); 
   
 
 

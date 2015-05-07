@@ -326,7 +326,7 @@ inline std::pair<std::vector<T>, std::vector<T> > base4FullAdder(const std::vect
 		   tmp,
 		   mkFalse<T>());
   std::vector<T> res;
-  rippleCarryAdder(res,
+  rippleCarryAdder(tmp,
 		   makeZeroExtend(carry, 2),
 		   res,
 		   mkFalse<T>());
@@ -357,7 +357,7 @@ inline std::pair<std::vector<T>, std::vector<T> > base8FullAdder(const std::vect
 		   tmp,
 		   mkFalse<T>());
   std::vector<T> res;
-  rippleCarryAdder(res,
+  rippleCarryAdder(tmp,
 		   makeZeroExtend(carry, 3),
 		   res,
 		   mkFalse<T>());
