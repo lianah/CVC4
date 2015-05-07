@@ -445,7 +445,8 @@ void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Debug("encodings") << "zooMult with multStyle " << std::endl
 		     << "      " << multStyle.reductionStyle << std::endl
                      << "      " << multStyle.accumulateStyle.style << std::endl
-                     << "      " << multStyle.accumulateStyle.add2Style.style << std::endl
+                     << "      " << multStyle.accumulateStyle.add2Style.fullAdderStyle << std::endl
+		     << "      " << multStyle.accumulateStyle.add2Style.style << std::endl
                      << "      " << multStyle.accumulateStyle.add3Style.style << std::endl
                      << "      " << multStyle.partialProductStyle << std::endl;
     

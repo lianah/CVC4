@@ -674,9 +674,9 @@ void printTermEncodingSharing(Kind k, std::vector<TBitblaster<Node>::TermBBStrat
   os << name << (truncated? "": "2n") << "_" << n<< (auxiliaries? "_aux" : "");
   name = os.str();
 
-  std::cout << "Writing file " << name << ".dimacs"<<std::endl;
+  std::cout << "Writing file " << name << ".cnf"<<std::endl;
   ofstream outfile;
-  outfile.open ((name+".dimacs").c_str());
+  outfile.open ((name+".cnf").c_str());
 
   unsigned bitwidth = truncated ? n : 2*n;
 
@@ -765,9 +765,9 @@ void printTermEncoding(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string 
   os << name << (truncated? "": "2n") << "_" << n<< (auxiliaries? "_aux" : "");
   name = os.str();
 
-  std::cout << "Writing file " << name << ".dimacs"<<std::endl;
+  std::cout << "Writing file " << name << ".cnf"<<std::endl;
   ofstream outfile;
-  outfile.open ((name+".dimacs").c_str());
+  outfile.open ((name+".cnf").c_str());
 
   unsigned bitwidth = truncated ? n : 2*n;
 
@@ -845,6 +845,7 @@ void printTermEncoding(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string 
   outfile.close();
 }
 
+
 void printTermEncodingConst(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string name,
                             unsigned n, unsigned K, bool truncated = true) {
 
@@ -852,9 +853,9 @@ void printTermEncodingConst(Kind k, TBitblaster<Node>::TermBBStrategy e, std::st
   os << name << "_const"<<K<<"_" << (truncated? "": "2n") << "_" << n;
   name = os.str();
 
-  std::cout << "Writing file " << name << ".dimacs"<<std::endl;
+  std::cout << "Writing file " << name << ".cnf"<<std::endl;
   ofstream outfile;
-  outfile.open ((name+".dimacs").c_str());
+  outfile.open ((name+".cnf").c_str());
 
   unsigned bitwidth = truncated ? n : 2*n;
 
@@ -924,7 +925,7 @@ void printAtomEncoding(Kind k, TBitblaster<Node>::AtomBBStrategy e, std::string 
   os << name << "_" << bitwidth;
   name = os.str();
   ofstream outfile;
-  outfile.open ((name+".dimacs").c_str());
+  outfile.open ((name+".cnf").c_str());
 
   EncodingBitblaster eb(new context::Context(), name);
   eb.setAtomBBStrategy(k, e);
@@ -958,8 +959,43 @@ void printAtomEncoding(Kind k, TBitblaster<Node>::AtomBBStrategy e, std::string 
   outfile.close();
 }
 
-void makeLTNewGadget() {
+void makeFullAdder(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "FullAdder");
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  Node carry = nm->mkSkolem("c", nm->booleanType());
+
+  std::pair<Node, Node> fa_res;
+  
+  fa_res = theory::bv::fullAdder<Node>(a, b, carry);
+
+  Node sum = fa_res.first;
+  Node carry_out = fa_res.second;
+
+  CVC4::prop::CnfStream* cnf  = eb.getCnfStream();
+  cnf->ensureLiteral(sum);
+  cnf->ensureLiteral(carry_out);
+
+  CVC4::prop::SatLiteral sum_lit = cnf->getLiteral(sum);
+  CVC4::prop::SatLiteral carry_out_lit = cnf->getLiteral(carry_out);
+  out << "c " << eb.getName() << std::endl;
+  out << "c " << sum_lit << " : sum" << std::endl;
+  out << "c " << carry_out_lit << " : carry_out_lit" << std::endl;
+  out << "c i "<< sum_lit <<" "
+      << carry_out_lit << " "
+      << cnf->getLiteral(a) <<" "
+      << cnf->getLiteral(b) <<" "
+      << cnf->getLiteral(carry) <<"0"
+      << std::endl;
+  eb.printCnfMapping(out, NodeSet(), true);
+  eb.printProblemClauses(out);
+}
+
+
+void makeLTNewGadget(std::ostream& out) {
   EncodingBitblaster eb(new context::Context(), "LTGadget");
+  out << "c " << eb.getName()  << std::endl;
   NodeManager* nm = NodeManager::currentNM();
   Node a = nm->mkSkolem("a", nm->booleanType());
   Node b = nm->mkSkolem("b", nm->booleanType());
@@ -972,18 +1008,53 @@ void makeLTNewGadget() {
 
   eb.getCnfStream()->ensureLiteral(answ);
 
+  out << "c i " << eb.getCnfStream()->getLiteral(a) <<" "
+      << eb.getCnfStream()->getLiteral(b) <<" "
+      << eb.getCnfStream()->getLiteral(rest) <<" "
+      << eb.getCnfStream()->getLiteral(answ);
+  
+  out << "0"<< std::endl;
   CVC4::prop::SatLiteral answ_lit = eb.getCnfStream()->getLiteral(answ);
-  std::cout << "c " << answ_lit << " : answ" << std::endl;
+  out << "c " << answ_lit << " : answ" << std::endl;
   NodeSet inputs;
   inputs.insert(a);
   inputs.insert(b);
   inputs.insert(rest);
-  eb.printCnfMapping(std::cout/*, inputs*/);
-  eb.printProblemClauses(std::cout);
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
 }
 
-void makeAdd3DoubleCarryGadget() {
+void makeSignedGadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "SignedGadget");
+  out << "c " << eb.getName() << std::endl;
+  
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  Node aLTb = nm->mkSkolem("aLTb", nm->booleanType());
+
+  Node res = theory::bv::optimalSignGadget(a, b, aLTb, eb.getCnfStream());
+
+  eb.getCnfStream()->ensureLiteral(res);
+  
+  out << "c i " << eb.getCnfStream()->getLiteral(a) <<" "
+      << eb.getCnfStream()->getLiteral(b) <<" "
+      << eb.getCnfStream()->getLiteral(aLTb) <<" "
+      << eb.getCnfStream()->getLiteral(res) <<"0 " << std::endl;
+  
+
+  CVC4::prop::SatLiteral aSLTb = eb.getCnfStream()->getLiteral(res);
+  out << "c " << aSLTb << " : aSLTb" << std::endl;
+  out << "c " << eb.getCnfStream()->getLiteral(aLTb) <<" : aLTb"<< std::endl; 
+  eb.printCnfMapping(out, NodeSet(), true);
+  eb.printProblemClauses(out);
+}
+
+
+void makeAdd3DoubleCarryGadget(std::ostream& out) {
   EncodingBitblaster eb(new context::Context(), "Add3DoubleCarryGadget");
+  out << "c " << eb.getName() << std::endl;
+  
   NodeManager* nm = NodeManager::currentNM();
   Node x1 = nm->mkSkolem("x1", nm->booleanType());
   Node x2 = nm->mkSkolem("x2", nm->booleanType());
@@ -1020,11 +1091,22 @@ void makeAdd3DoubleCarryGadget() {
     eb.getCnfStream()->ensureLiteral(aux[i]);
   }
   CVC4::prop::SatLiteral sum_lit = eb.getCnfStream()->getLiteral(sum);
-  std::cout << "c " << sum_lit << " : sum" << std::endl;
+  out << "c " << sum_lit << " : sum" << std::endl;
   CVC4::prop::SatLiteral carry_out0_lit = eb.getCnfStream()->getLiteral(carry_out0);
-  std::cout << "c " << carry_out0_lit << " : carry_out0" << std::endl;
+  out << "c " << carry_out0_lit << " : carry_out0" << std::endl;
   CVC4::prop::SatLiteral carry_out1_lit = eb.getCnfStream()->getLiteral(carry_out1);
-  std::cout << "c " << carry_out1_lit << " : carry_out1" << std::endl;
+  out << "c " << carry_out1_lit << " : carry_out1" << std::endl;
+
+  out << "c i "
+      << eb.getCnfStream()->getLiteral(x1) <<" "
+      << eb.getCnfStream()->getLiteral(x2) <<" "
+      << eb.getCnfStream()->getLiteral(x3) <<" "
+      << eb.getCnfStream()->getLiteral(carry0) <<" "
+      << eb.getCnfStream()->getLiteral(carry1) <<" "
+      << eb.getCnfStream()->getLiteral(sum) <<" "
+      << eb.getCnfStream()->getLiteral(carry_out0) <<" "
+      << eb.getCnfStream()->getLiteral(carry_out1) << "0" << std::endl;
+
   
   NodeSet inputs;
   inputs.insert(sum);
@@ -1036,118 +1118,56 @@ void makeAdd3DoubleCarryGadget() {
   inputs.insert(x3);
   inputs.insert(carry0);
   inputs.insert(carry1);
-  eb.printCnfMapping(std::cout, inputs, true);
-  eb.printProblemClauses(std::cout);
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
 }
 
-void makeFullAdder() {
-  EncodingBitblaster eb(new context::Context(), "FullAdder");
+void makeAdd3Optimal(unsigned width, std::ostream&out) {
+    
+  EncodingBitblaster eb(new context::Context(), "Add3Optimal");
   NodeManager* nm = NodeManager::currentNM();
-  Node a = nm->mkSkolem("a", nm->booleanType());
-  Node b = nm->mkSkolem("b", nm->booleanType());
-  Node carry = nm->mkSkolem("c", nm->booleanType());
 
-  std::pair<Node, Node> fa_res;
+  out << "c " << eb.getName() << std::endl;
+  std::vector<Node> bits_a1(width);
+  std::vector<Node> bits_a2(width);
+  std::vector<Node> bits_a3(width);
+
+  NodeSet inputs;
   
-  fa_res = theory::bv::fullAdder<Node>(a, b, carry);
+  for (unsigned  i = 0; i < width; ++i){
+    bits_a1[i] = nm->mkSkolem("a1", nm->booleanType());
+    bits_a2[i] = nm->mkSkolem("a2", nm->booleanType());
+    bits_a3[i] = nm->mkSkolem("a3", nm->booleanType());
+    inputs.insert(bits_a1[i]);
+    inputs.insert(bits_a2[i]);
+    inputs.insert(bits_a3[i]);
+  }
 
-  Node sum = fa_res.first;
-  Node carry_out = fa_res.second;
+  std::vector<Node> res_bits = theory::bv::add3OptimalGadget(bits_a1,
+							     bits_a2,
+							     bits_a3,
+							     eb.getCnfStream());
 
-  CVC4::prop::CnfStream* cnf  = eb.getCnfStream();
-  cnf->ensureLiteral(sum);
-  cnf->ensureLiteral(carry_out);
+  for (unsigned i = 0; i < res_bits.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(res_bits[i]);
+    CVC4::prop::SatLiteral res_lit = eb.getCnfStream()->getLiteral(res_bits[i]);
+    out << "c " << res_lit << " : res" << i << std::endl;
+    inputs.insert(res_bits[i]);
+  }
 
-  CVC4::prop::SatLiteral sum_lit = cnf->getLiteral(sum);
-  CVC4::prop::SatLiteral carry_out_lit = cnf->getLiteral(carry_out);
-  std::cout << "c " << eb.getName() << std::endl;
-  std::cout << "c " << sum_lit << " : sum" << std::endl;
-  std::cout << "c " << carry_out_lit << " : carry_out_lit" << std::endl;
-  std::cout << "i "<< sum_lit <<" " << carry_out_lit << " "
-	    << cnf->getLiteral(a) <<" " << cnf->getLiteral(b) <<" " << cnf->getLiteral(carry)
-	    << std::endl;
-  eb.printCnfMapping(std::cout);
-  eb.printProblemClauses(std::cout);
+  out << "c i " ;
+  for (unsigned i = 0; i < res_bits.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(bits_a1[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_a2[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(bits_a3[i]) <<" "
+	<< eb.getCnfStream()->getLiteral(res_bits[i]) <<" ";
+  }
+  out << "0" << std::endl;
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
 }
 
-
-
-
-// void testUltGadget() {
-//   EncodingBitblaster eb(new context::Context(), "LTGadget1");
-//   NodeManager* nm = NodeManager::currentNM();
-//   Node a = nm->mkSkolem("a", nm->booleanType());
-//   Node b = nm->mkSkolem("b", nm->booleanType());
-//   Node ans_found = nm->mkSkolem("answerFound", nm->booleanType());
-//   Node answer = nm->mkSkolem("answer", nm->booleanType());
-
-//   // Node ans_found_out = utils::mkSkolem("ans_found_out", nm->booleanType());
-//   // Node answer_out = utils::mkSkolem("answer_out", nm->booleanType());
-  
-//   std::pair<Node, Node> pair;
-//   pair = theory::bv::optimalUltGadget(ans_found, answer, a, b, eb.getCnfStream());
-//   TNode af1 = pair.first;
-//   TNode ans1 = pair.second;
-
-//   CnfStream* cnf = eb.getCnfStream();
-//   CVC4::prop::EMinisatSatSolver* sat_solver = eb.getSatSolver();
-//   cnf->ensureLiteral(af1);
-//   cnf->ensureLiteral(ans1);
-//   pair = theory::bv::optimalUltGadgetGen(ans_found, answer, a, b, cnf);
-//   TNode af2 = pair.first;
-//   TNode ans2 = pair.second;
-
-//   Node af1_eq_af2 = af1.iffNode(af2);
-//   Node ans1_eq_ans2 = ans1.iffNode(ans2);
-
-//   //cnf->convertAndAssert(af1_eq_af2.notNode(), false, false, RULE_INVALID, TNode::null());
-//   cnf->convertAndAssert(ans1_eq_ans2.notNode(), false, false, RULE_INVALID, TNode::null());
-
-//   bool res = eb.solve();
-
-//   std::cout << "Result is " << res << std::endl;
-//   if (res) {
-//     std::cout << "a: " << eb.getModelFromSatSolver(a, false) << std::endl;
-//     std::cout << "b: " << eb.getModelFromSatSolver(b, false) << std::endl;
-//     std::cout << "ans_found: " << eb.getModelFromSatSolver(ans_found, false) << std::endl;
-//     std::cout << "answer: " << eb.getModelFromSatSolver(answer, false) << std::endl;
-//     CVC4::prop::SatValue af1_val = sat_solver->value(cnf->getLiteral(af1));
-//     std::cout << "af1: " << af1_val << std::endl;
-//     CVC4::prop::SatValue ans1_val = sat_solver->value(cnf->getLiteral(ans1));
-//     std::cout << "ans1: " << ans1_val << std::endl;
-//     std::cout << "af2: " << eb.getModelFromSatSolver(af2, false) << std::endl;
-//     std::cout << "ans2: " << eb.getModelFromSatSolver(ans2, false) << std::endl;
-//   }
-//   CVC4::prop::SatLiteral ans_found_out = cnf->getLiteral(af1);
-//   CVC4::prop::SatLiteral answer_out = cnf->getLiteral(ans1);
-//   std::cout << "c " << ans_found_out << " : answerFoundOut1" << std::endl;
-//   std::cout << "c " << answer_out <<" : answerOut1"<< std::endl;
-//   ans_found_out = cnf->getLiteral(af2);
-//   answer_out = cnf->getLiteral(ans2);
-//   std::cout << "c " << ans_found_out << " : answerFoundOut2" << std::endl;
-//   std::cout << "c " << answer_out <<" : answerOut2"<< std::endl;
-
-//   eb.printCnfMapping();
-//   eb.printProblemClauses();
-// }
-
-
-void makeSignedGadget() {
-  EncodingBitblaster eb(new context::Context(), "SignedGadget");
-  NodeManager* nm = NodeManager::currentNM();
-  Node a = nm->mkSkolem("a", nm->booleanType());
-  Node b = nm->mkSkolem("b", nm->booleanType());
-  Node aLTb = nm->mkSkolem("aLTb", nm->booleanType());
-
-  Node res = theory::bv::optimalSignGadget(a, b, aLTb, eb.getCnfStream());
-
-  eb.getCnfStream()->ensureLiteral(res);
-  CVC4::prop::SatLiteral aSLTb = eb.getCnfStream()->getLiteral(res);
-  std::cout << "c " << aSLTb << " : aSLTb" << std::endl;
-  std::cout << "c " << eb.getCnfStream()->getLiteral(aLTb) <<" : aLTb"<< std::endl; 
-  eb.printCnfMapping(std::cout);
-  eb.printProblemClauses(std::cout);
-}
 
 void equivalenceCheckerTerm(TBitblaster<Node>::TermBBStrategy e1, std::string name1, 
 			    TBitblaster<Node>::TermBBStrategy e2, std::string name2,
@@ -1245,15 +1265,65 @@ void equivalenceCheckerAtom(TBitblaster<Node>::AtomBBStrategy e1, std::string na
   }
 }
 
+void generateReferenceEncodingsSAT15() {
+
+  printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "cvc-ult", 6);
+  printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", 6);
+  printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", 6);
+  printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", 6);
+  
+  printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", 3);
+  printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", 4);
+
+  printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult2-2n", 2, false, false);
+  printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult4", 4, false);
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-full-adder.cnf");
+    makeFullAdder(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-ult-gadget.cnf");
+    makeLTNewGadget(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-slt-gadget.cnf");
+    makeSignedGadget(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-add3-carry2-gadget.cnf");
+    makeAdd3DoubleCarryGadget(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-add3-opt-bw3.cnf");
+    makeAdd3Optimal(3, outfile);
+    outfile.close();
+  }
+  
+}
+
 void generateReferenceEncodings(unsigned k, Options& opts) {
   Assert (k >= 2);
   // to test generating optimal encodings (and optimality of current designs)
   for (unsigned i = 2; i <= k; ++i) {
-    // printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "cvc-ult", i);
-    // printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", i);
-    // printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", i);
-    // printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", i);
-    // printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", i);
+     printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "cvc-ult", i);
+     printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", i);
+     printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", i);
+     printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", i);
+     printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", i);
 
     // printAtomEncoding(kind::BITVECTOR_ULT, OptimalUltBB<Node>, "optimal-ult", i);
     // printAtomEncoding(kind::BITVECTOR_ULE, OptimalUleBB<Node>, "optimal-ule", i);
@@ -1280,19 +1350,20 @@ void generateReferenceEncodings(unsigned k, Options& opts) {
 }
 
 
+
 void checkZooMultipliers(Options& opts) {
   unsigned width = opts[options::encodingBitwidth];
   std::vector<FullAdderEncoding> fullAdderEncodings;
   fullAdderEncodings.push_back(TSEITIN_NAIVE_AB_CIRCUIT);
-  // fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
-  // fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
-  // fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
-  // fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
-  // fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
-  // fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
-  // fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
-  // fullAdderEncodings.push_back(MINISAT_COMPLETE);
-  // fullAdderEncodings.push_back(MARTIN_OPTIMAL);
+  fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
+  fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
+  fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
+  fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
+  fullAdderEncodings.push_back(MINISAT_COMPLETE);
+  fullAdderEncodings.push_back(MARTIN_OPTIMAL);
 
   std::vector<Add2Encoding::Style> add2Styles;
   add2Styles.push_back(Add2Encoding::RIPPLE_CARRY);   
@@ -1303,9 +1374,9 @@ void checkZooMultipliers(Options& opts) {
   add3Styles.push_back(Add3Encoding::THREE_TO_TWO_THEN_ADD);
 
   std::vector<AccumulateEncoding::Style> accStyles;
-  // accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
-  // accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
-  // accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
+  accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
   accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
   accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
   accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
@@ -1329,7 +1400,7 @@ void checkZooMultipliers(Options& opts) {
   reductionStyles.push_back(WORD_LEVEL);
   reductionStyles.push_back(WALLACE_TREE);
   // reductionStyle.push_back(DADDA_TREE);
-  // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);
+  // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);`
   // reductionStyle.push_back(CARRY_SAVE_LINEAR_REDUCTION);
   // reductionStyle.push_back(CARRY_SAVE_TREE_REDUCTION);
   for (unsigned fa = 0; fa < fullAdderEncodings.size(); ++fa) {
@@ -1399,33 +1470,11 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
-  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 2, 3, false);
-
-  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 5, false);
-  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 6, false);
-  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
-
-  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
-  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
-  // printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "multConst", 3, 7, false);
-  
-  // makeAdd3DoubleCarryGadget();
-  
-  // makeFullAdder();
+  generateReferenceEncodingsSAT15();
   // generateReferenceEncodings(width, opts);
 
-  // printTermEncoding(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>, "mult2", 2);
-  // printTermEncoding(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>, "mult3", 3);
-  // printTermEncoding(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>, "mult4", 4);
 
-  // printTermEncoding(kind::BITVECTOR_SHL, DefaultShlBB<Node>, "shl3", 3);
-  // printTermEncoding(kind::BITVECTOR_SHL, DefaultShlBB<Node>, "shl4", 4);
 
-  // printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "ult3", 3);
-  // printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "ult4", 4);
-  
-  // makeLTNewGadget();
-  // makeSignedGadget();
   // printMult4x4x8(kind::BITVECTOR_MULT, OptimalAddMultBB<Node>);
 
   // EncodingComparator ec_plus(3, kind::BITVECTOR_MULT, true,

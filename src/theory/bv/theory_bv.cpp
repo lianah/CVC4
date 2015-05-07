@@ -65,13 +65,13 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   size_t carrySelectMin = -1;
   size_t carrySelectSplit = -1;
 
+  FullAdderEncoding fullAdderEncoding = options::fullAdderStyle();
+  
   switch(options::multStyle()) {
   case -1: break; // the default
   case 0: {
     // default but via multiply
     // just optimal adder now part of the multiplication too
-    FullAdderEncoding fullAdderEncoding = TSEITIN_NAIVE_AB_CIRCUIT;
-
     Add2Encoding add2Enc(fullAdderEncoding,
                          add2Style,
                          carrySelectMin,
@@ -100,7 +100,7 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   }
   case 1: {
     // just optimal adder now part of the multiplication too
-    FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
+    // FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
 
     Add2Encoding add2Enc(fullAdderEncoding,
                          add2Style,
@@ -131,7 +131,7 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   }
   case 2: {
     // using the optimal add3 gadget for tree reduction
-    FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
+    // FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
 
     Add2Encoding add2Enc(fullAdderEncoding,
                          add2Style,
@@ -162,7 +162,7 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   }
   case 3: {
     // block2
-    FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
+    //FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
     
     Add2Encoding add2Enc(fullAdderEncoding,
                          add2Style,
@@ -192,7 +192,7 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
   }
   case 4: {
     // block2 with wallace
-    FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
+    //FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
     
     Add2Encoding add2Enc(fullAdderEncoding,
                          add2Style,

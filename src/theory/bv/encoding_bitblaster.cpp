@@ -104,13 +104,13 @@ void EncodingBitblaster::printLearned(std::ostream& out) {
 
 void EncodingBitblaster::printCnfMapping(std::ostream& out, const NodeSet& toprint, bool full) {
   // out << "c "<< getName() << std::endl;
-  if (toprint.size()) {
-    out << "c i ";
-    for (NodeSet::const_iterator it = toprint.begin(); it != toprint.end(); ++it) {
-      out << d_cnfStream->getLiteral(*it) <<" ";
-    }
-    out << "0" << std::endl;
-  }
+  // if (toprint.size()) {
+  //   out << "c i ";
+  //   for (NodeSet::const_iterator it = toprint.begin(); it != toprint.end(); ++it) {
+  //     out << d_cnfStream->getLiteral(*it) <<" ";
+  //   }
+  //   out << "0" << std::endl;
+  // }
 
 
   const CVC4::prop::CnfStream::LiteralToNodeMap& map = d_cnfStream->getNodeCache();

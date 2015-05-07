@@ -101,6 +101,21 @@ expert-option bvBlock2MultOpt --bv-mult-block2-opt bool :default false
 
 expert-option multStyle --bv-mult-style int :default -1
  what style to use to bit-blast multiplier
- 
+
+expert-option fullAdderStyle full-adder --full-adder=MODE CVC4::theory::bv::FullAdderEncoding :handler CVC4::theory::bv::stringToFullAdder :default CVC4::theory::bv::TSEITIN_NAIVE_AB_CIRCUIT :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose full-adder style
+
+expert-option add3Style add3-style --add3-style=MODE CVC4::theory::bv::Add3Encoding::Style :handler CVC4::theory::bv::stringToAdd3Style :default CVC4::theory::bv::Add3Encoding::THREE_TO_TWO_THEN_ADD :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose add3-style style
+
+expert-option accumulateStyle accumulate --accumulate=MODE CVC4::theory::bv::AccumulateEncoding::Style :handler CVC4::theory::bv::stringToAccumulateStyle :default CVC4::theory::bv::AccumulateEncoding::LINEAR_FORWARDS :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose accumulate style
+
+expert-option partialProdStyle partial-prod --partial-prod=MODE CVC4::theory::bv::PartialProductEncoding :handler CVC4::theory::bv::stringToPartialProduct :default CVC4::theory::bv::CONVENTIONAL :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose partial-prod style
+
+expert-option reductionStyle reduction --reduction=MODE CVC4::theory::bv::ReductionEncoding :handler CVC4::theory::bv::stringToReduction :default CVC4::theory::bv::WORD_LEVEL :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose reduction style
+
  
 endmodule

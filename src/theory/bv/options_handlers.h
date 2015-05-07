@@ -108,6 +108,100 @@ inline BitblastMode stringToBitblastMode(std::string option, std::string optarg,
   }
 }
 
+ inline CVC4::theory::bv::FullAdderEncoding stringToFullAdder(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if(optarg == "tseitin-naive-ab") {
+    return CVC4::theory::bv::TSEITIN_NAIVE_AB_CIRCUIT;
+  } else if(optarg == "tseitin-naive-ac") {
+    return CVC4::theory::bv::TSEITIN_NAIVE_AC_CIRCUIT;
+  } else if(optarg == "tseitin-naive-bc") {
+    return CVC4::theory::bv::TSEITIN_NAIVE_BC_CIRCUIT;
+  } else if(optarg == "tseitin-shared-ab") {
+    return CVC4::theory::bv::TSEITIN_SHARED_AB_CIRCUIT;
+  } else if(optarg == "tseitin-shared-ac") {
+    return CVC4::theory::bv::TSEITIN_SHARED_AC_CIRCUIT;
+  } else if(optarg == "tseitin-shared-bc") {
+    return CVC4::theory::bv::TSEITIN_SHARED_BC_CIRCUIT;
+  } else if(optarg == "compact-carry") {
+    return CVC4::theory::bv::DANIEL_COMPACT_CARRY;
+  } else if(optarg == "sum-and-carry") {
+    return CVC4::theory::bv::MINISAT_SUM_AND_CARRY;
+  } else if(optarg == "minisat-complete") {
+    return CVC4::theory::bv::MINISAT_COMPLETE;
+  } else if(optarg == "optimal") {
+    return CVC4::theory::bv::MARTIN_OPTIMAL;
+  } else {
+    throw OptionException(std::string("unknown option for --full-adder: `") +
+                          optarg );
+  }
+}
+
+inline CVC4::theory::bv::Add3Encoding::Style stringToAdd3Style(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if (optarg == "optimal") {
+    return CVC4::theory::bv::Add3Encoding::OPTIMAL_ADD3;
+  } else if (optarg == "add2then") {
+    return CVC4::theory::bv::Add3Encoding::THREE_TO_TWO_THEN_ADD;
+  } else {
+    throw OptionException(std::string("unknown option for --add3style: `") +
+                          optarg );
+  }
+}
+
+inline CVC4::theory::bv::AccumulateEncoding::Style stringToAccumulateStyle(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if (optarg == "linear-fwd") {
+    return CVC4::theory::bv::AccumulateEncoding::LINEAR_FORWARDS;
+  } else if (optarg == "linear-back") {
+    return CVC4::theory::bv::AccumulateEncoding::LINEAR_BACKWARDS;
+  } else if (optarg == "tree") {
+    return CVC4::theory::bv::AccumulateEncoding::TREE_REDUCTION;
+  } else if (optarg == "add3-linear-fwd") {
+    return CVC4::theory::bv::AccumulateEncoding::ADD3_LINEAR_FORWARDS;
+  } else if (optarg == "add3-linear-back") {
+    return CVC4::theory::bv::AccumulateEncoding::ADD3_LINEAR_BACKWARDS;
+  } else if (optarg == "add3-tree") {
+    return CVC4::theory::bv::AccumulateEncoding::ADD3_TREE_REDUCTION;
+  } else {
+    throw OptionException(std::string("unknown option for --accumulate: `") +
+                          optarg );
+  }
+}
+
+inline CVC4::theory::bv::PartialProductEncoding stringToPartialProduct(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if (optarg == "conventional") {
+    return CVC4::theory::bv::CONVENTIONAL;
+  } else if (optarg == "block2") {
+    return CVC4::theory::bv::BLOCK2_BY_ADDITION;
+  } else if (optarg == "block3") {
+    return CVC4::theory::bv::BLOCK3_BY_ADDITION;
+  } else if (optarg == "block4") {
+    return CVC4::theory::bv::BLOCK4_BY_ADDITION;
+  } else if (optarg == "block5") {
+    return CVC4::theory::bv::BLOCK5_BY_ADDITION;
+  } else if (optarg == "block2const") {
+    return CVC4::theory::bv::BLOCK2_BY_CONSTANT_MULTIPLICATION;
+  } else if (optarg == "block3const") {
+    return CVC4::theory::bv::BLOCK3_BY_CONSTANT_MULTIPLICATION;
+  } else if (optarg == "block4const") {
+    return CVC4::theory::bv::BLOCK4_BY_CONSTANT_MULTIPLICATION;
+  } else if (optarg == "block5const") {
+    return CVC4::theory::bv::BLOCK5_BY_CONSTANT_MULTIPLICATION;
+  } else {
+    throw OptionException(std::string("unknown option for --partial-prod: `") +
+                          optarg );
+  }
+}
+
+inline CVC4::theory::bv::ReductionEncoding stringToReduction(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if (optarg == "wallace") {
+    return CVC4::theory::bv::WALLACE_TREE;
+  } else if (optarg == "word") {
+    return CVC4::theory::bv::WORD_LEVEL; 
+  } else {
+    throw OptionException(std::string("unknown option for --reduction: `") +
+                          optarg );
+  }
+}
+
+ 
 static const std::string bvSlicerModeHelp = "\
 Bit-vector equality slicer modes supported by the --bv-eq-slicer option:\n\
 \n\
