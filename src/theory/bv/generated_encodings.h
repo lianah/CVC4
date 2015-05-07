@@ -123,6 +123,21 @@ inline void optimalMult2(const std::vector<T>&a,
 }
 
 template <class T>
+inline void optimalMult3(const std::vector<T>&a,
+			 const std::vector<T>& b,
+			 std::vector<T>& c,
+			 prop::CnfStream* cnf) {
+  Unreachable();
+}
+template <class T>
+inline void optimalMult4(const std::vector<T>&a,
+			 const std::vector<T>& b,
+			 std::vector<T>& c,
+			 prop::CnfStream* cnf) {
+  Unreachable();
+}
+ 
+template <class T>
 inline void mult2(const std::vector<T>&a,
 		  const std::vector<T>& b,
 		  std::vector<T>& c,
@@ -134,19 +149,11 @@ inline void mult2(const std::vector<T>&a,
   zeroes_b.insert(zeroes_b.begin(), b.begin(), b.end());
   shiftOptimalAddMultiplier(zeroes_a, zeroes_b, c, cnf);
 }
- 
- 
-template <class T>
-inline void optimalMult3(const std::vector<T>&a,
-			 const std::vector<T>& b,
-			 std::vector<T>& c, prop::CnfStream* cnf) {
-  Unreachable();
-}
 
 template <class T>
 inline void mult3(const std::vector<T>&a,
-			 const std::vector<T>& b,
-			 std::vector<T>& c, prop::CnfStream* cnf) {
+		  const std::vector<T>& b,
+		  std::vector<T>& c, prop::CnfStream* cnf) {
   Assert (a.size() == b.size() && a.size() == 3);
   std::vector<T> zeroes_a(a.size(), mkFalse<T>());
   std::vector<T> zeroes_b(a.size(), mkFalse<T>());
@@ -157,18 +164,218 @@ inline void mult3(const std::vector<T>&a,
  
  
 template <class T>
-inline void optimalMult4(const std::vector<T>&a,
-			 const std::vector<T>& b,
-			 std::vector<T>& c, prop::CnfStream* cnf) {
-  Unreachable();
-  // FIXME: until we have the real encoding for debugging
-  Assert (a.size() == b.size() && a.size() == 4);
-  std::vector<T> zeroes_a(a.size(), mkFalse<T>());
-  std::vector<T> zeroes_b(a.size(), mkFalse<T>());
-  zeroes_a.insert(zeroes_a.begin(), a.begin(), a.end());
-  zeroes_b.insert(zeroes_b.begin(), b.begin(), b.end());
-  shiftOptimalAddMultiplier(zeroes_a, zeroes_b, c, cnf);
+inline std::vector<T> optimalMultConst3Gadget(const std::vector<T>& a,
+					      prop::CnfStream* cnf) {
+
+  Assert (a.size() == 2); 
+
+  std::vector<T> res;
+  shiftAddMultiplier(makeZeroExtend(a, 2),
+		     makeConst<T>(3, 4),
+		     res);
+  Assert (res.size() == 4);
+  return res; 
 }
+
+template <class T>
+inline std::vector<T> optimalMultConst5Gadget(const std::vector<T>& a,
+					      prop::CnfStream* cnf) {
+
+  Assert ( a.size() == 3); 
+
+  std::vector<T> res;
+  shiftAddMultiplier(makeZeroExtend(a, 3),
+		     makeConst<T>(5, 6),
+		     res);
+  Assert (res.size() == 6);
+  return res; 
+}
+
+template <class T>
+inline std::vector<T> optimalMultConst7Gadget(const std::vector<T>& a,
+					      prop::CnfStream* cnf) {
+
+  Assert ( a.size() == 3);
+
+  std::vector<T> res;
+  shiftAddMultiplier(makeZeroExtend(a, 3),
+		     makeConst<T>(7, 6),
+		     res);
+  Assert (res.size() == 6);
+  return res; 
+}
+
+template <class T>
+inline std::vector<T> optimalMultConst3(const std::vector<T>& a,
+					prop::CnfStream* cnf) {
+  Assert(a.size() >= 2);
+
+  std::vector< std::vector<T> > grid;
+  for (unsigned i = 0; i < a.size()-1; i+= 2) {
+    std::vector<T> tmp = optimalMultConst3Gadget(makeExtract(a, i, i+1),
+						 cnf);
+    grid.push_back(tmp);
+  }
+
+  if (a.size() % 2 != 0) {
+    grid.push_back(makeAndBit(a.back(), makeConst<T>(3, 2)));
+  }
+
+  T carry = mkFalse<T>();
+  std::vector<T> res;
+  res.push_back(grid[0][0]);
+  res.push_back(grid[0][1]);
+  for (unsigned i = 0; i < grid.size() - 1; ++i) {
+    std::vector<T> top = makeExtract(grid[i], 2, 3);
+    std::vector<T> bot = makeExtract(grid[i+1], 0, 1);
+    
+    std::vector<T> tmp;
+    carry = rippleCarryAdder(top, bot, tmp, carry);
+    res.push_back(tmp[0]);
+    res.push_back(tmp[1]);
+  }
+  if (a.size() %2 != 0) {
+    res.pop_back();//FIXME
+  }
+
+  Assert (res.size() == a.size());
+  return res; 
+}
+
+// FIXME: all other guys need a check for width not div by 3
+template <class T>
+inline std::vector<T> optimalMultConst5(const std::vector<T>& a,
+					prop::CnfStream* cnf) {
+  Assert(a.size() >= 3);
+  
+  std::vector< std::vector<T> > grid;
+  for (unsigned i = 0; i < a.size(); i+= 3) {
+    std::vector<T> tmp = optimalMultConst5Gadget(makeExtract(a, i, i+2),
+						 cnf);
+    grid.push_back(tmp);
+  }
+
+  T carry = mkFalse<T>();
+  std::vector<T> res;
+  res.push_back(grid[0][0]);
+  res.push_back(grid[0][1]);
+  res.push_back(grid[0][2]);
+  
+  for (unsigned i = 0; i < grid.size() - 1; ++i) {
+    std::vector<T> top = makeExtract(grid[i], 3, 5);
+    std::vector<T> bot = makeExtract(grid[i+1], 0, 2);
+    
+    std::vector<T> tmp;
+    carry = rippleCarryAdder(top, bot, tmp, carry);
+    res.push_back(tmp[0]);
+    res.push_back(tmp[1]);
+    res.push_back(tmp[2]);
+  }
+
+  Assert (res.size() == a.size());
+  return res; 
+}
+
+template <class T>
+inline std::vector<T> optimalMultConst7(const std::vector<T>& a,
+					prop::CnfStream* cnf) {
+  Assert(a.size() >= 3);
+  
+  std::vector< std::vector<T> > grid;
+  for (unsigned i = 0; i < a.size(); i+= 3) {
+    std::vector<T> tmp = optimalMultConst7Gadget(makeExtract(a, i, i+2),
+						 cnf);
+    grid.push_back(tmp);
+  }
+
+  T carry = mkFalse<T>();
+  std::vector<T> res;
+  res.push_back(grid[0][0]);
+  res.push_back(grid[0][1]);
+  res.push_back(grid[0][2]);
+  
+  for (unsigned i = 0; i < grid.size() - 1; ++i) {
+    std::vector<T> top = makeExtract(grid[i], 3, 5);
+    std::vector<T> bot = makeExtract(grid[i+1], 0, 2);
+    
+    std::vector<T> tmp;
+    carry = rippleCarryAdder(top, bot, tmp, carry);
+    res.push_back(tmp[0]);
+    res.push_back(tmp[1]);
+    res.push_back(tmp[2]);
+  }
+
+  Assert (res.size() == a.size());
+  return res; 
+}
+ 
+ 
+// this can  be used in optimal 2 by 2 encoding 
+template <class T>
+inline std::pair<std::vector<T>, std::vector<T> > base4FullAdder(const std::vector<T>& a,
+								 const std::vector<T>& b,
+								 const std::vector<T>& carry,
+								 prop::CnfStream* cnf) {
+  Assert (a.size() == b.size() &&
+	  a.size() == carry.size() &&
+	  a.size() == 2); 
+
+  std::vector<T> tmp;
+  rippleCarryAdder(makeZeroExtend(a, 2),
+		   makeZeroExtend(b, 2),
+		   tmp,
+		   mkFalse<T>());
+  std::vector<T> res;
+  rippleCarryAdder(res,
+		   makeZeroExtend(carry, 2),
+		   res,
+		   mkFalse<T>());
+  
+  std::vector<T> sum, carry_out;
+  extractBits(res, sum, 0, 1);
+  extractBits(res, carry_out, 2, 3);
+
+  Assert (sum.size() == 2 &&
+	  carry_out.size() == 2);
+  
+  return std::make_pair(sum, carry_out); 
+}
+
+// this can  be used in optimal 3 by 3 encoding
+template <class T>
+inline std::pair<std::vector<T>, std::vector<T> > base8FullAdder(const std::vector<T>& a,
+								 const std::vector<T>& b,
+								 const std::vector<T>& carry,
+								 prop::CnfStream* cnf) {
+  Assert (a.size() == b.size() &&
+	  a.size() == carry.size() &&
+	  a.size() == 3);
+
+  std::vector<T> tmp;
+  rippleCarryAdder(makeZeroExtend(a, 3),
+		   makeZeroExtend(b, 3),
+		   tmp,
+		   mkFalse<T>());
+  std::vector<T> res;
+  rippleCarryAdder(res,
+		   makeZeroExtend(carry, 3),
+		   res,
+		   mkFalse<T>());
+  
+  std::vector<T> sum, carry_out;
+  extractBits(res, sum, 0, 2);
+  extractBits(res, carry_out, 3, 5);
+
+  Assert (sum.size() == 3 &&
+	  carry_out.size() == 3);
+  
+  return std::make_pair(sum, carry_out); 
+}
+ 
+ 
+ 
+
+
  
 /******************************
 * Generated encodings   

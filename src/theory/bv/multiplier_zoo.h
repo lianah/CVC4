@@ -553,7 +553,7 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
                       block[2],
                       mkFalse<T>(), cnf);
 
-      if (blockSize == 2) goto trim;
+      if (blockSize == 2) goto trim1;
       Assert (a.size() >= 3);      
 
       block[4] = makeLShift(a, 2);
@@ -566,7 +566,7 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
                       makeLShift(a, 3), // 8 * a
                       block[1], cnf);
 
-      if (blockSize == 3) goto trim;
+      if (blockSize == 3) goto trim1;
       Assert (a.size() >= 4);
       // TODO: maybe better combinations
       block[8] = makeLShift(a, 3);
@@ -597,11 +597,11 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 		       makeLShift(a, 4),
 		       block[1], cnf);
 
-      if (blockSize == 4) goto trim; 
+      if (blockSize == 4) goto trim1; 
       Assert (a.size() >= 5);
       Unimplemented("No 5 blocking yet");
       
-      trim :
+      trim1 :
       // Select to build grid
       if (multiplyStyle.partialProductStyle == BLOCK2_BY_ADDITION) {
         for (int i = 0; i <= b.size() -2; i += 2) {
@@ -684,7 +684,62 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
     case BLOCK3_BY_CONSTANT_MULTIPLICATION : 
     case BLOCK4_BY_CONSTANT_MULTIPLICATION : 
     case BLOCK5_BY_CONSTANT_MULTIPLICATION : {
+      if (multiplyStyle.partialProductStyle == BLOCK2_BY_CONSTANT_MULTIPLICATION)
+        blockSize = 2;
+      if (multiplyStyle.partialProductStyle == BLOCK3_BY_CONSTANT_MULTIPLICATION)
+        blockSize = 3;
+      if (multiplyStyle.partialProductStyle == BLOCK4_BY_CONSTANT_MULTIPLICATION)
+        blockSize = 4;
+      if (multiplyStyle.partialProductStyle == BLOCK5_BY_CONSTANT_MULTIPLICATION)
+        blockSize = 5;
+
+      // FIXME add leftovers to optimalMultConst
+      // Assert (a.size() % blockSize == 0);
+      // Build blocks
+      // each block[i] represents the result of multiplying the constant i by a (IDIOT!!)
+      Assert (a.size() >= 2);
+      blockEntryWidth = a.size();
+      std::vector< std::vector<T> > block(1 << blockSize);
+      block[0] = makeZero<T>(blockEntryWidth);
+      block[1] = a;
+      block[2] = makeLShift(a, 1);
+      block[3] = optimalMultConst3(a, cnf);
+
+      if (blockSize == 2) goto trim2;
+      Assert (a.size() >= 3);      
+
+      block[4] = makeLShift(a, 2);
+      block[5] = optimalMultConst5(a, cnf);
+      block[6] = makeLShift(block[3], 1);
+      block[7] = optimalMultConst7(a, cnf);
+
+      if (blockSize == 3) goto trim2;
       Unimplemented("Need the multiply by constant function.");
+
+      trim2 :
+      // Select to build grid
+      if (multiplyStyle.partialProductStyle == BLOCK2_BY_CONSTANT_MULTIPLICATION) {
+        for (int i = 0; i <= b.size() -2; i += 2) {
+          // \todo This is not optimal!
+          grid.push_back(makeIte(b[i + 1],
+                                 makeIte(b[i], block[3], block[2]),
+                                 makeIte(b[i], block[1], block[0])));
+        }
+        
+      } else if (multiplyStyle.partialProductStyle == BLOCK3_BY_CONSTANT_MULTIPLICATION) {
+        for (int i = 0; i <= b.size() -3; i += 3) {
+          grid.push_back(makeIte(b[i+2],
+                                 (makeIte(b[i + 1],
+                                         makeIte(b[i], block[7], block[6]),
+                                         makeIte(b[i], block[5], block[4]))),
+                                 makeIte(b[i + 1],
+                                         makeIte(b[i], block[3], block[2]),
+                                         makeIte(b[i], block[1], block[0]))));
+        }
+      } else {
+	Unimplemented("No > 3 block yet");
+      }
+      
       break;
     }
       

@@ -215,6 +215,25 @@ void inline makeZero(std::vector<T>& bits, unsigned width) {
 }
 
 template <class T>
+std::vector<T> inline makeConst(unsigned K, unsigned width) {
+  std::vector<T> res;
+  while ( K > 0) {
+    if (K % 2 != 0) {
+      res.push_back(mkTrue<T>());
+    } else {
+      res.push_back(mkFalse<T>());
+    }
+    K = K/ 2; 
+  }
+  while(res.size() < width) {
+    res.push_back(mkFalse<T>());
+  }
+  Assert (res.size() == width);
+  return res; 
+}
+ 
+ 
+template <class T>
 std::pair<T,T> inline fullAdder(const T a, const T b, const T cin) {
   T cout = mkOr(mkAnd(a, b),
 		mkAnd(mkXor(a, b),
@@ -285,6 +304,18 @@ std::vector<T> inline makeZeroExtend(const std::vector<T>& a,
   }
   return dest;
 }
+
+template <class T>
+  std::vector<T> inline makeExtract(const std::vector<T>& a,
+				    unsigned lo, unsigned hi) {
+  Assert (lo >= 0 && hi < a.size());
+  std::vector<T> bits;
+  for(unsigned i = lo; i <= hi; ++i) {
+    bits.push_back(a[i]); 
+  }
+  return bits;
+}
+ 
  
 template <class T>
 std::vector<T> inline makeOr(const std::vector<T>& a,

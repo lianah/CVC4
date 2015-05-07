@@ -1286,6 +1286,9 @@ void generateReferenceEncodingsSAT15() {
   
   printTermEncoding(kind::BITVECTOR_PLUS, OptimalPlusBB<Node>, "cvc-plus-opt", 3);
   printTermEncoding(kind::BITVECTOR_PLUS, OptimalPlusBB<Node>, "cvc-plus-opt", 4);
+
+
+  // GADGETS
   
   {
     ofstream outfile;
@@ -1321,6 +1324,16 @@ void generateReferenceEncodingsSAT15() {
     makeAdd3Optimal(3, outfile);
     outfile.close();
   }
+
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
+			 2, 3, false);
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
+			 3, 5, false);
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
+			 3, 6, false);
+  printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
+			 3, 7, false);
+
   
 }
 
@@ -1364,15 +1377,15 @@ void checkZooMultipliers(Options& opts) {
   unsigned width = opts[options::encodingBitwidth];
   std::vector<FullAdderEncoding> fullAdderEncodings;
   fullAdderEncodings.push_back(TSEITIN_NAIVE_AB_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
-  fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
-  fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
-  fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
-  fullAdderEncodings.push_back(MINISAT_COMPLETE);
-  fullAdderEncodings.push_back(MARTIN_OPTIMAL);
+  // fullAdderEncodings.push_back(TSEITIN_NAIVE_AC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_NAIVE_BC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_AB_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_AC_CIRCUIT);
+  // fullAdderEncodings.push_back(TSEITIN_SHARED_BC_CIRCUIT);
+  // fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
+  // fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
+  // fullAdderEncodings.push_back(MINISAT_COMPLETE);
+  // fullAdderEncodings.push_back(MARTIN_OPTIMAL);
 
   std::vector<Add2Encoding::Style> add2Styles;
   add2Styles.push_back(Add2Encoding::RIPPLE_CARRY);   
@@ -1380,24 +1393,24 @@ void checkZooMultipliers(Options& opts) {
   // add2Styles.push_back(CARRY_SELECT); 
   std::vector<Add3Encoding::Style> add3Styles;
   add3Styles.push_back(Add3Encoding::OPTIMAL_ADD3);
-  add3Styles.push_back(Add3Encoding::THREE_TO_TWO_THEN_ADD);
+  // add3Styles.push_back(Add3Encoding::THREE_TO_TWO_THEN_ADD);
 
   std::vector<AccumulateEncoding::Style> accStyles;
   accStyles.push_back(AccumulateEncoding::LINEAR_FORWARDS);
-  accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
-  accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
-  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
-  accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
-  accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::TREE_REDUCTION);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_FORWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_LINEAR_BACKWARDS);
+  // accStyles.push_back(AccumulateEncoding::ADD3_TREE_REDUCTION);
 
   std::vector<PartialProductEncoding> partialProductEncodings;
-  partialProductEncodings.push_back(CONVENTIONAL);
-  partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
-  partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
-  partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
+  // partialProductEncodings.push_back(CONVENTIONAL);
+  // partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
+  // partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK5_BY_ADDITION);
-  // partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);
-  // partialProductEncodings.push_back(BLOCK3_BY_CONSTANT_MULTIPLICATION);
+  partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);
+  partialProductEncodings.push_back(BLOCK3_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(BLOCK4_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(BLOCK5_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(OPTIMAL_2_BY_2);
@@ -1407,7 +1420,7 @@ void checkZooMultipliers(Options& opts) {
 
   std::vector<ReductionEncoding> reductionStyles;
   reductionStyles.push_back(WORD_LEVEL);
-  reductionStyles.push_back(WALLACE_TREE);
+  // reductionStyles.push_back(WALLACE_TREE);
   // reductionStyle.push_back(DADDA_TREE);
   // reductionStyle.push_back(UNARY_TO_BINARY_REDUCTION);`
   // reductionStyle.push_back(CARRY_SAVE_LINEAR_REDUCTION);
@@ -1479,7 +1492,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
-  generateReferenceEncodingsSAT15();
+  // generateReferenceEncodingsSAT15();
   // generateReferenceEncodings(width, opts);
 
 
@@ -1526,7 +1539,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   /********* Equivalence Check Mult ****************/
 
 
-  // checkZooMultipliers(opts); 
+  checkZooMultipliers(opts); 
   
 
 
