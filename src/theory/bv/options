@@ -99,8 +99,8 @@ expert-option bvBlock2Mult --bv-mult-block2 bool :default false
 expert-option bvBlock2MultOpt --bv-mult-block2-opt bool :default false
  bit-blast mult with optimal 2x2x4 multiplier
 
-expert-option multStyle --bv-mult-style int :default -1
- what style to use to bit-blast multiplier
+expert-option encodingsZoo --encodings-zoo bool :default false
+ use crazy new multiplier encodings
 
 expert-option fullAdderStyle full-adder --full-adder=MODE CVC4::theory::bv::FullAdderEncoding :handler CVC4::theory::bv::stringToFullAdder :default CVC4::theory::bv::TSEITIN_NAIVE_AB_CIRCUIT :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
  choose full-adder style

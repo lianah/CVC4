@@ -61,169 +61,37 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
 {
   // initialize bit-blast style for mult based on options
 
-  Add2Encoding::Style add2Style = Add2Encoding::RIPPLE_CARRY;
-  size_t carrySelectMin = -1;
-  size_t carrySelectSplit = -1;
 
-  FullAdderEncoding fullAdderEncoding = options::fullAdderStyle();
-  
-  switch(options::multStyle()) {
-  case -1: break; // the default
-  case 0: {
-    // default but via multiply
-    // just optimal adder now part of the multiplication too
+  if (options::encodingsZoo()) {
+    FullAdderEncoding fullAdderEncoding = options::fullAdderStyle();
+    Add3Encoding::Style add3Style = options::add3Style();
+    AccumulateEncoding::Style accStyle = options::accumulateStyle();
+    PartialProductEncoding partialProductEncoding = options::partialProdStyle();
+    ReductionEncoding reductionStyle = options::reductionStyle();
+
+
+    size_t carrySelectMin = -1;
+    size_t carrySelectSplit = -1;
+
     Add2Encoding add2Enc(fullAdderEncoding,
-                         add2Style,
-                         carrySelectMin,
-                         carrySelectSplit);
+			 Add2Encoding::RIPPLE_CARRY,
+			 carrySelectMin,
+			 carrySelectSplit);
 
-    Add3Encoding::Style add3Style = Add3Encoding::THREE_TO_TWO_THEN_ADD;
+
     Add3Encoding add3Enc(add3Style,
-                         fullAdderEncoding,
-                         add2Enc);
-  
-    AccumulateEncoding::Style accStyle = AccumulateEncoding::LINEAR_FORWARDS;
+			 fullAdderEncoding,
+			 add2Enc);
 
     AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
 
-    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
-    PartialProductEncoding partialProductEncoding = CONVENTIONAL;
-    ReductionEncoding reductionStyle = WORD_LEVEL;
-
-    MultiplyEncoding multStyle(recursionStyle,
-                               partialProductEncoding,
-                               reductionStyle,
-                               accEncoding);
+    MultiplyEncoding multStyle(DEFAULT_REC,
+			       partialProductEncoding,
+			       reductionStyle,
+			       accEncoding);
 
     MultiplyEncoding::setCurrent(multStyle);
-    break;
-  }
-  case 1: {
-    // just optimal adder now part of the multiplication too
-    // FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
-
-    Add2Encoding add2Enc(fullAdderEncoding,
-                         add2Style,
-                         carrySelectMin,
-                         carrySelectSplit);
-
-    Add3Encoding::Style add3Style = Add3Encoding::OPTIMAL_ADD3;
-    Add3Encoding add3Enc(add3Style,
-                         fullAdderEncoding,
-                         add2Enc);
-  
-    AccumulateEncoding::Style accStyle = AccumulateEncoding::LINEAR_FORWARDS;
-
-    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
-
-    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
-    PartialProductEncoding partialProductEncoding = CONVENTIONAL;
-    ReductionEncoding reductionStyle = WORD_LEVEL;
-
-    MultiplyEncoding multStyle(recursionStyle,
-                               partialProductEncoding,
-                               reductionStyle,
-                               accEncoding);
-
-    MultiplyEncoding::setCurrent(multStyle);
-
-    break;
-  }
-  case 2: {
-    // using the optimal add3 gadget for tree reduction
-    // FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
-
-    Add2Encoding add2Enc(fullAdderEncoding,
-                         add2Style,
-                         carrySelectMin,
-                         carrySelectSplit);
-
-    Add3Encoding::Style add3Style = Add3Encoding::OPTIMAL_ADD3;
-    Add3Encoding add3Enc(add3Style,
-                         fullAdderEncoding,
-                         add2Enc);
-  
-    AccumulateEncoding::Style accStyle = AccumulateEncoding::ADD3_TREE_REDUCTION;
-
-    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
-
-    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
-    PartialProductEncoding partialProductEncoding = CONVENTIONAL;
-    ReductionEncoding reductionStyle = WORD_LEVEL;
-
-    MultiplyEncoding multStyle(recursionStyle,
-                               partialProductEncoding,
-                               reductionStyle,
-                               accEncoding);
-
-    MultiplyEncoding::setCurrent(multStyle);
-
-    break;
-  }
-  case 3: {
-    // block2
-    //FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
-    
-    Add2Encoding add2Enc(fullAdderEncoding,
-                         add2Style,
-                         carrySelectMin,
-                         carrySelectSplit);
-
-    Add3Encoding::Style add3Style = Add3Encoding::OPTIMAL_ADD3;
-    Add3Encoding add3Enc(add3Style,
-                         fullAdderEncoding,
-                         add2Enc);
-  
-    AccumulateEncoding::Style accStyle = AccumulateEncoding::LINEAR_FORWARDS;
-
-    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
-
-    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
-    PartialProductEncoding partialProductEncoding = BLOCK2_BY_ADDITION;
-    ReductionEncoding reductionStyle = WORD_LEVEL;
-
-    MultiplyEncoding multStyle(recursionStyle,
-                               partialProductEncoding,
-                               reductionStyle,
-                               accEncoding);
-
-    MultiplyEncoding::setCurrent(multStyle);
-    break;
-  }
-  case 4: {
-    // block2 with wallace
-    //FullAdderEncoding fullAdderEncoding = MARTIN_OPTIMAL;
-    
-    Add2Encoding add2Enc(fullAdderEncoding,
-                         add2Style,
-                         carrySelectMin,
-                         carrySelectSplit);
-
-    Add3Encoding::Style add3Style = Add3Encoding::OPTIMAL_ADD3;
-    Add3Encoding add3Enc(add3Style,
-                         fullAdderEncoding,
-                         add2Enc);
-  
-    AccumulateEncoding::Style accStyle = AccumulateEncoding::LINEAR_FORWARDS;
-
-    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
-
-    RecursiveMultiplicationEncoding recursionStyle = DEFAULT_REC;
-    PartialProductEncoding partialProductEncoding = BLOCK2_BY_ADDITION;
-    ReductionEncoding reductionStyle = WALLACE_TREE;
-
-    MultiplyEncoding multStyle(recursionStyle,
-                               partialProductEncoding,
-                               reductionStyle,
-                               accEncoding);
-
-    MultiplyEncoding::setCurrent(multStyle);
-    break;
-  }
-  default:
-    Unimplemented("Unknown multiplier style option.");
-  }
-  
+  }  
 
   if (options::bitblastMode() == theory::bv::BITBLAST_MODE_EAGER) {
     d_eagerSolver = new EagerBitblastSolver(this);

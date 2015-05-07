@@ -392,7 +392,7 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
 
-  if(options::multStyle() != -1 && utils::getSize(node) >= 2) {
+  if(options::encodingsZoo() && utils::getSize(node) >= 2) {
     ZooMultBB(node, res, bb);
     return;
   }
