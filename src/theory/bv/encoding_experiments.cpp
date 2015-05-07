@@ -829,7 +829,7 @@ void printTermEncoding(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string 
   }
   outfile << "0" << std::endl;
 
-  eb.printCnfMapping(outfile, all_bits);
+  eb.printCnfMapping(outfile, all_bits, true);
   eb.printProblemClauses(outfile);
 
   // assert that the top n bits are zero as units
@@ -1268,16 +1268,25 @@ void equivalenceCheckerAtom(TBitblaster<Node>::AtomBBStrategy e1, std::string na
 void generateReferenceEncodingsSAT15() {
 
   printAtomEncoding(kind::BITVECTOR_ULT, DefaultUltBB<Node>, "cvc-ult", 6);
-  printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", 6);
-  printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", 6);
-  printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", 6);
+  // printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", 6);
+  // printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", 6);
+  // printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", 6);
   
   printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", 3);
   printTermEncoding(kind::BITVECTOR_PLUS, DefaultPlusBB<Node>, "cvc-plus", 4);
 
   printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult2-2n", 2, false, false);
+  printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult2-2n", 2, true, false);
   printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult4", 4, false);
 
+  printAtomEncoding(kind::BITVECTOR_ULT, OptimalUltBB<Node>, "cvc-ult-opt", 6);
+  // printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", 6);
+  // printAtomEncoding(kind::BITVECTOR_SLT, DefaultSltBB<Node>, "cvc-slt", 6);
+  // printAtomEncoding(kind::BITVECTOR_SLE, DefaultSleBB<Node>, "cvc-sle", 6);
+  
+  printTermEncoding(kind::BITVECTOR_PLUS, OptimalPlusBB<Node>, "cvc-plus-opt", 3);
+  printTermEncoding(kind::BITVECTOR_PLUS, OptimalPlusBB<Node>, "cvc-plus-opt", 4);
+  
   {
     ofstream outfile;
     outfile.open ("cvc-full-adder.cnf");
