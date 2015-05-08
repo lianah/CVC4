@@ -1079,17 +1079,17 @@ void makeAdd3DoubleCarryGadget(std::ostream& out) {
   eb.getCnfStream()->ensureLiteral(carry_out1);
 
   // auxiliary mayhem!
-  std::vector<Node> aux;
-  aux.push_back(utils::mkAnd(x1, x2));
-  aux.push_back(utils::mkAnd(x3, utils::mkAnd(x1, x2)));
+  // std::vector<Node> aux;
+  // aux.push_back(utils::mkAnd(x1, x2));
+  // aux.push_back(utils::mkAnd(x3, utils::mkAnd(x1, x2)));
 
-  aux.push_back(utils::mkAnd(carry0, carry1));
-  aux.push_back(utils::mkAnd(carry_out0, utils::mkAnd(carry0, carry1)));
+  // aux.push_back(utils::mkAnd(carry0, carry1));
+  // aux.push_back(utils::mkAnd(carry_out0, utils::mkAnd(carry0, carry1)));
 
 
-  for (unsigned i = 0; i < aux.size(); ++i) {
-    eb.getCnfStream()->ensureLiteral(aux[i]);
-  }
+  // for (unsigned i = 0; i < aux.size(); ++i) {
+  //   eb.getCnfStream()->ensureLiteral(aux[i]);
+  // }
   CVC4::prop::SatLiteral sum_lit = eb.getCnfStream()->getLiteral(sum);
   out << "c " << sum_lit << " : sum" << std::endl;
   CVC4::prop::SatLiteral carry_out0_lit = eb.getCnfStream()->getLiteral(carry_out0);
@@ -1119,6 +1119,73 @@ void makeAdd3DoubleCarryGadget(std::ostream& out) {
   inputs.insert(carry0);
   inputs.insert(carry1);
   eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+
+void makeAdd7To3Gadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "Add7To3");
+  out << "c " << eb.getName() << std::endl;
+  
+  NodeManager* nm = NodeManager::currentNM();
+  std::vector<Node> bits(7);
+  for (unsigned i = 0; i < 7; ++i) {
+    bits[i] = nm->mkSkolem("a", nm->booleanType());
+  }
+
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  vector<Node> res = theory::bv::add7To3(bits, cnf);
+  
+  for (unsigned i = 0; i < res.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(res[i]);
+    CVC4::prop::SatLiteral lit = eb.getCnfStream()->getLiteral(res[i]);
+    out << "c " << lit << " : res" <<i << std::endl;
+  }
+
+  out << "c i ";
+  for (unsigned i = 0; i < bits.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(bits[i]) <<" ";
+  }
+
+  for (unsigned i = 0; i < res.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(res[i]) <<" ";
+  }
+  out<< "0" << std::endl;
+
+  eb.printCnfMapping(out, NodeSet(), true);
+  eb.printProblemClauses(out);
+}
+
+void makeAdd15To4Gadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "Add7To3");
+  out << "c " << eb.getName() << std::endl;
+  
+  NodeManager* nm = NodeManager::currentNM();
+  std::vector<Node> bits(15);
+  for (unsigned i = 0; i < 15; ++i) {
+    bits[i] = nm->mkSkolem("a", nm->booleanType());
+  }
+
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  vector<Node> res = theory::bv::add15To4(bits, cnf);
+  
+  for (unsigned i = 0; i < res.size(); ++i) {
+    eb.getCnfStream()->ensureLiteral(res[i]);
+    CVC4::prop::SatLiteral lit = eb.getCnfStream()->getLiteral(res[i]);
+    out << "c " << lit << " : res" << i <<  std::endl;
+  }
+
+  out << "c i ";
+  for (unsigned i = 0; i < bits.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(bits[i]) <<" ";
+  }
+
+  for (unsigned i = 0; i < res.size(); ++i) {
+    out << eb.getCnfStream()->getLiteral(res[i]) <<" ";
+  }
+  out<< "0" << std::endl;
+
+  eb.printCnfMapping(out, NodeSet(), true);
   eb.printProblemClauses(out);
 }
 
@@ -1389,6 +1456,7 @@ void generateReferenceEncodingsSAT15() {
   printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult2-2n", 2, false, false);
   printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult2-2n", 2, true, false);
   printTermEncoding(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult4", 4, false);
+  printTermEncoding(kind::BITVECTOR_MULT, MultBlock2BB<Node>, "cvc-mult4-block2-opt", 4, false);
 
   printAtomEncoding(kind::BITVECTOR_ULT, OptimalUltBB<Node>, "cvc-ult-opt", 6);
   // printAtomEncoding(kind::BITVECTOR_ULE, DefaultUleBB<Node>, "cvc-ule", 6);
@@ -1450,6 +1518,19 @@ void generateReferenceEncodingsSAT15() {
     outfile.close();
   }
 
+  {
+    ofstream outfile;
+    outfile.open ("cvc-add7to3.cnf");
+    makeAdd7To3Gadget(outfile);
+    outfile.close();
+  }
+
+  {
+    ofstream outfile;
+    outfile.open ("cvc-add15to4.cnf");
+    makeAdd15To4Gadget(outfile);
+    outfile.close();
+  }
   
   printTermEncodingConst(kind::BITVECTOR_MULT, DefaultMultBB<Node>, "cvc-mult-const",
 			 2, 3, false);
@@ -1616,7 +1697,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   
   /**** Generating CNF encoding files for operations ****/
 
-  generateReferenceEncodingsSAT15();
+  // generateReferenceEncodingsSAT15();
   // generateReferenceEncodings(width, opts);
 
 

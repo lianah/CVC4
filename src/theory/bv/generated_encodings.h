@@ -61,6 +61,51 @@ T inline optimalSignGadget (const T& a, const T& b, const T &aLTbRec,
 }
 
 
+
+template <class T>
+std::vector<T>
+inline add7To3(const std::vector<T>& bits,
+	       CVC4::prop::CnfStream* cnf) {
+  Assert (bits.size() == 7);
+  std::vector<T> res;
+  std::pair<T, T> res1 = fullAdder(bits[0], bits[1], bits[2]);
+  std::pair<T, T> res2 = fullAdder(bits[3], bits[4], bits[5]);
+  std::pair<T, T> res3 = fullAdder(bits[6], res1.first, res2.first);
+  res.push_back(res3.first);
+  std::pair<T, T> res4 = fullAdder(res1.second, res2.second, res3.second);
+  res.push_back(res4.first);
+  res.push_back(res4.second);
+  Assert (res.size() == 3);
+  return res;
+}
+
+template <class T>
+std::vector<T>
+inline add15To4(const std::vector<T>& bits,
+		CVC4::prop::CnfStream* cnf) {
+  Assert (bits.size() == 15);
+  std::vector<std::vector<T> > sum;
+  for (unsigned i = 0; i < 15; i+=3) {
+    std::pair<T, T> fa = fullAdder(bits[i], bits[i+1], bits[i+2]);
+    std::vector<T> current;
+    current.push_back(fa.first);
+    current.push_back(fa.second);
+    current.push_back(mkFalse<T>());
+    current.push_back(mkFalse<T>());
+    sum.push_back(current);
+  }
+  std::vector<T> res = sum[0];
+  std::vector<T> curr;
+  for (unsigned i = 1; i < sum.size(); ++i) {
+    rippleCarryAdder(res, sum[i], curr, mkFalse<T>());
+    curr.swap(res);
+    curr.clear();
+  }
+  Assert (res.size() == 4);
+  return res;
+}
+ 
+ 
 template <class T>
 std::pair<T, std::pair<T, T> >
 inline add3DoubleCarryGadget(const T a,
