@@ -82,7 +82,7 @@ typedef enum _fullAdderEncoding {
   /** Clause based **/
   MINISAT_SUM_AND_CARRY,
   MINISAT_COMPLETE,          // With the 6 additional clauses
-  MARTIN_OPTIMAL             // Current CBMC
+  OPTIMAL             // Current CBMC
 } FullAdderEncoding;
 
 typedef enum _halfAdderEncoding {

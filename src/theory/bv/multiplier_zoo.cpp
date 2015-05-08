@@ -33,7 +33,7 @@ using namespace CVC4::theory::bv::utils;
    case DANIEL_COMPACT_CARRY: out << "DANIEL_COMPACT_CARRY"; break;
    case MINISAT_SUM_AND_CARRY: out << "MINISAT_SUM_AND_CARRY"; break;
    case MINISAT_COMPLETE: out << "MINISAT_COMPLETE"; break;
-   case MARTIN_OPTIMAL: out << "MARTIN_OPTIMA"; break;
+   case OPTIMAL: out << "OPTIMAL"; break;
    default:
      Unreachable();
    }

@@ -175,7 +175,7 @@ std::pair<Node, Node> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
       }
       return std::make_pair<Node, Node>(sum, carry);
     }
-  case MARTIN_OPTIMAL: {
+  case OPTIMAL: {
     return optimalFullAdder(a, b, c, cnf);
     }
   default:

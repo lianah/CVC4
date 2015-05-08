@@ -128,7 +128,7 @@ inline BitblastMode stringToBitblastMode(std::string option, std::string optarg,
   } else if(optarg == "minisat-complete") {
     return CVC4::theory::bv::MINISAT_COMPLETE;
   } else if(optarg == "optimal") {
-    return CVC4::theory::bv::MARTIN_OPTIMAL;
+    return CVC4::theory::bv::OPTIMAL;
   } else {
     throw OptionException(std::string("unknown option for --full-adder: `") +
                           optarg );

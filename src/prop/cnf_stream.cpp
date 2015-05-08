@@ -106,6 +106,19 @@ bool CnfStream::hasLiteral(TNode n) const {
   return find != d_nodeToLiteralMap.end();
 }
 
+// FIXME: is this safe in anyway?
+void TseitinCnfStream::mergeInMap(TNode node, TNode rep) {
+  Assert (!hasLiteral(rep) && rep.isVar());
+  
+  if (hasLiteral(node)) {
+    SatLiteral lit = getLiteral(node);
+    d_nodeToLiteralMap.insert(rep, lit);
+  } else {
+    SatLiteral lit = convertAtom(rep);
+    d_nodeToLiteralMap.insert(node, lit);
+  }
+}
+ 
 void TseitinCnfStream::ensureLiteral(TNode n) {
   // These are not removable and have no proof ID
   d_removable = false;

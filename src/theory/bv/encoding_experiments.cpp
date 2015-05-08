@@ -1590,7 +1590,7 @@ void checkZooMultipliers(Options& opts) {
   // fullAdderEncodings.push_back(DANIEL_COMPACT_CARRY);
   // fullAdderEncodings.push_back(MINISAT_SUM_AND_CARRY);
   // fullAdderEncodings.push_back(MINISAT_COMPLETE);
-  // fullAdderEncodings.push_back(MARTIN_OPTIMAL);
+  // fullAdderEncodings.push_back(OPTIMAL);
 
   std::vector<Add2Encoding::Style> add2Styles;
   add2Styles.push_back(Add2Encoding::RIPPLE_CARRY);   
@@ -1610,12 +1610,12 @@ void checkZooMultipliers(Options& opts) {
 
   std::vector<PartialProductEncoding> partialProductEncodings;
   // partialProductEncodings.push_back(CONVENTIONAL);
-  // partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
-  // partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
+  partialProductEncodings.push_back(BLOCK2_BY_ADDITION);
+  partialProductEncodings.push_back(BLOCK3_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK4_BY_ADDITION);
   // partialProductEncodings.push_back(BLOCK5_BY_ADDITION);
   partialProductEncodings.push_back(BLOCK2_BY_CONSTANT_MULTIPLICATION);
-  partialProductEncodings.push_back(BLOCK3_BY_CONSTANT_MULTIPLICATION);
+  // partialProductEncodings.push_back(BLOCK3_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(BLOCK4_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(BLOCK5_BY_CONSTANT_MULTIPLICATION);
   // partialProductEncodings.push_back(OPTIMAL_2_BY_2);
@@ -1744,7 +1744,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   /********* Equivalence Check Mult ****************/
 
 
-  // checkZooMultipliers(opts); 
+  checkZooMultipliers(opts); 
   
 
 

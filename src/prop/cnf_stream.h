@@ -231,6 +231,8 @@ public:
    */
   virtual void ensureLiteral(TNode n) = 0;
 
+  virtual void mergeInMap(TNode node, TNode rep) = 0;
+  
   /**
    * Returns the literal that represents the given node in the SAT CNF
    * representation.
@@ -335,6 +337,7 @@ private:
 
   void ensureLiteral(TNode n);
 
+  void mergeInMap(TNode node, TNode rep);
 };/* class TseitinCnfStream */
 
 

@@ -294,12 +294,13 @@ inline std::vector<T> optimalMultConst5(const std::vector<T>& a,
   Assert(a.size() >= 3);
   
   std::vector< std::vector<T> > grid;
-  for (unsigned i = 0; i < a.size(); i+= 3) {
+  for (unsigned i = 0; i < a.size()-2; i+= 3) {
     std::vector<T> tmp = optimalMultConst5Gadget(makeExtract(a, i, i+2),
 						 cnf);
     grid.push_back(tmp);
   }
 
+ 
   T carry = mkFalse<T>();
   std::vector<T> res;
   res.push_back(grid[0][0]);
@@ -316,7 +317,7 @@ inline std::vector<T> optimalMultConst5(const std::vector<T>& a,
     res.push_back(tmp[1]);
     res.push_back(tmp[2]);
   }
-
+  
   Assert (res.size() == a.size());
   return res; 
 }
@@ -327,12 +328,12 @@ inline std::vector<T> optimalMultConst7(const std::vector<T>& a,
   Assert(a.size() >= 3);
   
   std::vector< std::vector<T> > grid;
-  for (unsigned i = 0; i < a.size(); i+= 3) {
+  for (unsigned i = 0; i < a.size()-2; i+= 3) {
     std::vector<T> tmp = optimalMultConst7Gadget(makeExtract(a, i, i+2),
 						 cnf);
     grid.push_back(tmp);
   }
-
+  
   T carry = mkFalse<T>();
   std::vector<T> res;
   res.push_back(grid[0][0]);
@@ -350,10 +351,21 @@ inline std::vector<T> optimalMultConst7(const std::vector<T>& a,
     res.push_back(tmp[2]);
   }
 
+
   Assert (res.size() == a.size());
   return res; 
 }
- 
+
+template <>
+std::vector<Node> optimalMultConst3Gadget(const std::vector<Node>& a,
+						 prop::CnfStream* cnf);
+
+template <>
+std::vector<Node> optimalMultConst5Gadget(const std::vector<Node>& a,
+						 prop::CnfStream* cnf);
+template <>
+std::vector<Node> optimalMultConst7Gadget(const std::vector<Node>& a,
+						 prop::CnfStream* cnf);
  
 // this can  be used in optimal 2 by 2 encoding 
 template <class T>
@@ -417,11 +429,6 @@ inline std::pair<std::vector<T>, std::vector<T> > base8FullAdder(const std::vect
   return std::make_pair(sum, carry_out); 
 }
  
- 
- 
-
-
- 
 /******************************
 * Generated encodings   
 *    
@@ -442,7 +449,7 @@ void optimalMult4Aux(const std::vector<T>&a,
 
  
 std::pair<Node, Node> optimalFullAdder(const Node a, const Node b, const Node cin,
-					      CVC4::prop::CnfStream* cnf);
+				       CVC4::prop::CnfStream* cnf);
 
 template <>
 std::pair<Node, std::pair<Node, Node> >
@@ -677,8 +684,12 @@ inline Node multByBlock2(const std::vector<Node>& a, const Block& block_b,
     } else {
       mult2<Node>(block_a, block_b, curr, cnf);
     }
-    // make sure to add the carry in 
-    rippleCarryAdder(curr, carry_in, curr_sum, mkFalse<Node>());
+    // make sure to add the carry in
+     if (options::bvOptimalAdder()) {
+       optimalRippleCarryAdder(curr, carry_in, curr_sum, mkFalse<Node>(), cnf);
+     } else {
+       rippleCarryAdder(curr, carry_in, curr_sum, mkFalse<Node>());
+     }
     
     res.push_back(curr_sum[0]);
     res.push_back(curr_sum[1]);
