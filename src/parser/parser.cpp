@@ -31,6 +31,7 @@
 #include "util/output.h"
 #include "util/resource_manager.h"
 #include "options/options.h"
+#include "smt/options.h"
 
 using namespace std;
 using namespace CVC4::kind;
@@ -499,14 +500,17 @@ Command* Parser::nextCommand() throw(ParserException, UnsafeInterruptException) 
       dynamic_cast<QuitCommand*>(cmd) == NULL) {
     // don't count set-option commands as to not get stuck in an infinite
     // loop of resourcing out
-    d_resourceManager->spendResource();
+    //d_resourceManager->spendResource(options::parseStep());
+    // FIXME: until we figure out checking options into the parser
+    d_resourceManager->spendResource(0);
   }
   return cmd;
 }
 
 Expr Parser::nextExpression() throw(ParserException, UnsafeInterruptException) {
   Debug("parser") << "nextExpression()" << std::endl;
-  d_resourceManager->spendResource();
+  // d_resourceManager->spendResource(options::parseStep());
+  d_resourceManager->spendResource(0);
   Expr result;
   if(!done()) {
     try {

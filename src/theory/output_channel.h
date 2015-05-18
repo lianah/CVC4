@@ -85,7 +85,7 @@ public:
    * With safePoint(), the theory signals that it is at a safe point
    * and can be interrupted.
    */
-  virtual void safePoint() throw(Interrupted, UnsafeInterruptException, AssertionException) {
+  virtual void safePoint(uint64_t ammount) throw(Interrupted, UnsafeInterruptException, AssertionException) {
   }
 
   /**
@@ -212,7 +212,7 @@ public:
    * long-running operations, they cannot rely on resource() to break
    * out of infinite or intractable computations.
    */
-  virtual void spendResource() throw(UnsafeInterruptException) {}
+  virtual void spendResource(uint64_t ammount) throw(UnsafeInterruptException) {}
 
   /**
    * Handle user attribute.
