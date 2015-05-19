@@ -111,6 +111,9 @@ expert-option rewriteStep rewrite-step --rewrite-step uint64_t :default 1
 expert-option theoryCheckStep theory-check-step --theory-check-step uint64_t :default 1
  ammount of resources spent for each theory check call
 
+expert-option decisionStep decision-step --decision-step uint64_t :default 1
+ ammount of getNext decision calls in the decision engine
+ 
 expert-option bitblastStep bitblast-step --bitblast-step uint64_t :default 1
  ammount of resources spent for each bitblast step
  

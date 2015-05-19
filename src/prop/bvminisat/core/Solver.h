@@ -415,7 +415,7 @@ inline void     Solver::budgetOff(){ conflict_budget = propagation_budget = -1; 
 inline bool     Solver::withinBudget(uint64_t ammount) const {
     Assert (notify);
     notify->spendResource(ammount);
-    notify->safePoint(1);
+    notify->safePoint(0);
 
     return !asynch_interrupt &&
            (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
