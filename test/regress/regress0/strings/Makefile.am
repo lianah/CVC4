@@ -21,7 +21,7 @@ MAKEFLAGS = -k
 TESTS =	\
   at001.smt2 \
   bug001.smt2 \
-  cardinality.smt2 \
+  bug002.smt2 \
   escchar.smt2 \
   escchar_25.smt2 \
   str001.smt2 \
@@ -37,6 +37,8 @@ TESTS =	\
   model001.smt2 \
   substr001.smt2 \
   regexp001.smt2 \
+  regexp002.smt2 \
+  regexp003.smt2 \
   leadingzero001.smt2 \
   loop001.smt2 \
   loop002.smt2 \
@@ -47,15 +49,18 @@ TESTS =	\
   loop007.smt2 \
   loop008.smt2 \
   loop009.smt2 \
-  reloop.smt2 \
-  artemis-0512-nonterm.smt2
+  reloop.smt2 
+
 
 FAILING_TESTS =
 
 EXTRA_DIST = $(TESTS) \
+  artemis-0512-nonterm.smt2 \
   fmf001.smt2 \
-  regexp002.smt2 \
   type002.smt2
+
+#   slow after changes on Nov 20 : artemis-0512-nonterm.smt2
+#   slow after decision engine respects requirePhase: type003.smt2  loop007.smt2 
 
 # and make sure to distribute it
 EXTRA_DIST +=

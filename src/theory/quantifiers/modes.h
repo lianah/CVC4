@@ -15,7 +15,7 @@
  ** \todo document this file
  **/
 
-#include "cvc4_private.h"
+#include "cvc4_public.h"
 
 #ifndef __CVC4__THEORY__QUANTIFIERS__MODES_H
 #define __CVC4__THEORY__QUANTIFIERS__MODES_H
@@ -62,14 +62,10 @@ typedef enum {
   MBQI_GEN_EVAL,
   /** no mbqi */
   MBQI_NONE,
-  /** implementation that mimics inst-gen */
-  MBQI_INST_GEN,
   /** default, mbqi from Section 5.4.2 of AJR thesis */
   MBQI_FMC,
   /** mbqi with integer intervals */
   MBQI_FMC_INTERVAL,
-  /** mbqi with interval abstraction of uninterpreted sorts */
-  MBQI_INTERVAL,
   /** abstract mbqi algorithm */
   MBQI_ABS,
   /** mbqi trust (produce no instantiations) */
@@ -118,7 +114,7 @@ typedef enum {
   TRIGGER_SEL_MAX,
 } TriggerSelMode;
 
-typedef enum {
+typedef enum CVC4_PUBLIC {
   /** default : prenex quantifiers without user patterns */
   PRENEX_NO_USER_PAT,
   /** prenex all */
@@ -132,9 +128,18 @@ typedef enum {
   CEGQI_FAIR_UF_DT_SIZE,
   /** enforce fairness by datatypes size */
   CEGQI_FAIR_DT_SIZE,
+  /** enforce fairness by datatypes height bound */
+  CEGQI_FAIR_DT_HEIGHT_PRED,
   /** do not use fair strategy for CEGQI */
   CEGQI_FAIR_NONE,
 } CegqiFairMode;
+
+typedef enum {
+  /** consider all terms in master equality engine */
+  TERM_DB_ALL,
+  /** consider only relevant terms */
+  TERM_DB_RELEVANT,
+} TermDbMode;
 
 
 }/* CVC4::theory::quantifiers namespace */

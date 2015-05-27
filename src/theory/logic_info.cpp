@@ -107,6 +107,10 @@ std::string LogicInfo::getLogicString() const {
         ss << "BV";
         ++seen;
       }
+      if(d_theories[THEORY_FP]) {
+        ss << "FP";
+        ++seen;
+      }
       if(d_theories[THEORY_DATATYPES]) {
         ss << "DT";
         ++seen;
@@ -206,6 +210,10 @@ void LogicInfo::setLogicString(std::string logicString) throw(IllegalArgumentExc
         enableTheory(THEORY_BV);
         p += 2;
       }
+      if(!strncmp(p, "FP", 2)) {
+        enableTheory(THEORY_FP);
+        p += 2;
+      }
       if(!strncmp(p, "DT", 2)) {
         enableTheory(THEORY_DATATYPES);
         p += 2;
@@ -215,13 +223,7 @@ void LogicInfo::setLogicString(std::string logicString) throw(IllegalArgumentExc
         p += 2;
       }
       if(*p == 'S') {
-        // Strings requires arith for length constraints,
-        // and UF for equality (?)
         enableTheory(THEORY_STRINGS);
-        enableTheory(THEORY_UF);
-        enableTheory(THEORY_ARITH);
-        enableIntegers();
-        arithOnlyLinear();
         ++p;
       }
       if(!strncmp(p, "IDL", 3)) {

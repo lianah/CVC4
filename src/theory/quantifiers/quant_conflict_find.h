@@ -118,6 +118,7 @@ public:
   QuantInfo() : d_mg( NULL ) {}
   ~QuantInfo() { delete d_mg; }
   std::vector< TNode > d_vars;
+  std::vector< TypeNode > d_var_types;
   std::map< TNode, int > d_var_num;
   std::vector< int > d_tsym_vars;
   std::map< TNode, bool > d_inMatchConstraint;
@@ -202,6 +203,7 @@ public:
   bool areMatchDisequal( TNode n1, TNode n2 );
 public:
   QuantConflictFind( QuantifiersEngine * qe, context::Context* c );
+  ~QuantConflictFind() throw() {}
   /** register quantifier */
   void registerQuantifier( Node q );
 public:

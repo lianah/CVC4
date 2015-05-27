@@ -39,6 +39,7 @@ class QuantifiersEngine;
 
 namespace quantifiers {
   class TermDb;
+  class TermDbSygus;
 }
 
 class QuantifiersModule {
@@ -54,11 +55,13 @@ public:
   /* whether this module needs to check this round */
   virtual bool needsCheck( Theory::Effort e ) { return e>=Theory::EFFORT_LAST_CALL; }
   /* whether this module needs a model built */
-  virtual bool needsModel( Theory::Effort e ) { return false; }
+  virtual unsigned needsModel( Theory::Effort e );
   /* reset at a round */
   virtual void reset_round( Theory::Effort e ){}
   /* Call during quantifier engine's check */
   virtual void check( Theory::Effort e, unsigned quant_e ) = 0;
+  /* check was complete (e.g. no lemmas implies a model) */
+  virtual bool checkComplete() { return false; }
   /* Called for new quantifiers */
   virtual void registerQuantifier( Node q ) = 0;
   virtual void assertNode( Node n ) = 0;
@@ -87,6 +90,7 @@ namespace quantifiers {
   class QModelBuilder;
   class ConjectureGenerator;
   class CegInstantiation;
+  class LtePartialInst;
 }/* CVC4::theory::quantifiers */
 
 namespace inst {
@@ -132,15 +136,19 @@ private:
   quantifiers::ConjectureGenerator * d_sg_gen;
   /** ceg instantiation */
   quantifiers::CegInstantiation * d_ceg_inst;
+  /** lte partial instantiation */
+  quantifiers::LtePartialInst * d_lte_part_inst;
 public: //effort levels
   enum {
     QEFFORT_CONFLICT,
     QEFFORT_STANDARD,
     QEFFORT_MODEL,
+    //none
+    QEFFORT_NONE,
   };
 private:
   /** list of all quantifiers seen */
-  std::vector< Node > d_quants;
+  std::map< Node, bool > d_quants;
   /** list of all lemmas produced */
   //std::map< Node, bool > d_lemmas_produced;
   BoolMap d_lemmas_produced_c;
@@ -167,6 +175,9 @@ private:
   std::map< Node, int > d_total_inst_debug;
   std::map< Node, int > d_temp_inst_debug;
   int d_total_inst_count_debug;
+  /** inst round counters */
+  int d_ierCounter;
+  int d_ierCounter_lc;
 private:
   KEEP_STATISTIC(TimerStat, d_time, "theory::QuantifiersEngine::time");
 public:
@@ -210,6 +221,8 @@ public:  //modules
   quantifiers::ConjectureGenerator * getConjectureGenerator() { return d_sg_gen; }
   /** ceg instantiation */
   quantifiers::CegInstantiation * getCegInstantiation() { return d_ceg_inst; }
+  /** local theory ext partial inst */
+  quantifiers::LtePartialInst * getLtePartialInst() { return d_lte_part_inst; }
 private:
   /** owner of quantified formulas */
   std::map< Node, QuantifiersModule * > d_owner;
@@ -226,7 +239,7 @@ public:
   /** check at level */
   void check( Theory::Effort e );
   /** register quantifier */
-  void registerQuantifier( Node f );
+  bool registerQuantifier( Node f );
   /** register quantifier */
   void registerPattern( std::vector<Node> & pattern);
   /** assert universal quantifier */
@@ -253,8 +266,6 @@ public:
   Node getInstantiation( Node f, std::vector< Node >& terms );
   /** do substitution */
   Node getSubstitute( Node n, std::vector< Node >& terms );
-  /** exist instantiation ? */
-  bool existsInstantiation( Node f, InstMatch& m, bool modEq = true, bool modInst = false );
   /** add lemma lem */
   bool addLemma( Node lem, bool doCache = true );
   /** add require phase */
@@ -271,24 +282,21 @@ public:
   bool hasAddedLemma() { return !d_lemmas_waiting.empty() || d_hasAddedLemma; }
   /** get number of waiting lemmas */
   int getNumLemmasWaiting() { return (int)d_lemmas_waiting.size(); }
+  /** get needs check */
+  bool getInstWhenNeedsCheck( Theory::Effort e );
   /** set instantiation level attr */
   static void setInstantiationLevelAttr( Node n, uint64_t level );
-  /** is term eligble for instantiation? */
-  bool isTermEligibleForInstantiation( Node n, Node f, bool print = false );
-public:
-  /** get number of quantifiers */
-  int getNumQuantifiers() { return (int)d_quants.size(); }
-  /** get quantifier */
-  Node getQuantifier( int i ) { return d_quants[i]; }
 public:
   /** get model */
   quantifiers::FirstOrderModel* getModel() { return d_model; }
   /** get term database */
   quantifiers::TermDb* getTermDatabase() { return d_term_db; }
+  /** get term database sygus */
+  quantifiers::TermDbSygus* getTermDatabaseSygus();
   /** get trigger database */
   inst::TriggerTrie* getTriggerDatabase() { return d_tr_trie; }
   /** add term to database */
-  void addTermToDatabase( Node n, bool withinQuant = false );
+  void addTermToDatabase( Node n, bool withinQuant = false, bool withinInstClosure = false );
   /** get the master equality engine */
   eq::EqualityEngine* getMasterEqualityEngine() ;
   /** debug print equality engine */
@@ -296,6 +304,8 @@ public:
 public:
   /** print instantiations */
   void printInstantiations( std::ostream& out );
+  /** print solution for synthesis conjectures */
+  void printSynthSolution( std::ostream& out );
   /** statistics class */
   class Statistics {
   public:
@@ -305,8 +315,6 @@ public:
     IntStat d_instantiations;
     IntStat d_inst_duplicate;
     IntStat d_inst_duplicate_eq;
-    IntStat d_lit_phase_req;
-    IntStat d_lit_phase_nreq;
     IntStat d_triggers;
     IntStat d_simple_triggers;
     IntStat d_multi_triggers;

@@ -111,8 +111,9 @@ public:
   static bool isSimpleTrigger( Node n );
   static bool isBooleanTermTrigger( Node n );
   static bool isPureTheoryTrigger( Node n );
+  static bool isLocalTheoryExt( Node n, std::vector< Node >& vars, std::vector< Node >& patTerms );
   /** return data structure for producing matches for this trigger. */
-  static InstMatchGenerator* getInstMatchGenerator( Node n );
+  static InstMatchGenerator* getInstMatchGenerator( Node q, Node n );
   static Node getInversionVariable( Node n );
   static Node getInversion( Node n, Node x );
 

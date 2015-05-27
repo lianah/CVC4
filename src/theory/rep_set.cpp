@@ -26,6 +26,16 @@ void RepSet::clear(){
   d_type_reps.clear();
   d_type_complete.clear();
   d_tmap.clear();
+  d_values_to_terms.clear();
+}
+
+bool RepSet::hasRep( TypeNode tn, Node n ) {
+  std::map< TypeNode, std::vector< Node > >::iterator it = d_type_reps.find( tn );
+  if( it==d_type_reps.end() ){
+    return false;
+  }else{
+    return std::find( it->second.begin(), it->second.end(), n )!=it->second.end();
+  }
 }
 
 int RepSet::getNumRepresentatives( TypeNode tn ) const{

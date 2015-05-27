@@ -30,11 +30,11 @@
 #include "theory/quantifiers/quant_conflict_find.h"
 #include "theory/quantifiers/conjecture_generator.h"
 #include "theory/quantifiers/ce_guided_instantiation.h"
+#include "theory/quantifiers/local_theory_ext.h"
 #include "theory/quantifiers/relevant_domain.h"
 #include "theory/uf/options.h"
 #include "theory/uf/theory_uf.h"
 #include "theory/quantifiers/full_model_check.h"
-#include "theory/quantifiers/qinterval_builder.h"
 #include "theory/quantifiers/ambqi_builder.h"
 
 using namespace std;
@@ -44,6 +44,9 @@ using namespace CVC4::context;
 using namespace CVC4::theory;
 using namespace CVC4::theory::inst;
 
+unsigned QuantifiersModule::needsModel( Theory::Effort e ) {
+  return QuantifiersEngine::QEFFORT_NONE;
+}
 
 eq::EqualityEngine * QuantifiersModule::getEqualityEngine() {
   return d_quantEngine->getMasterEqualityEngine();
@@ -81,9 +84,9 @@ d_lemmas_produced_c(u){
   //d_rr_tr_trie = new rrinst::TriggerTrie;
   //d_eem = new EfficientEMatcher( this );
   d_hasAddedLemma = false;
-  
+
   bool needsBuilder = false;
-  
+  Trace("quant-engine-debug") << "Initialize quantifiers engine." << std::endl;
   Trace("quant-engine-debug") << "Initialize model, mbqi : " << options::mbqiMode() << std::endl;
 
   //the model object
@@ -91,8 +94,6 @@ d_lemmas_produced_c(u){
       options::mbqiMode()==quantifiers::MBQI_FMC_INTERVAL || options::fmfBoundInt() ||
       options::mbqiMode()==quantifiers::MBQI_TRUST ){
     d_model = new quantifiers::fmcheck::FirstOrderModelFmc( this, c, "FirstOrderModelFmc" );
-  }else if( options::mbqiMode()==quantifiers::MBQI_INTERVAL ){
-    d_model = new quantifiers::FirstOrderModelQInt( this, c, "FirstOrderModelQInt" );
   }else if( options::mbqiMode()==quantifiers::MBQI_ABS ){
     d_model = new quantifiers::FirstOrderModelAbs( this, c, "FirstOrderModelAbs" );
   }else{
@@ -122,9 +123,9 @@ d_lemmas_produced_c(u){
   }else{
     d_sg_gen = NULL;
   }
+  //maintain invariant : either InstantiationEngine or ModelEngine must be in d_modules
   if( !options::finiteModelFind() || options::fmfInstEngine() ){
-    //the instantiation must set incomplete flag unless finite model finding is turned on
-    d_inst_engine = new quantifiers::InstantiationEngine( this, !options::finiteModelFind() );
+    d_inst_engine = new quantifiers::InstantiationEngine( this );
     d_modules.push_back(  d_inst_engine );
   }else{
     d_inst_engine = NULL;
@@ -156,22 +157,22 @@ d_lemmas_produced_c(u){
   }else{
     d_ceg_inst = NULL;
   }
-  
+  if( options::ltePartialInst() ){
+    d_lte_part_inst = new quantifiers::LtePartialInst( this, c );
+    d_modules.push_back( d_lte_part_inst );
+  }else{
+    d_lte_part_inst = NULL;
+  }
+
   if( needsBuilder ){
     Trace("quant-engine-debug") << "Initialize model engine, mbqi : " << options::mbqiMode() << " " << options::fmfBoundInt() << std::endl;
     if( options::mbqiMode()==quantifiers::MBQI_FMC || options::mbqiMode()==quantifiers::MBQI_FMC_INTERVAL ||
         options::mbqiMode()==quantifiers::MBQI_TRUST || options::fmfBoundInt() ){
       Trace("quant-engine-debug") << "...make fmc builder." << std::endl;
       d_builder = new quantifiers::fmcheck::FullModelChecker( c, this );
-    }else if( options::mbqiMode()==quantifiers::MBQI_INTERVAL ){
-      Trace("quant-engine-debug") << "...make interval builder." << std::endl;
-      d_builder = new quantifiers::QIntervalBuilder( c, this );
     }else if( options::mbqiMode()==quantifiers::MBQI_ABS ){
       Trace("quant-engine-debug") << "...make abs mbqi builder." << std::endl;
       d_builder = new quantifiers::AbsMbqiBuilder( c, this );
-    }else if( options::mbqiMode()==quantifiers::MBQI_INST_GEN ){
-      Trace("quant-engine-debug") << "...make inst-gen builder." << std::endl;
-      d_builder = new quantifiers::QModelBuilderInstGen( c, this );
     }else{
       Trace("quant-engine-debug") << "...make default model builder." << std::endl;
       d_builder = new quantifiers::QModelBuilderDefault( c, this );
@@ -180,8 +181,9 @@ d_lemmas_produced_c(u){
     d_builder = NULL;
   }
 
-  //options
   d_total_inst_count_debug = 0;
+  d_ierCounter = 0;
+  d_ierCounter_lc = 0;
 }
 
 QuantifiersEngine::~QuantifiersEngine(){
@@ -199,6 +201,7 @@ QuantifiersEngine::~QuantifiersEngine(){
   delete d_eq_query;
   delete d_sg_gen;
   delete d_ceg_inst;
+  delete d_lte_part_inst;
   for(std::map< Node, QuantPhaseReq* >::iterator i = d_phase_reqs.begin(); i != d_phase_reqs.end(); ++i) {
     delete (*i).second;
   }
@@ -256,81 +259,92 @@ bool QuantifiersEngine::hasOwnership( Node q, QuantifiersModule * m ) {
 
 void QuantifiersEngine::check( Theory::Effort e ){
   CodeTimer codeTimer(d_time);
-  bool needsCheck = false;
-  bool needsModel = false;
+  if( !getMasterEqualityEngine()->consistent() ){
+    Trace("quant-engine-debug") << "Master equality engine not consistent, return." << std::endl;
+    return;
+  }
+  if( e==Theory::EFFORT_FULL ){
+    d_ierCounter++;
+  }else if( e==Theory::EFFORT_LAST_CALL ){
+    d_ierCounter_lc++;
+  }
+  bool needsCheck = !d_lemmas_waiting.empty();
+  unsigned needsModelE = QEFFORT_NONE;
   std::vector< QuantifiersModule* > qm;
-  if( d_model->getNumAssertedQuantifiers()>0 ){
-    needsCheck = e>=Theory::EFFORT_LAST_CALL;  //always need to check at or above last call
+  if( d_model->checkNeeded() ){
+    needsCheck = needsCheck || e>=Theory::EFFORT_LAST_CALL;  //always need to check at or above last call
     for( int i=0; i<(int)d_modules.size(); i++ ){
       if( d_modules[i]->needsCheck( e ) ){
         qm.push_back( d_modules[i] );
         needsCheck = true;
-        if( d_modules[i]->needsModel( e ) ){
-          needsModel = true;
-        }
+        unsigned me = d_modules[i]->needsModel( e );
+        needsModelE = me<needsModelE ? me : needsModelE;
       }
     }
   }
-  bool defaultBuildModel = false;
   if( needsCheck ){
     Trace("quant-engine") << "Quantifiers Engine check, level = " << e << std::endl;
-    Trace("quant-engine-debug") << "  modules to check : ";
-    for( unsigned i=0; i<qm.size(); i++ ){
-      Trace("quant-engine-debug") << qm[i]->identify() << " ";
+    if( Trace.isOn("quant-engine-debug") ){
+      Trace("quant-engine-debug") << "  modules to check : ";
+      for( unsigned i=0; i<qm.size(); i++ ){
+        Trace("quant-engine-debug") << qm[i]->identify() << " ";
+      }
+      Trace("quant-engine-debug") << std::endl;
+      Trace("quant-engine-debug") << "  # quantified formulas = " << d_model->getNumAssertedQuantifiers() << std::endl;
+      if( d_model->getNumToReduceQuantifiers()>0 ){
+        Trace("quant-engine-debug") << "  # quantified formulas to reduce = " << d_model->getNumToReduceQuantifiers() << std::endl;
+      }
+      if( !d_lemmas_waiting.empty() ){
+        Trace("quant-engine-debug") << "  lemmas waiting = " << d_lemmas_waiting.size() << std::endl;
+      }
+      Trace("quant-engine-debug") << "  Theory engine finished : " << !d_te->needCheck() << std::endl;
+      Trace("quant-engine-debug") << "Resetting all modules..." << std::endl;
     }
-    Trace("quant-engine-debug") << std::endl;
-    Trace("quant-engine-debug") << "  # quantified formulas = " << d_model->getNumAssertedQuantifiers() << std::endl;
-    Trace("quant-engine-debug") << "  Theory engine finished : " << !d_te->needCheck() << std::endl;
-
-    Trace("quant-engine-ee") << "Equality engine : " << std::endl;
-    debugPrintEqualityEngine( "quant-engine-ee" );
-
-    if( !getMasterEqualityEngine()->consistent() ){
-      Trace("quant-engine") << "Master equality engine not consistent, return." << std::endl;
-      return;
+    if( Trace.isOn("quant-engine-ee") ){
+      Trace("quant-engine-ee") << "Equality engine : " << std::endl;
+      debugPrintEqualityEngine( "quant-engine-ee" );
     }
-    Trace("quant-engine-debug") << "Resetting all modules..." << std::endl;
+
     //reset relevant information
     d_conflict = false;
     d_hasAddedLemma = false;
 
-    //flush previous lemmas (for instance, if was interupted)
+    //flush previous lemmas (for instance, if was interupted), or other lemmas to process
     flushLemmas();
     if( d_hasAddedLemma ){
       return;
     }
 
+    Trace("quant-engine-debug2") << "Reset term db..." << std::endl;
     d_term_db->reset( e );
     d_eq_query->reset();
     if( d_rel_dom ){
       d_rel_dom->reset();
     }
     d_model->reset_round();
-    for( int i=0; i<(int)d_modules.size(); i++ ){
+    for( unsigned i=0; i<d_modules.size(); i++ ){
+      Trace("quant-engine-debug2") << "Reset " << d_modules[i]->identify().c_str() << std::endl;
       d_modules[i]->reset_round( e );
     }
     Trace("quant-engine-debug") << "Done resetting all modules." << std::endl;
 
     if( e==Theory::EFFORT_LAST_CALL ){
-      //if effort is last call, try to minimize model first FIXME: remove?
-      uf::StrongSolverTheoryUF * ufss = ((uf::TheoryUF*)getTheoryEngine()->theoryOf( THEORY_UF ))->getStrongSolver();
-      if( ufss && !ufss->minimize() ){
-        return;
-      }
+      //if effort is last call, try to minimize model first
+      //uf::StrongSolverTheoryUF * ufss = ((uf::TheoryUF*)getTheoryEngine()->theoryOf( THEORY_UF ))->getStrongSolver();
+      //if( ufss && !ufss->minimize() ){ return; }
       ++(d_statistics.d_instantiation_rounds_lc);
     }else if( e==Theory::EFFORT_FULL ){
       ++(d_statistics.d_instantiation_rounds);
     }
-
     Trace("quant-engine-debug") << "Check modules that needed check..." << std::endl;
     for( unsigned quant_e = QEFFORT_CONFLICT; quant_e<=QEFFORT_MODEL; quant_e++ ){
       bool success = true;
       //build the model if any module requested it
-      if( quant_e==QEFFORT_MODEL && needsModel ){
+      if( needsModelE==quant_e ){
         Assert( d_builder!=NULL );
-        Trace("quant-engine-debug") << "Build model, fullModel = " <<  d_builder->optBuildAtFullModel() << "..." << std::endl;
+        Trace("quant-engine-debug") << "Build model..." << std::endl;
         d_builder->d_addedLemmas = 0;
-        d_builder->buildModel( d_model, d_builder->optBuildAtFullModel() );
+        d_builder->buildModel( d_model, false );
         //we are done if model building was unsuccessful
         if( d_builder->d_addedLemmas>0 ){
           success = false;
@@ -338,7 +352,7 @@ void QuantifiersEngine::check( Theory::Effort e ){
       }
       if( success ){
         //check each module
-        for( int i=0; i<(int)qm.size(); i++ ){
+        for( unsigned i=0; i<qm.size(); i++ ){
           Trace("quant-engine-debug") << "Check " << qm[i]->identify().c_str() << " at effort " << quant_e << "..." << std::endl;
           qm[i]->check( e, quant_e );
         }
@@ -349,25 +363,14 @@ void QuantifiersEngine::check( Theory::Effort e ){
       if( d_hasAddedLemma ){
         break;
       //otherwise, complete the model generation if necessary
-      }else if( quant_e==QEFFORT_MODEL && needsModel && options::produceModels() && !d_builder->optBuildAtFullModel() ){
+      }else if( quant_e==QEFFORT_MODEL && needsModelE<=quant_e && options::produceModels() ){
         Trace("quant-engine-debug") << "Build completed model..." << std::endl;
         d_builder->buildModel( d_model, true );
       }
     }
     Trace("quant-engine-debug") << "Done check modules that needed check." << std::endl;
-
-    //build the model if not done so already
-    //  this happens if no quantifiers are currently asserted and no model-building module is enabled
-    if( e==Theory::EFFORT_LAST_CALL && !d_hasAddedLemma ){
-      if( options::produceModels() && !d_model->isModelSet() ){
-        defaultBuildModel = true;
-      }
-      if( Trace.isOn("inst-per-quant") ){
-        for( std::map< Node, int >::iterator it = d_total_inst_debug.begin(); it != d_total_inst_debug.end(); ++it ){
-          Trace("inst-per-quant") << " * " << it->second << " for " << it->first << std::endl;
-        }
-      }
-    }else{
+    if( d_hasAddedLemma ){
+      //debug information
       if( Trace.isOn("inst-per-quant-round") ){
         for( std::map< Node, int >::iterator it = d_temp_inst_debug.begin(); it != d_temp_inst_debug.end(); ++it ){
           Trace("inst-per-quant-round") << " * " << it->second << " for " << it->first << std::endl;
@@ -377,48 +380,96 @@ void QuantifiersEngine::check( Theory::Effort e ){
     }
     Trace("quant-engine") << "Finished quantifiers engine check." << std::endl;
   }else{
-    if( e==Theory::EFFORT_LAST_CALL && options::produceModels() ){
-      defaultBuildModel = true;
-    }
+    Trace("quant-engine") << "Quantifiers Engine does not need check." << std::endl;
   }
-
-  if( defaultBuildModel ){
-    Trace("quant-engine-debug") << "Build the model..." << std::endl;
-    d_te->getModelBuilder()->buildModel( d_model, true );
-    Trace("quant-engine-debug") << "Done building the model." << std::endl;
+  //SAT case
+  if( e==Theory::EFFORT_LAST_CALL && !d_hasAddedLemma ){
+    if( options::produceModels() && !d_model->isModelSet() ){
+      //use default model builder when no module built the model
+      Trace("quant-engine-debug") << "Build the model..." << std::endl;
+      d_te->getModelBuilder()->buildModel( d_model, true );
+      Trace("quant-engine-debug") << "Done building the model." << std::endl;
+    }
+    bool setInc = false;
+    if( needsCheck ){
+      setInc = true;
+      for( unsigned i=0; i<qm.size(); i++ ){
+        if( qm[i]->checkComplete() ){
+          Trace("quant-engine-debug") << "Do not set incomplete because " << qm[i]->identify().c_str() << " was complete." << std::endl;
+          setInc = false;
+        }
+      }
+    }else{
+      Trace("quant-engine-debug") << "Do not set incomplete because check wasn't necessary." << std::endl;
+    }
+    //check other sources of incompleteness
+    if( !setInc ){
+      if( d_lte_part_inst && d_lte_part_inst->wasInvoked() ){
+        Trace("quant-engine-debug") << "Set incomplete due to LTE partial instantiation." << std::endl;
+        setInc = true;
+      }
+    }
+    if( setInc ){
+      Trace("quant-engine-debug") << "Set incomplete flag." << std::endl;
+      getOutputChannel().setIncomplete();
+    }
+    //output debug stats
+    if( Trace.isOn("inst-per-quant") ){
+      for( std::map< Node, int >::iterator it = d_total_inst_debug.begin(); it != d_total_inst_debug.end(); ++it ){
+        Trace("inst-per-quant") << " * " << it->second << " for " << it->first << std::endl;
+      }
+    }
   }
 }
 
-void QuantifiersEngine::registerQuantifier( Node f ){
-  if( std::find( d_quants.begin(), d_quants.end(), f )==d_quants.end() ){
+bool QuantifiersEngine::registerQuantifier( Node f ){
+  std::map< Node, bool >::iterator it = d_quants.find( f );
+  if( it==d_quants.end() ){
     Trace("quant") << "QuantifiersEngine : Register quantifier ";
     Trace("quant") << " : " << f << std::endl;
-    d_quants.push_back( f );
-
     ++(d_statistics.d_num_quant);
     Assert( f.getKind()==FORALL );
-    //make instantiation constants for f
-    d_term_db->makeInstantiationConstantsFor( f );
-    d_term_db->computeAttributes( f );
-    QuantifiersModule * qm = getOwner( f );
-    if( qm!=NULL ){
-      Trace("quant") << "   Owner : " << qm->identify() << std::endl;
+
+    //check whether we should apply a reduction
+    bool reduced = false;
+    if( d_lte_part_inst && !f.getAttribute(LtePartialInstAttribute()) ){
+      Trace("lte-partial-inst") << "LTE: Partially instantiate " << f << "?" << std::endl;
+      if( d_lte_part_inst->addQuantifier( f ) ){
+        reduced = true;
+      }
     }
-    //register with quantifier relevance
-    if( d_quant_rel ){
-      d_quant_rel->registerQuantifier( f );
+    if( reduced ){
+      d_model->assertQuantifier( f, true );
+      d_quants[f] = false;
+      return false;
+    }else{
+      //make instantiation constants for f
+      d_term_db->makeInstantiationConstantsFor( f );
+      d_term_db->computeAttributes( f );
+      QuantifiersModule * qm = getOwner( f );
+      if( qm!=NULL ){
+        Trace("quant") << "   Owner : " << qm->identify() << std::endl;
+      }
+      //register with quantifier relevance
+      if( d_quant_rel ){
+        d_quant_rel->registerQuantifier( f );
+      }
+      //register with each module
+      for( int i=0; i<(int)d_modules.size(); i++ ){
+        d_modules[i]->registerQuantifier( f );
+      }
+      Node ceBody = d_term_db->getInstConstantBody( f );
+      //generate the phase requirements
+      d_phase_reqs[f] = new QuantPhaseReq( ceBody, true );
+      //also register it with the strong solver
+      if( options::finiteModelFind() ){
+        ((uf::TheoryUF*)d_te->theoryOf( THEORY_UF ))->getStrongSolver()->registerQuantifier( f );
+      }
+      d_quants[f] = true;
+      return true;
     }
-    //register with each module
-    for( int i=0; i<(int)d_modules.size(); i++ ){
-      d_modules[i]->registerQuantifier( f );
-    }
-    Node ceBody = d_term_db->getInstConstantBody( f );
-    //generate the phase requirements
-    d_phase_reqs[f] = new QuantPhaseReq( ceBody, true );
-    //also register it with the strong solver
-    if( options::finiteModelFind() ){
-      ((uf::TheoryUF*)d_te->theoryOf( THEORY_UF ))->getStrongSolver()->registerQuantifier( f );
-    }
+  }else{
+    return it->second;
   }
 }
 
@@ -448,11 +499,13 @@ void QuantifiersEngine::assertQuantifier( Node f, bool pol ){
   //assert to modules TODO : handle !pol
   if( pol ){
     //register the quantifier
-    registerQuantifier( f );
+    bool nreduced = registerQuantifier( f );
     //assert it to each module
-    d_model->assertQuantifier( f );
-    for( int i=0; i<(int)d_modules.size(); i++ ){
-      d_modules[i]->assertNode( f );
+    if( nreduced ){
+      d_model->assertQuantifier( f );
+      for( int i=0; i<(int)d_modules.size(); i++ ){
+        d_modules[i]->assertNode( f );
+      }
     }
   }
 }
@@ -475,9 +528,13 @@ Node QuantifiersEngine::getNextDecisionRequest(){
   return Node::null();
 }
 
-void QuantifiersEngine::addTermToDatabase( Node n, bool withinQuant ){
+quantifiers::TermDbSygus* QuantifiersEngine::getTermDatabaseSygus() {
+  return getTermDatabase()->getTermDatabaseSygus();
+}
+
+void QuantifiersEngine::addTermToDatabase( Node n, bool withinQuant, bool withinInstClosure ){
   std::set< Node > added;
-  getTermDatabase()->addTerm( n, added, withinQuant );
+  getTermDatabase()->addTerm( n, added, withinQuant, withinInstClosure );
   //maybe have triggered instantiations if we are doing eager instantiation
   if( options::eagerInstQuant() ){
     flushLemmas();
@@ -520,8 +577,9 @@ bool QuantifiersEngine::addInstantiation( Node f, std::vector< Node >& vars, std
     for( int i=0; i<(int)terms.size(); i++ ){
       Trace("inst") << "   " << terms[i];
       Trace("inst") << std::endl;
+      Assert( terms[i].getType().isSubtypeOf( f[0][i].getType() ) );
     }
-    if( options::cbqi() ){
+    if( options::cbqi() && !options::cbqi2() ){
       for( int i=0; i<(int)terms.size(); i++ ){
         if( quantifiers::TermDb::hasInstConstAttr(terms[i]) ){
           Debug("inst")<< "***& Bad Instantiate " << f << " with " << std::endl;
@@ -543,7 +601,6 @@ bool QuantifiersEngine::addInstantiation( Node f, std::vector< Node >& vars, std
       }
       setInstantiationLevelAttr( body, f[1], maxInstLevel+1 );
     }
-    Trace("inst-debug") << "*** Lemma is " << lem << std::endl;
     ++(d_statistics.d_instantiations);
     return true;
   }else{
@@ -579,26 +636,6 @@ void QuantifiersEngine::setInstantiationLevelAttr( Node n, uint64_t level ){
     setInstantiationLevelAttr( n[i], level );
   }
 }
-
-bool QuantifiersEngine::isTermEligibleForInstantiation( Node n, Node f, bool print ) {
-  if( n.hasAttribute(InstLevelAttribute()) ){
-    int fml = d_term_db->getQAttrQuantInstLevel( f );
-    unsigned ml = fml>=0 ? fml : options::instMaxLevel();
-
-    if( n.getAttribute(InstLevelAttribute())>ml ){
-      Trace("inst-add-debug") << "Term " << n << " has instantiation level " << n.getAttribute(InstLevelAttribute());
-      Trace("inst-add-debug") << ", which is more than maximum allowed level " << ml << " for this quantified formula." << std::endl;
-      return false;
-    }
-  }else{
-    if( options::instLevelInputOnly() ){
-      Trace("inst-add-debug") << "Term " << n << " does not have an instantiation level." << std::endl;
-      return false;
-    }
-  }
-  return true;
-}
-
 
 Node QuantifiersEngine::getSubstitute( Node n, std::vector< Node >& terms ){
   if( n.getKind()==INST_CONSTANT ){
@@ -647,13 +684,17 @@ Node QuantifiersEngine::getInstantiation( Node f, std::vector< Node >& vars, std
     Trace("partial-inst") << "Partial instantiation : " << f << std::endl;
     Trace("partial-inst") << "                      : " << body << std::endl;
   }else{
-    //do optimized version
-    Node icb = d_term_db->getInstConstantBody( f );
-    body = getSubstitute( icb, terms );
-    if( Debug.isOn("check-inst") ){
-      Node body2 = f[ 1 ].substitute( vars.begin(), vars.end(), terms.begin(), terms.end() );
-      if( body!=body2 ){
-        Debug("check-inst") << "Substitution is wrong : " << body << " " << body2 << std::endl;
+    if( options::cbqi() ){
+      body = f[ 1 ].substitute( vars.begin(), vars.end(), terms.begin(), terms.end() );
+    }else{
+      //do optimized version
+      Node icb = d_term_db->getInstConstantBody( f );
+      body = getSubstitute( icb, terms );
+      if( Debug.isOn("check-inst") ){
+        Node body2 = f[ 1 ].substitute( vars.begin(), vars.end(), terms.begin(), terms.end() );
+        if( body!=body2 ){
+          Debug("check-inst") << "Substitution is wrong : " << body << " " << body2 << std::endl;
+        }
       }
     }
   }
@@ -671,6 +712,7 @@ Node QuantifiersEngine::getInstantiation( Node f, std::vector< Node >& terms ) {
   return getInstantiation( f, d_term_db->d_inst_constants[f], terms );
 }
 
+/*
 bool QuantifiersEngine::existsInstantiation( Node f, InstMatch& m, bool modEq, bool modInst ){
   if( options::incrementalSolving() ){
     if( d_c_inst_match_trie.find( f )!=d_c_inst_match_trie.end() ){
@@ -691,19 +733,20 @@ bool QuantifiersEngine::existsInstantiation( Node f, InstMatch& m, bool modEq, b
   }
   return false;
 }
+*/
 
 bool QuantifiersEngine::addLemma( Node lem, bool doCache ){
   if( doCache ){
-    Debug("inst-engine-debug") << "Adding lemma : " << lem << std::endl;
     lem = Rewriter::rewrite(lem);
+    Trace("inst-add-debug2") << "Adding lemma : " << lem << std::endl;
     if( d_lemmas_produced_c.find( lem )==d_lemmas_produced_c.end() ){
       //d_curr_out->lemma( lem, false, true );
       d_lemmas_produced_c[ lem ] = true;
       d_lemmas_waiting.push_back( lem );
-      Debug("inst-engine-debug") << "Added lemma : " << lem << std::endl;
+      Trace("inst-add-debug2") << "Added lemma : " << lem << std::endl;
       return true;
     }else{
-      Debug("inst-engine-debug") << "Duplicate." << std::endl;
+      Trace("inst-add-debug2") << "Duplicate." << std::endl;
       return false;
     }
   }else{
@@ -717,24 +760,15 @@ void QuantifiersEngine::addRequirePhase( Node lit, bool req ){
 }
 
 bool QuantifiersEngine::addInstantiation( Node f, InstMatch& m, bool mkRep, bool modEq, bool modInst ){
-  // For resource-limiting (also does a time check).
-  getOutputChannel().safePoint();
-
   std::vector< Node > terms;
-  //make sure there are values for each variable we are instantiating
-  for( size_t i=0; i<f[0].getNumChildren(); i++ ){
-    Node val = m.get( i );
-    if( val.isNull() ){
-      Node ic = d_term_db->getInstantiationConstant( f, i );
-      val = d_term_db->getFreeVariableForInstConstant( ic );
-      Trace("inst-add-debug") << "mkComplete " << val << std::endl;
-    }
-    terms.push_back( val );
-  }
+  m.getTerms( this, f, terms );
   return addInstantiation( f, terms, mkRep, modEq, modInst );
 }
 
 bool QuantifiersEngine::addInstantiation( Node f, std::vector< Node >& terms, bool mkRep, bool modEq, bool modInst ) {
+  // For resource-limiting (also does a time check).
+  getOutputChannel().safePoint();
+
   Assert( terms.size()==f[0].getNumChildren() );
   Trace("inst-add-debug") << "Add instantiation: ";
   for( unsigned i=0; i<terms.size(); i++ ){
@@ -750,9 +784,9 @@ bool QuantifiersEngine::addInstantiation( Node f, std::vector< Node >& terms, bo
   Trace("inst-add-debug") << std::endl;
 
   //check based on instantiation level
-  if( options::instMaxLevel()!=-1 ){
+  if( options::instMaxLevel()!=-1 || options::lteRestrictInstClosure() ){
     for( unsigned i=0; i<terms.size(); i++ ){
-      if( !isTermEligibleForInstantiation( terms[i], f, true ) ){
+      if( !d_term_db->isTermEligibleForInstantiation( terms[i], f, true ) ){
         return false;
       }
     }
@@ -825,6 +859,30 @@ bool QuantifiersEngine::addSplitEquality( Node n1, Node n2, bool reqPhase, bool 
   return addSplit( fm );
 }
 
+bool QuantifiersEngine::getInstWhenNeedsCheck( Theory::Effort e ) {
+  //determine if we should perform check, based on instWhenMode
+  bool performCheck = false;
+  if( options::instWhenMode()==quantifiers::INST_WHEN_FULL ){
+    performCheck = ( e >= Theory::EFFORT_FULL );
+  }else if( options::instWhenMode()==quantifiers::INST_WHEN_FULL_DELAY ){
+    performCheck = ( e >= Theory::EFFORT_FULL ) && !getTheoryEngine()->needCheck();
+  }else if( options::instWhenMode()==quantifiers::INST_WHEN_FULL_LAST_CALL ){
+    performCheck = ( ( e==Theory::EFFORT_FULL  && d_ierCounter%2==0 ) || e==Theory::EFFORT_LAST_CALL );
+  }else if( options::instWhenMode()==quantifiers::INST_WHEN_LAST_CALL ){
+    performCheck = ( e >= Theory::EFFORT_LAST_CALL );
+  }else{
+    performCheck = true;
+  }
+  if( e==Theory::EFFORT_LAST_CALL ){
+    //with bounded integers, skip every other last call,
+    // since matching loops may occur with infinite quantification
+    if( d_ierCounter_lc%2==0 && options::fmfBoundInt() ){
+      performCheck = false;
+    }
+  }
+  return performCheck;
+}
+
 void QuantifiersEngine::flushLemmas(){
   if( !d_lemmas_waiting.empty() ){
     //take default output channel if none is provided
@@ -847,25 +905,15 @@ void QuantifiersEngine::getPhaseReqTerms( Node f, std::vector< Node >& nodes ){
     // doing literal-based matching (consider polarity of literals)
     for( int i=0; i<(int)nodes.size(); i++ ){
       Node prev = nodes[i];
-      bool nodeChanged = false;
       if( d_phase_reqs[f]->isPhaseReq( nodes[i] ) ){
         bool preq = d_phase_reqs[f]->getPhaseReq( nodes[i] );
         nodes[i] = NodeManager::currentNM()->mkNode( IFF, nodes[i], NodeManager::currentNM()->mkConst<bool>(preq) );
-        nodeChanged = true;
       }
       //else if( qe->isPhaseReqEquality( f, trNodes[i] ) ){
       //  Node req = qe->getPhaseReqEquality( f, trNodes[i] );
       //  trNodes[i] = NodeManager::currentNM()->mkNode( EQUAL, trNodes[i], req );
       //}
-      if( nodeChanged ){
-        Debug("literal-matching") << "  Make " << prev << " -> " << nodes[i] << std::endl;
-        ++(d_statistics.d_lit_phase_req);
-      }else{
-        ++(d_statistics.d_lit_phase_nreq);
-      }
     }
-  }else{
-    d_statistics.d_lit_phase_nreq += (int)nodes.size();
   }
 }
 
@@ -894,6 +942,14 @@ void QuantifiersEngine::printInstantiations( std::ostream& out ) {
   }
 }
 
+void QuantifiersEngine::printSynthSolution( std::ostream& out ) {
+  if( d_ceg_inst ){
+    d_ceg_inst->printSynthSolution( out );
+  }else{
+    out << "Internal error : module for synth solution not found." << std::endl;
+  }
+}
+
 QuantifiersEngine::Statistics::Statistics():
   d_num_quant("QuantifiersEngine::Num_Quantifiers", 0),
   d_instantiation_rounds("QuantifiersEngine::Rounds_Instantiation_Full", 0),
@@ -901,8 +957,6 @@ QuantifiersEngine::Statistics::Statistics():
   d_instantiations("QuantifiersEngine::Instantiations_Total", 0),
   d_inst_duplicate("QuantifiersEngine::Duplicate_Inst", 0),
   d_inst_duplicate_eq("QuantifiersEngine::Duplicate_Inst_Eq", 0),
-  d_lit_phase_req("QuantifiersEngine::lit_phase_req", 0),
-  d_lit_phase_nreq("QuantifiersEngine::lit_phase_nreq", 0),
   d_triggers("QuantifiersEngine::Triggers", 0),
   d_simple_triggers("QuantifiersEngine::Triggers_Simple", 0),
   d_multi_triggers("QuantifiersEngine::Triggers_Multi", 0),
@@ -914,8 +968,6 @@ QuantifiersEngine::Statistics::Statistics():
   StatisticsRegistry::registerStat(&d_instantiations);
   StatisticsRegistry::registerStat(&d_inst_duplicate);
   StatisticsRegistry::registerStat(&d_inst_duplicate_eq);
-  StatisticsRegistry::registerStat(&d_lit_phase_req);
-  StatisticsRegistry::registerStat(&d_lit_phase_nreq);
   StatisticsRegistry::registerStat(&d_triggers);
   StatisticsRegistry::registerStat(&d_simple_triggers);
   StatisticsRegistry::registerStat(&d_multi_triggers);
@@ -929,8 +981,6 @@ QuantifiersEngine::Statistics::~Statistics(){
   StatisticsRegistry::unregisterStat(&d_instantiations);
   StatisticsRegistry::unregisterStat(&d_inst_duplicate);
   StatisticsRegistry::unregisterStat(&d_inst_duplicate_eq);
-  StatisticsRegistry::unregisterStat(&d_lit_phase_req);
-  StatisticsRegistry::unregisterStat(&d_lit_phase_nreq);
   StatisticsRegistry::unregisterStat(&d_triggers);
   StatisticsRegistry::unregisterStat(&d_simple_triggers);
   StatisticsRegistry::unregisterStat(&d_multi_triggers);
@@ -944,8 +994,14 @@ eq::EqualityEngine* QuantifiersEngine::getMasterEqualityEngine(){
 void QuantifiersEngine::debugPrintEqualityEngine( const char * c ) {
   eq::EqualityEngine* ee = getMasterEqualityEngine();
   eq::EqClassesIterator eqcs_i = eq::EqClassesIterator( ee );
+  std::map< TypeNode, int > typ_num;
   while( !eqcs_i.isFinished() ){
     TNode r = (*eqcs_i);
+    TypeNode tr = r.getType();
+    if( typ_num.find( tr )==typ_num.end() ){
+      typ_num[tr] = 0;
+    }
+    typ_num[tr]++;
     bool firstTime = true;
     Trace(c) << "  " << r;
     Trace(c) << " : { ";
@@ -966,6 +1022,9 @@ void QuantifiersEngine::debugPrintEqualityEngine( const char * c ) {
     ++eqcs_i;
   }
   Trace(c) << std::endl;
+  for( std::map< TypeNode, int >::iterator it = typ_num.begin(); it != typ_num.end(); ++it ){
+    Trace(c) << "# eqc for " << it->first << " : " << it->second << std::endl;
+  }
 }
 
 void EqualityQueryQuantifiersEngine::reset(){
@@ -1019,6 +1078,23 @@ Node EqualityQueryQuantifiersEngine::getInternalRepresentative( Node a, Node f, 
   if( !options::internalReps() ){
     return r;
   }else{
+    if( options::finiteModelFind() ){
+      if( r.isConst() ){
+        //map back from values assigned by model, if any
+        if( d_qe->getModel() ){
+          std::map< Node, Node >::iterator it = d_qe->getModel()->d_rep_set.d_values_to_terms.find( r );
+          if( it!=d_qe->getModel()->d_rep_set.d_values_to_terms.end() ){
+            r = it->second;
+            r = getRepresentative( r );
+          }else{
+            if( r.getType().isSort() ){
+              Trace("internal-rep-warn") << "No representative for UF constant." << std::endl;
+            }
+          }
+        }
+      }
+    }
+
     if( d_int_rep.find( r )==d_int_rep.end() ){
       //find best selection for representative
       Node r_best;
@@ -1037,9 +1113,8 @@ Node EqualityQueryQuantifiersEngine::getInternalRepresentative( Node a, Node f, 
       Trace("internal-rep-select")  << " } " << std::endl;
       int r_best_score = -1;
       for( size_t i=0; i<eqc.size(); i++ ){
-        //if cbqi is active, do not choose instantiation constant terms
-        if( !options::cbqi() || !quantifiers::TermDb::hasInstConstAttr(eqc[i]) ){
-          int score = getRepScore( eqc[i], f, index );
+        int score = getRepScore( eqc[i], f, index );
+        if( score!=-2 ){
           if( r_best.isNull() || ( score>=0 && ( r_best_score<0 || score<r_best_score ) ) ){
             r_best = eqc[i];
             r_best_score = score;
@@ -1197,19 +1272,21 @@ int getDepth( Node n ){
 
 //smaller the score, the better
 int EqualityQueryQuantifiersEngine::getRepScore( Node n, Node f, int index ){
-  int s;
-  if( options::instMaxLevel()!=-1 ){
+  if( options::cbqi() && quantifiers::TermDb::hasInstConstAttr(n) ){
+    return -2;
+  }else if( options::lteRestrictInstClosure() && ( !d_qe->getTermDatabase()->isInstClosure( n ) || !d_qe->getTermDatabase()->hasTermCurrent( n, false ) ) ){
+    return -1;
+  }else if( options::instMaxLevel()!=-1 ){
     //score prefer lowest instantiation level
     if( n.hasAttribute(InstLevelAttribute()) ){
-      s = n.getAttribute(InstLevelAttribute());
+      return n.getAttribute(InstLevelAttribute());
     }else{
-      s = options::instLevelInputOnly() ? -1 : 0;
+      return options::instLevelInputOnly() ? -1 : 0;
     }
   }else{
     //score prefers earliest use of this term as a representative
-    s = d_rep_score.find( n )==d_rep_score.end() ? -1 : d_rep_score[n];
+    return d_rep_score.find( n )==d_rep_score.end() ? -1 : d_rep_score[n];
   }
-  return s;
   //return ( d_rep_score.find( n )==d_rep_score.end() ? 100 : 0 ) + getDepth( n );    //term depth
 }
 

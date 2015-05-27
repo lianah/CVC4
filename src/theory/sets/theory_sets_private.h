@@ -73,7 +73,6 @@ private:
 
   class Statistics {
   public:
-    TimerStat d_checkTime;
     TimerStat d_getModelValueTime;
     IntStat d_memberLemmas;
     IntStat d_disequalityLemmas;
@@ -100,6 +99,10 @@ private:
 
   /** Equality engine */
   eq::EqualityEngine d_equalityEngine;
+
+  /** True and false constant nodes */
+  Node d_trueNode;
+  Node d_falseNode;
 
   context::CDO<bool> d_conflict;
   Node d_conflictNode;

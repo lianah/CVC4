@@ -36,7 +36,7 @@ class SatSolver {
 public:
 
   /** Virtual destructor */
-  virtual ~SatSolver() { }
+  virtual ~SatSolver() throw(AssertionException) { }
 
   /** Assert a clause in the solver. */
   virtual void addClause(SatClause& clause, bool removable, uint64_t proof_id) = 0;
@@ -62,12 +62,6 @@ public:
   /** Check the satisfiability of the added clauses */
   virtual SatValue solve(long unsigned int&) = 0;
 
-  /**
-   * Instruct the solver that it should bump its consumed resource count.
-   * Returns true if resources are exhausted.
-   */
-  virtual bool spendResource() = 0;
-
   /** Interrupt the solver */
   virtual void interrupt() = 0;
 
@@ -86,6 +80,7 @@ public:
 class BVSatSolverInterface: public SatSolver {
 public:
 
+  virtual ~BVSatSolverInterface() throw(AssertionException) {}
   /** Interface for notifications */
   class Notify {
   public:
@@ -102,6 +97,7 @@ public:
      * Notify about a learnt clause.
      */
     virtual void notify(SatClause& clause) = 0;
+    virtual void spendResource() = 0;
     virtual void safePoint() = 0;
     
   };/* class BVSatSolverInterface::Notify */

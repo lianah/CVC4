@@ -199,7 +199,7 @@ struct sortExternalDegree {
 int gmcCount = 0;
 
 bool StrongSolverTheoryUF::SortModel::Region::getMustCombine( int cardinality ){
-  if( options::ufssRegions() && d_total_diseq_external>=long(cardinality) ){
+  if( options::ufssRegions() && d_total_diseq_external>=unsigned(cardinality) ){
     //The number of external disequalities is greater than or equal to cardinality.
     //Thus, a clique of size cardinality+1 may exist between nodes in d_regions[i] and other regions
     //Check if this is actually the case:  must have n nodes with outgoing degree (cardinality+1-n) for some n>0
@@ -238,7 +238,7 @@ bool StrongSolverTheoryUF::SortModel::Region::getMustCombine( int cardinality ){
 }
 
 bool StrongSolverTheoryUF::SortModel::Region::check( Theory::Effort level, int cardinality, std::vector< Node >& clique ){
-  if( d_reps_size>long(cardinality) ){
+  if( d_reps_size>unsigned(cardinality) ){
     if( d_total_diseq_internal==d_reps_size*( d_reps_size - 1 ) ){
       if( d_reps_size>1 ){
         //quick clique check, all reps form a clique
@@ -254,9 +254,9 @@ bool StrongSolverTheoryUF::SortModel::Region::check( Theory::Effort level, int c
       }
     }else if( options::ufssRegions() || options::ufssEagerSplits() || level==Theory::EFFORT_FULL ){
       //build test clique, up to size cardinality+1
-      if( d_testCliqueSize<=long(cardinality) ){
+      if( d_testCliqueSize<=unsigned(cardinality) ){
         std::vector< Node > newClique;
-        if( d_testCliqueSize<long(cardinality) ){
+        if( d_testCliqueSize<unsigned(cardinality) ){
           for( std::map< Node, RegionNodeInfo* >::iterator it = d_nodes.begin(); it != d_nodes.end(); ++it ){
             //if not in the test clique, add it to the set of new members
             if( it->second->d_valid && ( d_testClique.find( it->first )==d_testClique.end() || !d_testClique[ it->first ] ) ){
@@ -312,7 +312,7 @@ bool StrongSolverTheoryUF::SortModel::Region::check( Theory::Effort level, int c
         }
       }
       //check if test clique has larger size than cardinality, and forms a clique
-      if( d_testCliqueSize>=long(cardinality+1) && d_splitsSize==0 ){
+      if( d_testCliqueSize>=unsigned(cardinality+1) && d_splitsSize==0 ){
         //test clique is a clique
         for( NodeBoolMap::iterator it = d_testClique.begin(); it != d_testClique.end(); ++it ){
           if( (*it).second ){
@@ -327,7 +327,7 @@ bool StrongSolverTheoryUF::SortModel::Region::check( Theory::Effort level, int c
 }
 
 bool StrongSolverTheoryUF::SortModel::Region::getCandidateClique( int cardinality, std::vector< Node >& clique ) {
-  if( d_testCliqueSize>=long(cardinality+1) ){
+  if( d_testCliqueSize>=unsigned(cardinality+1) ){
     //test clique is a clique
     for( NodeBoolMap::iterator it = d_testClique.begin(); it != d_testClique.end(); ++it ){
       if( (*it).second ){
@@ -763,6 +763,7 @@ bool StrongSolverTheoryUF::SortModel::minimize( OutputChannel* out, TheoryModel*
           if( validRegionIndex!=-1 ){
             combineRegions( validRegionIndex, i );
             if( addSplit( d_regions[validRegionIndex], out )!=0 ){
+              Trace("uf-ss-debug") << "Minimize model : combined regions, found split. " << std::endl;
               return false;
             }
           }else{
@@ -770,9 +771,12 @@ bool StrongSolverTheoryUF::SortModel::minimize( OutputChannel* out, TheoryModel*
           }
         }
       }
+      Assert( validRegionIndex!=-1 );
       if( addSplit( d_regions[validRegionIndex], out )!=0 ){
+        Trace("uf-ss-debug") << "Minimize model : found split. " << std::endl;
         return false;
       }
+      Trace("uf-ss-debug") << "Minimize success. " << std::endl;
     }
   }
   return true;
@@ -1413,11 +1417,11 @@ bool StrongSolverTheoryUF::SortModel::debugModel( TheoryModel* m ){
     }
   }
   int nReps = m->d_rep_set.d_type_reps.find( d_type )==m->d_rep_set.d_type_reps.end() ? 0 : (int)m->d_rep_set.d_type_reps[d_type].size();
-  if( nReps!=d_maxNegCard ){
+  if( nReps!=(d_maxNegCard+1) ){
     Trace("uf-ss-warn") << "WARNING : Model does not have same # representatives as cardinality for " << d_type << "." << std::endl;
     Trace("uf-ss-warn") << "   Max neg cardinality : " << d_maxNegCard << std::endl;
     Trace("uf-ss-warn") << "   # Reps : " << nReps << std::endl;
-    if( d_maxNegCard>nReps ){
+    if( d_maxNegCard>=nReps ){
       /*
       for( unsigned i=0; i<d_fresh_aloc_reps.size(); i++ ){
         if( add>0 && !m->d_equalityEngine->hasTerm( d_fresh_aloc_reps[i] ) ){
@@ -1480,7 +1484,7 @@ Node StrongSolverTheoryUF::SortModel::getCardinalityLiteral( int c ) {
 
 StrongSolverTheoryUF::StrongSolverTheoryUF(context::Context* c, context::UserContext* u, OutputChannel& out, TheoryUF* th) :
 d_out( &out ), d_th( th ), d_conflict( c, false ), d_rep_model(), d_aloc_com_card( u, 0 ), d_com_card_assertions( c ),
-d_card_assertions_eqv_lemma( u )
+d_card_assertions_eqv_lemma( u ), d_rel_eqc( c )
 {
   if( options::ufssDiseqPropagation() ){
     d_deq_prop = new DisequalityPropagator( th->getQuantifiersEngine(), this );
@@ -1508,26 +1512,59 @@ OutputChannel& StrongSolverTheoryUF::getOutputChannel() {
   return d_th->getOutputChannel();
 }
 
-/** new node */
-void StrongSolverTheoryUF::newEqClass( Node n ){
-  SortModel* c = getSortModel( n );
-  if( c ){
-    Trace("uf-ss-solver") << "StrongSolverTheoryUF: New eq class " << n << " : " << n.getType() << std::endl;
-    c->newEqClass( n );
+/** ensure eqc */
+void StrongSolverTheoryUF::ensureEqc( SortModel* c, Node a ) {
+  if( !hasEqc( a ) ){
+    d_rel_eqc[a] = true;
+    Trace("uf-ss-solver") << "StrongSolverTheoryUF: New eq class " << a << " : " << a.getType() << std::endl;
+    c->newEqClass( a );
     if( options::ufssSymBreak() ){
-      d_sym_break->newEqClass( n );
+      d_sym_break->newEqClass( a );
     }
     Trace("uf-ss-solver") << "StrongSolverTheoryUF: Done New eq class." << std::endl;
   }
 }
 
+void StrongSolverTheoryUF::ensureEqcRec( Node n ) {
+  if( !hasEqc( n ) ){
+    SortModel* c = getSortModel( n );
+    if( c ){
+      ensureEqc( c, n );
+    }
+    for( unsigned i=0; i<n.getNumChildren(); i++ ){
+      ensureEqcRec( n[i] );
+    }
+  }
+}
+
+/** has eqc */
+bool StrongSolverTheoryUF::hasEqc( Node a ) {
+  NodeBoolMap::iterator it = d_rel_eqc.find( a );
+  return it!=d_rel_eqc.end() && (*it).second;
+}
+
+/** new node */
+void StrongSolverTheoryUF::newEqClass( Node n ){
+  SortModel* c = getSortModel( n );
+  if( c ){
+    //do nothing
+  }
+}
+
 /** merge */
 void StrongSolverTheoryUF::merge( Node a, Node b ){
+  //TODO: ensure they are relevant
   SortModel* c = getSortModel( a );
   if( c ){
-    Trace("uf-ss-solver") << "StrongSolverTheoryUF: Merge " << a << " " << b << " : " << a.getType() << std::endl;
-    c->merge( a, b );
-    Trace("uf-ss-solver") << "StrongSolverTheoryUF: Done Merge." << std::endl;
+    ensureEqc( c, a );
+    if( hasEqc( b ) ){
+      Trace("uf-ss-solver") << "StrongSolverTheoryUF: Merge " << a << " " << b << " : " << a.getType() << std::endl;
+      c->merge( a, b );
+      Trace("uf-ss-solver") << "StrongSolverTheoryUF: Done Merge." << std::endl;
+    }else{
+      //c->assignEqClass( b, a );
+      d_rel_eqc[b] = true;
+    }
   }else{
     if( options::ufssDiseqPropagation() ){
       d_deq_prop->merge(a, b);
@@ -1539,6 +1576,8 @@ void StrongSolverTheoryUF::merge( Node a, Node b ){
 void StrongSolverTheoryUF::assertDisequal( Node a, Node b, Node reason ){
   SortModel* c = getSortModel( a );
   if( c ){
+    ensureEqc( c, a );
+    ensureEqc( c, b );
     Trace("uf-ss-solver") << "StrongSolverTheoryUF: Assert disequal " << a << " " << b << " : " << a.getType() << std::endl;
     //Assert( d_th->d_equalityEngine.getRepresentative( a )==a );
     //Assert( d_th->d_equalityEngine.getRepresentative( b )==b );
@@ -1554,6 +1593,7 @@ void StrongSolverTheoryUF::assertDisequal( Node a, Node b, Node reason ){
 /** assert a node */
 void StrongSolverTheoryUF::assertNode( Node n, bool isDecision ){
   Trace("uf-ss") << "Assert " << n << " " << isDecision << std::endl;
+  ensureEqcRec( n );
   bool polarity = n.getKind() != kind::NOT;
   TNode lit = polarity ? n : n[0];
   if( lit.getKind()==CARDINALITY_CONSTRAINT ){

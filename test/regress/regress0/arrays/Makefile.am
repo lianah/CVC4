@@ -40,7 +40,6 @@ TESTS =	\
 	swap_t1_np_nf_ai_00005_007.cvc.smt \
 	x2.smt \
 	x3.smt \
-	parsing_ringer.cvc \
 	bug272.smt \
 	bug272.minimized.smt \
 	constarr.smt2 \
@@ -48,7 +47,8 @@ TESTS =	\
 	constarr3.smt2 \
 	constarr.cvc \
 	constarr2.cvc \
-	constarr3.cvc
+	constarr3.cvc \
+	parsing_ringer.cvc
 
 EXTRA_DIST = $(TESTS)
 

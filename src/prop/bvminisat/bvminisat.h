@@ -21,7 +21,6 @@
 #pragma once
 
 #include "prop/sat_solver.h"
-#include "prop/sat_solver_registry.h"
 #include "prop/bvminisat/simp/SimpSolver.h"
 #include "context/cdo.h"
 
@@ -47,8 +46,11 @@ private:
       d_notify->notify(satClause);
     }
 
+    void spendResource() {
+      d_notify->spendResource();
+    }
     void safePoint() {
-      d_notify->safePoint(); 
+      d_notify->safePoint();
     }
   };
 
@@ -87,8 +89,6 @@ public:
 
   void markUnremovable(SatLiteral lit);
 
-  bool spendResource();
-
   void interrupt();
   
   SatValue solve();
@@ -108,7 +108,6 @@ public:
   static SatVariable     toSatVariable(BVMinisat::Var var);
   static BVMinisat::Lit    toMinisatLit(SatLiteral lit);
   static SatLiteral      toSatLiteral(BVMinisat::Lit lit);
-  static SatValue toSatLiteralValue(bool res);
   static SatValue toSatLiteralValue(BVMinisat::lbool res);
 
   static void  toMinisatClause(SatClause& clause, BVMinisat::vec<BVMinisat::Lit>& minisat_clause);

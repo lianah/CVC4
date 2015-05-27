@@ -61,16 +61,15 @@ TheoryArrays::TheoryArrays(context::Context* c, context::UserContext* u, OutputC
   d_numGetModelValConflicts("theory::arrays::number of getModelVal conflicts", 0),
   d_numSetModelValSplits("theory::arrays::number of setModelVal splits", 0),
   d_numSetModelValConflicts("theory::arrays::number of setModelVal conflicts", 0),
-  d_checkTimer("theory::arrays::checkTime"),
-  d_ppEqualityEngine(u, "theory::arrays::TheoryArraysPP"),
+  d_ppEqualityEngine(u, "theory::arrays::TheoryArraysPP" , true),
   d_ppFacts(u),
   //  d_ppCache(u),
   d_literalsToPropagate(c),
   d_literalsToPropagateIndex(c, 0),
   d_isPreRegistered(c),
-  d_mayEqualEqualityEngine(c, "theory::arrays::TheoryArraysMayEqual"),
+  d_mayEqualEqualityEngine(c, "theory::arrays::TheoryArraysMayEqual", true),
   d_notify(*this),
-  d_equalityEngine(d_notify, c, "theory::arrays::TheoryArrays"),
+  d_equalityEngine(d_notify, c, "theory::arrays::TheoryArrays", true),
   d_conflict(c, false),
   d_backtracker(c),
   d_infoMap(c, &d_backtracker),
@@ -103,7 +102,6 @@ TheoryArrays::TheoryArrays(context::Context* c, context::UserContext* u, OutputC
   StatisticsRegistry::registerStat(&d_numGetModelValConflicts);
   StatisticsRegistry::registerStat(&d_numSetModelValSplits);
   StatisticsRegistry::registerStat(&d_numSetModelValConflicts);
-  StatisticsRegistry::registerStat(&d_checkTimer);
 
   d_true = NodeManager::currentNM()->mkConst<bool>(true);
   d_false = NodeManager::currentNM()->mkConst<bool>(false);
@@ -142,7 +140,6 @@ TheoryArrays::~TheoryArrays() {
   StatisticsRegistry::unregisterStat(&d_numGetModelValConflicts);
   StatisticsRegistry::unregisterStat(&d_numSetModelValSplits);
   StatisticsRegistry::unregisterStat(&d_numSetModelValConflicts);
-  StatisticsRegistry::unregisterStat(&d_checkTimer);
 }
 
 void TheoryArrays::setMasterEqualityEngine(eq::EqualityEngine* eq) {
@@ -1034,7 +1031,7 @@ void TheoryArrays::check(Effort e) {
   if (done() && !fullEffort(e)) {
     return;
   }
-  TimerStat::CodeTimer codeTimer(d_checkTimer);
+  TimerStat::CodeTimer checkTimer(d_checkTime);
 
   while (!done() && !d_conflict)
   {

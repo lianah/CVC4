@@ -3,7 +3,7 @@
  ** \verbatim
  ** Original author: Tianyi Liang
  ** Major contributors: none
- ** Minor contributors (to current version): Morgan Deters
+ ** Minor contributors (to current version): Morgan Deters, Andrew Reynolds
  ** This file is part of the CVC4 project.
  ** Copyright (c) 2009-2014  New York University and The University of Iowa
  ** See the file COPYING in the top-level source directory for licensing
@@ -19,6 +19,7 @@
 #include "theory/strings/options.h"
 #include "smt/logic_exception.h"
 #include <stdint.h>
+#include "proof/proof_manager.h"
 
 namespace CVC4 {
 namespace theory {
@@ -40,6 +41,14 @@ void StringsPreprocess::processRegExp( Node s, Node r, std::vector< Node > &ret 
     case kind::REGEXP_SIGMA: {
       Node one = NodeManager::currentNM()->mkConst( ::CVC4::Rational(1) );
       Node eq = one.eqNode(NodeManager::currentNM()->mkNode(kind::STRING_LENGTH, s));
+      ret.push_back( eq );
+      break;
+    }
+    case kind::REGEXP_RANGE: {
+      Node one = NodeManager::currentNM()->mkConst( ::CVC4::Rational(1) );
+      Node eq = one.eqNode(NodeManager::currentNM()->mkNode(kind::STRING_LENGTH, s));
+      ret.push_back( eq );
+      eq = NodeManager::currentNM()->mkNode( kind::STRING_IN_REGEXP, s, r );
       ret.push_back( eq );
       break;
     }
@@ -93,6 +102,11 @@ void StringsPreprocess::processRegExp( Node s, Node r, std::vector< Node > &ret 
         Node eq = NodeManager::currentNM()->mkNode( kind::STRING_IN_REGEXP, s, r );
         ret.push_back( eq );
       }
+      break;
+    }
+    case kind::REGEXP_LOOP: {
+      Node eq = NodeManager::currentNM()->mkNode( kind::STRING_IN_REGEXP, s, r );
+      ret.push_back( eq );
       break;
     }
     default: {
@@ -537,15 +551,15 @@ Node StringsPreprocess::simplify( Node t, std::vector< Node > &new_nodes ) {
       retNode = t;
     }
   }*/
-
-  Trace("strings-preprocess") << "StringsPreprocess::simplify returns: " << retNode << std::endl;
-  if(!new_nodes.empty()) {
-    Trace("strings-preprocess") << " ... new nodes (" << new_nodes.size() << "):\n";
-    for(unsigned int i=0; i<new_nodes.size(); ++i) {
-      Trace("strings-preprocess") << "\t" << new_nodes[i] << "\n";
+  if( t!=retNode ){
+    Trace("strings-preprocess") << "StringsPreprocess::simplify returns: " << retNode << std::endl;
+    if(!new_nodes.empty()) {
+      Trace("strings-preprocess") << " ... new nodes (" << new_nodes.size() << "):\n";
+      for(unsigned int i=0; i<new_nodes.size(); ++i) {
+        Trace("strings-preprocess") << "\t" << new_nodes[i] << "\n";
+      }
     }
   }
-
   return retNode;
 }
 
@@ -580,17 +594,28 @@ Node StringsPreprocess::decompose(Node t, std::vector< Node > & new_nodes) {
   }
 }
 
-void StringsPreprocess::simplify(std::vector< Node > &vec_node, std::vector< Node > &new_nodes) {
+void StringsPreprocess::simplify(std::vector< Node > &vec_node) {
   for( unsigned i=0; i<vec_node.size(); i++ ){
-    vec_node[i] = decompose( vec_node[i], new_nodes );
+    std::vector< Node > new_nodes;
+    Node curr = decompose( vec_node[i], new_nodes );
+    if( !new_nodes.empty() ){
+      new_nodes.insert( new_nodes.begin(), curr );
+      curr = NodeManager::currentNM()->mkNode( kind::AND, new_nodes );
+    }
+    if( curr!=vec_node[i] ){
+      curr = Rewriter::rewrite( curr );
+      PROOF( ProofManager::currentPM()->addDependence(curr, vec_node[i]); );
+      vec_node[i] = curr;
+    }
   }
 }
-
+/*
 void StringsPreprocess::simplify(std::vector< Node > &vec_node) {
   std::vector< Node > new_nodes;
   simplify(vec_node, new_nodes);
   vec_node.insert( vec_node.end(), new_nodes.begin(), new_nodes.end() );
 }
+*/
 
 }/* CVC4::theory::strings namespace */
 }/* CVC4::theory namespace */

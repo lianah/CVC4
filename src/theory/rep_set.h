@@ -33,10 +33,14 @@ public:
   std::map< TypeNode, std::vector< Node > > d_type_reps;
   std::map< TypeNode, bool > d_type_complete;
   std::map< Node, int > d_tmap;
+  // map from values to terms they were assigned for
+  std::map< Node, Node > d_values_to_terms;
   /** clear the set */
   void clear();
   /** has type */
   bool hasType( TypeNode tn ) const { return d_type_reps.find( tn )!=d_type_reps.end(); }
+  /** has rep */
+  bool hasRep( TypeNode tn, Node n );
   /** get cardinality for type */
   int getNumRepresentatives( TypeNode tn ) const;
   /** add representative for type */

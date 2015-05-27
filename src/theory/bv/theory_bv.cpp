@@ -95,6 +95,7 @@ TheoryBV::~TheoryBV() {
   for (unsigned i = 0; i < d_subtheories.size(); ++i) {
     delete d_subtheories[i];
   }
+  delete d_abstractionModule;
 }
 
 void TheoryBV::setMasterEqualityEngine(eq::EqualityEngine* eq) {
@@ -104,6 +105,10 @@ void TheoryBV::setMasterEqualityEngine(eq::EqualityEngine* eq) {
   if (options::bitvectorEqualitySolver()) {
     dynamic_cast<CoreSolver*>(d_subtheoryMap[SUB_CORE])->setMasterEqualityEngine(eq);
   }
+}
+
+void TheoryBV::spendResource() throw(UnsafeInterruptException) {
+  getOutputChannel().spendResource();
 }
 
 TheoryBV::Statistics::Statistics():
@@ -360,7 +365,9 @@ void TheoryBV::check(Effort e)
   if (done() && !fullEffort(e)) {
     return;
   }
+  TimerStat::CodeTimer checkTimer(d_checkTime);
   Debug("bitvector") << "TheoryBV::check(" << e << ")" << std::endl;
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTimer);
   // we may be getting new assertions so the model cache may not be sound
   d_invalidateModelCache.set(true); 
   // if we are using the eager solver
@@ -569,8 +576,8 @@ Node TheoryBV::ppRewrite(TNode t)
   } else if( res.getKind() == kind::EQUAL &&
       ((res[0].getKind() == kind::BITVECTOR_PLUS &&
         RewriteRule<ConcatToMult>::applies(res[1])) ||
-       res[1].getKind() == kind::BITVECTOR_PLUS &&
-       RewriteRule<ConcatToMult>::applies(res[0]))) {
+       (res[1].getKind() == kind::BITVECTOR_PLUS &&
+	RewriteRule<ConcatToMult>::applies(res[0])))) {
     Node mult = RewriteRule<ConcatToMult>::applies(res[0])?
       RewriteRule<ConcatToMult>::run<false>(res[0]) :
       RewriteRule<ConcatToMult>::run<true>(res[1]);
@@ -740,8 +747,8 @@ void TheoryBV::ppStaticLearn(TNode in, NodeBuilder<>& learned) {
   d_staticLearnCache.insert(in);
     
   if (in.getKind() == kind::EQUAL) {
-    if(in[0].getKind() == kind::BITVECTOR_PLUS && in[1].getKind() == kind::BITVECTOR_SHL ||
-       in[1].getKind() == kind::BITVECTOR_PLUS && in[0].getKind() == kind::BITVECTOR_SHL){
+    if((in[0].getKind() == kind::BITVECTOR_PLUS && in[1].getKind() == kind::BITVECTOR_SHL) ||
+       (in[1].getKind() == kind::BITVECTOR_PLUS && in[0].getKind() == kind::BITVECTOR_SHL)) {
       TNode p = in[0].getKind() == kind::BITVECTOR_PLUS ? in[0] : in[1];
       TNode s = in[0].getKind() == kind::BITVECTOR_PLUS ? in[1] : in[0];
 

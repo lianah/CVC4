@@ -179,24 +179,11 @@ void BoundedIntegers::processLiteral( Node f, Node lit, bool pol,
     std::map< Node, Node > msum;
     if (QuantArith::getMonomialSumLit( lit, msum )){
       Trace("bound-int-debug") << "Literal (polarity = " << pol << ") " << lit << " is monomial sum : " << std::endl;
-      for(std::map< Node, Node >::iterator it = msum.begin(); it != msum.end(); ++it ){
-        Trace("bound-int-debug") << "  ";
-        if( !it->second.isNull() ){
-          Trace("bound-int-debug") << it->second;
-          if( !it->first.isNull() ){
-            Trace("bound-int-debug") << " * ";
-          }
-        }
-        if( !it->first.isNull() ){
-          Trace("bound-int-debug") << it->first;
-        }
-        Trace("bound-int-debug") << std::endl;
-      }
-      Trace("bound-int-debug") << std::endl;
+      QuantArith::debugPrintMonomialSum( msum, "bound-int-debug" );
       for( std::map< Node, Node >::iterator it = msum.begin(); it != msum.end(); ++it ){
         if ( !it->first.isNull() && it->first.getKind()==BOUND_VARIABLE && !isBound( f, it->first ) ){
           Node veq;
-          if( QuantArith::isolate( it->first, msum, veq, GEQ ) ){
+          if( QuantArith::isolate( it->first, msum, veq, GEQ )!=0 ){
             Node n1 = veq[0];
             Node n2 = veq[1];
             if(pol){

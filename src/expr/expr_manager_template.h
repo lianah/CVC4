@@ -45,6 +45,7 @@ class Options;
 class IntStat;
 struct ExprManagerMapCollection;
 class StatisticsRegistry;
+class ResourceManager;
 
 namespace expr {
   namespace pickle {
@@ -120,8 +121,11 @@ public:
    */
   ~ExprManager() throw();
 
-  /** Get this node manager's options */
+  /** Get this expr manager's options */
   const Options& getOptions() const;
+
+  /** Get this expr manager's resource manager */
+  ResourceManager* getResourceManager() throw();
 
   /** Get the type for booleans */
   BooleanType booleanType() const;
@@ -134,6 +138,9 @@ public:
 
   /** Get the type for integers */
   IntegerType integerType() const;
+
+  /** Get the type for rounding modes */
+  RoundingModeType roundingModeType() const;
 
   /**
    * Make a unary expression of a given kind (NOT, BVNOT, ...).
@@ -356,6 +363,9 @@ public:
    * have any number of elements.
    */
   SExprType mkSExprType(const std::vector<Type>& types);
+
+  /** Make a type representing a floating-point type with the given parameters. */
+  FloatingPointType mkFloatingPointType(unsigned exp, unsigned sig) const;
 
   /** Make a type representing a bit-vector of the given size. */
   BitVectorType mkBitVectorType(unsigned size) const;

@@ -34,7 +34,7 @@ TheoryModel::TheoryModel(context::Context* c, std::string name, bool enableFuncM
   d_false = NodeManager::currentNM()->mkConst( false );
 
   d_eeContext = new context::Context();
-  d_equalityEngine = new eq::EqualityEngine(d_eeContext, name);
+  d_equalityEngine = new eq::EqualityEngine(d_eeContext, name, false);
 
   // The kinds we are treating as function application in congruence
   d_equalityEngine->addFunctionKind(kind::APPLY_UF);
@@ -46,7 +46,7 @@ TheoryModel::TheoryModel(context::Context* c, std::string name, bool enableFuncM
   d_eeContext->push();
 }
 
-TheoryModel::~TheoryModel() {
+TheoryModel::~TheoryModel() throw() {
   d_eeContext->pop();
   delete d_equalityEngine;
   delete d_eeContext;
@@ -169,9 +169,11 @@ Node TheoryModel::getModelValue(TNode n, bool hasBoundVars) const
     if (n.getNumChildren() > 0 &&
         n.getKind() != kind::BITVECTOR_ACKERMANIZE_UDIV &&
         n.getKind() != kind::BITVECTOR_ACKERMANIZE_UREM) {
+      Debug("model-getvalue-debug") << "Get model value children " << n << std::endl;
       std::vector<Node> children;
       if (n.getKind() == APPLY_UF) {
         Node op = getModelValue(n.getOperator(), hasBoundVars);
+        Debug("model-getvalue-debug") << "  operator : " << op << std::endl;
         children.push_back(op);
       }
       else if (n.getMetaKind() == kind::metakind::PARAMETERIZED) {
@@ -180,6 +182,7 @@ Node TheoryModel::getModelValue(TNode n, bool hasBoundVars) const
       //evaluate the children
       for (unsigned i = 0; i < n.getNumChildren(); ++i) {
         ret = getModelValue(n[i], hasBoundVars);
+        Debug("model-getvalue-debug") << "  " << n << "[" << i << "] is " << ret << std::endl;
         children.push_back(ret);
       }
       ret = Rewriter::rewrite(NodeManager::currentNM()->mkNode(n.getKind(), children));
@@ -195,9 +198,13 @@ Node TheoryModel::getModelValue(TNode n, bool hasBoundVars) const
     }
 
     if (!d_equalityEngine->hasTerm(n)) {
-      // Unknown term - return first enumerated value for this type
-      TypeEnumerator te(n.getType());
-      ret = *te;
+      if(n.getType().isRegExp()) {
+        ret = Rewriter::rewrite(ret);
+      } else {
+        // Unknown term - return first enumerated value for this type
+        TypeEnumerator te(n.getType());
+        ret = *te;
+      }
       d_modelCache[n] = ret;
       return ret;
     }
@@ -369,6 +376,7 @@ void TheoryModel::assertEqualityEngine(const eq::EqualityEngine* ee, set<Node>* 
 void TheoryModel::assertRepresentative(TNode n )
 {
   Trace("model-builder-reps") << "Assert rep : " << n << std::endl;
+  Trace("model-builder-reps") << "Rep eqc is : " << getRepresentative( n ) << std::endl;
   d_reps[ n ] = n;
 }
 
@@ -549,7 +557,7 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
     else if (!rep.isNull()) {
       assertedReps[eqc] = rep;
       typeRepSet.add(eqct.getBaseType(), eqc);
-      allTypes.insert(eqct);
+      allTypes.insert(eqct.getBaseType());
     }
     else {
       typeNoRepSet.add(eqct, eqc);
@@ -639,7 +647,7 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
             Trace("model-builder") << "    Normalizing rep (" << rep << "), normalized to (" << normalized << ")" << endl;
             if (normalized.isConst()) {
               changed = true;
-              typeConstSet.add(t.getBaseType(), normalized);
+              typeConstSet.add(tb, normalized);
               constantReps[*i] = normalized;
               assertedReps.erase(*i);
               i2 = i;
@@ -658,7 +666,7 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
       }
     } while (changed);
 
-    if (!fullModel || !unassignedAssignable) {
+    if (!unassignedAssignable) {
       break;
     }
 
@@ -667,9 +675,8 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
     // different are different.
 
     // Only make assignments on a type if:
-    // 1. fullModel is true
-    // 2. there are no terms that share the same base type with un-normalized representatives
-    // 3. there are no terms that share teh same base type that are unevaluated evaluable terms
+    // 1. there are no terms that share the same base type with un-normalized representatives
+    // 2. there are no terms that share teh same base type that are unevaluated evaluable terms
     // Alternatively, if 2 or 3 don't hold but we are in a special deadlock-breaking mode where assignOne is true, go ahead and make one assignment
     changed = false;
     for (it = typeNoRepSet.begin(); it != typeNoRepSet.end(); ++it) {
@@ -678,6 +685,9 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
         continue;
       }
       TypeNode t = TypeSet::getType(it);
+      if(t.isTuple() || t.isRecord()) {
+        t = NodeManager::currentNM()->getDatatypeForTupleRecord(t);
+      }
       TypeNode tb = t.getBaseType();
       if (!assignOne) {
         set<Node>* repSet = typeRepSet.getSet(tb);
@@ -719,6 +729,9 @@ void TheoryEngineModelBuilder::buildModel(Model* m, bool fullModel)
           Assert(!n.isNull());
           constantReps[*i2] = n;
           Trace("model-builder") << "    Assign: Setting constant rep of " << (*i2) << " to " << n << endl;
+          if( !fullModel ){
+            tm->d_rep_set.d_values_to_terms[n] = (*i2);
+          }
           changed = true;
           noRepSet.erase(i2);
           if (assignOne) {
@@ -841,11 +854,11 @@ Node TheoryEngineModelBuilder::normalize(TheoryModel* m, TNode r, std::map< Node
           itMap = constantReps.find(m->d_equalityEngine->getRepresentative(ri));
           if (itMap != constantReps.end()) {
             ri = (*itMap).second;
-	    recurse = false;
+            recurse = false;
           }
           else if (!evalOnly) {
-	    recurse = false;
-	  }
+            recurse = false;
+          }
         }
         if (recurse) {
           ri = normalize(m, ri, constantReps, evalOnly);
@@ -859,7 +872,7 @@ Node TheoryEngineModelBuilder::normalize(TheoryModel* m, TNode r, std::map< Node
     retNode = NodeManager::currentNM()->mkNode( r.getKind(), children );
     if (childrenConst) {
       retNode = Rewriter::rewrite(retNode);
-      Assert(retNode.getKind() == kind::APPLY_UF || retNode.isConst());
+      Assert(retNode.getKind()==kind::APPLY_UF || retNode.getKind()==kind::REGEXP_RANGE || retNode.isConst());
     }
   }
   d_normalizedCache[r] = retNode;

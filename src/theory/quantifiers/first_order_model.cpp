@@ -17,7 +17,6 @@
 #include "theory/quantifiers/term_database.h"
 #include "theory/quantifiers/quantifiers_attributes.h"
 #include "theory/quantifiers/full_model_check.h"
-#include "theory/quantifiers/qinterval_builder.h"
 #include "theory/quantifiers/ambqi_builder.h"
 #include "theory/quantifiers/options.h"
 
@@ -37,14 +36,21 @@ d_qe( qe ), d_axiom_asserted( c, false ), d_forall_asserts( c ), d_isModelSet( c
 
 }
 
-void FirstOrderModel::assertQuantifier( Node n ){
-  if( n.getKind()==FORALL ){
-    d_forall_asserts.push_back( n );
-    if( n.getAttribute(AxiomAttribute()) ){
-      d_axiom_asserted = true;
+void FirstOrderModel::assertQuantifier( Node n, bool reduced ){
+  if( !reduced ){
+    if( n.getKind()==FORALL ){
+      d_forall_asserts.push_back( n );
+      if( n.getAttribute(AxiomAttribute()) ){
+        d_axiom_asserted = true;
+      }
+    }else if( n.getKind()==NOT ){
+      Assert( n[0].getKind()==FORALL );
     }
-  }else if( n.getKind()==NOT ){
-    Assert( n[0].getKind()==FORALL );
+  }else{
+    Assert( n.getKind()==FORALL );
+    Assert( d_forall_to_reduce.find( n )==d_forall_to_reduce.end() );
+    d_forall_to_reduce[n] = true;
+    Trace("quant") << "Mark to reduce : " << n << std::endl;
   }
 }
 
@@ -113,6 +119,18 @@ Node FirstOrderModel::getSomeDomainElement(TypeNode tn){
   return d_rep_set.d_type_reps[tn][0];
 }
 
+/** needs check */
+bool FirstOrderModel::checkNeeded() {
+  return d_forall_asserts.size()>0 || !d_forall_to_reduce.empty();
+}
+
+/** mark reduced */
+void FirstOrderModel::markQuantifierReduced( Node q ) {
+  Assert( d_forall_to_reduce.find( q )!=d_forall_to_reduce.end() );
+  d_forall_to_reduce.erase( q );
+  Trace("quant") << "Mark reduced : " << q << std::endl;
+}
+
 void FirstOrderModel::reset_round() {
   d_quant_active.clear();
 }
@@ -151,10 +169,10 @@ void FirstOrderModelIG::processInitializeModelForTerm( Node n ){
       TypeNode tn = op.getType();
       tn = tn[ (int)tn.getNumChildren()-1 ];
       //only generate models for predicates and functions with uninterpreted range types
-      if( tn==NodeManager::currentNM()->booleanType() || tn.isSort() ){
+      //if( tn==NodeManager::currentNM()->booleanType() || tn.isSort() ){
         d_uf_model_tree[ op ] = uf::UfModelTree( op );
         d_uf_model_gen[ op ].clear();
-      }
+      //}
     }
   }
   /*
@@ -337,42 +355,9 @@ Node FirstOrderModelIG::evaluateTerm( Node n, int& depIndex, RepSetIterator* ri 
     }
   }else{
     std::vector< int > children_depIndex;
-    //for select, pre-process read over writes
-    if( n.getKind()==SELECT ){
-#if 0
-      //std::cout << "Evaluate " << n << std::endl;
-      Node sel = evaluateTerm( n[1], depIndex, ri );
-      if( sel.isNull() ){
-        depIndex = ri->getNumTerms()-1;
-        return Node::null();
-      }
-      Node arr = getRepresentative( n[0] );
-      //if( n[0]!=getRepresentative( n[0] ) ){
-      //  std::cout << n[0] << " is " << getRepresentative( n[0] ) << std::endl;
-      //}
-      int tempIndex;
-      int eval = 1;
-      while( arr.getKind()==STORE && eval!=0 ){
-        eval = evaluate( sel.eqNode( arr[1] ), tempIndex, ri );
-        depIndex = tempIndex > depIndex ? tempIndex : depIndex;
-        if( eval==1 ){
-          val = evaluateTerm( arr[2], tempIndex, ri );
-          depIndex = tempIndex > depIndex ? tempIndex : depIndex;
-          return val;
-        }else if( eval==-1 ){
-          arr = arr[0];
-        }
-      }
-      arr = evaluateTerm( arr, tempIndex, ri );
-      depIndex = tempIndex > depIndex ? tempIndex : depIndex;
-      val = NodeManager::currentNM()->mkNode( SELECT, arr, sel );
-#else
-      val = evaluateTermDefault( n, depIndex, children_depIndex, ri );
-#endif
-    }else{
-      //default term evaluate : evaluate all children, recreate the value
-      val = evaluateTermDefault( n, depIndex, children_depIndex, ri );
-    }
+    //default term evaluate : evaluate all children, recreate the value
+    val = evaluateTermDefault( n, depIndex, children_depIndex, ri );
+    Trace("fmf-eval-debug") << "Evaluate term, value from " << n << " is " << val << std::endl;
     if( !val.isNull() ){
       bool setVal = false;
       //custom ways of evaluating terms
@@ -387,8 +372,10 @@ Node FirstOrderModelIG::evaluateTerm( Node n, int& depIndex, RepSetIterator* ri 
           makeEvalUfModel( n );
           //now, consult the model
           if( d_eval_uf_use_default[n] ){
+            Trace("fmf-eval-debug") << "get default" << std::endl;
             val = d_uf_model_tree[ op ].getValue( this, val, argDepIndex );
           }else{
+            Trace("fmf-eval-debug") << "get uf model" << std::endl;
             val = d_eval_uf_model[ n ].getValue( this, val, argDepIndex );
           }
           //Debug("fmf-eval-debug") << "Evaluate term " << n << " (" << gn << ")" << std::endl;
@@ -404,22 +391,20 @@ Node FirstOrderModelIG::evaluateTerm( Node n, int& depIndex, RepSetIterator* ri 
             }
           }
           setVal = true;
+        }else{
+          Trace("fmf-eval-debug") << "No model." << std::endl;
         }
-      }else if( n.getKind()==SELECT ){
-        //we are free to interpret this term however we want
       }
       //if not set already, rewrite and consult model for interpretation
       if( !setVal ){
         val = Rewriter::rewrite( val );
-        if( val.getMetaKind()!=kind::metakind::CONSTANT ){
-          //FIXME: we cannot do this until we trust all theories collectModelInfo!
-          //val = getInterpretedValue( val );
-          //val = getRepresentative( val );
+        if( !val.isConst() ){
+          return Node::null();
         }
       }
       Trace("fmf-eval-debug") << "Evaluate term " << n << " = ";
       printRepresentativeDebug( "fmf-eval-debug", val );
-      Trace("fmf-eval-debug") << ", depIndex = " << depIndex << std::endl;
+      Trace("fmf-eval-debug") << " (term " << val << "), depIndex = " << depIndex << std::endl;
     }
   }
   return val;
@@ -430,6 +415,7 @@ Node FirstOrderModelIG::evaluateTermDefault( Node n, int& depIndex, std::vector<
   if( n.getNumChildren()==0 ){
     return n;
   }else{
+    bool isInterp = n.getKind()!=APPLY_UF;
     //first we must evaluate the arguments
     std::vector< Node > children;
     if( n.getMetaKind()==kind::metakind::PARAMETERIZED ){
@@ -443,10 +429,15 @@ Node FirstOrderModelIG::evaluateTermDefault( Node n, int& depIndex, std::vector<
         depIndex = ri->getNumTerms()-1;
         return nn;
       }else{
-        children.push_back( nn );
         if( childDepIndex[i]>depIndex ){
           depIndex = childDepIndex[i];
         }
+        if( isInterp ){
+          if( !nn.isConst() ) {
+            nn = getRepresentative( nn );
+          }
+        }
+        children.push_back( nn );
       }
     }
     //recreate the value
@@ -567,7 +558,7 @@ FirstOrderModel(qe, c, name){
 
 }
 
-FirstOrderModelFmc::~FirstOrderModelFmc() {
+FirstOrderModelFmc::~FirstOrderModelFmc() throw() {
   for(std::map<Node, Def*>::iterator i = d_models.begin(); i != d_models.end(); ++i) {
     delete (*i).second;
   }
@@ -677,18 +668,24 @@ Node FirstOrderModelFmc::getFunctionValue(Node op, const char* argPrefix ) {
   Node curr;
   for( int i=(d_models[op]->d_cond.size()-1); i>=0; i--) {
     Node v = d_models[op]->d_value[i];
+    Trace("fmc-model-func") << "Value is : " << v << std::endl;
     if( !hasTerm( v ) ){
       //can happen when the model basis term does not exist in ground assignment
       TypeNode tn = v.getType();
-      if( d_rep_set.d_type_reps.find( tn )!=d_rep_set.d_type_reps.end() && !d_rep_set.d_type_reps[ tn ].empty() ){
-        //see full_model_check.cpp line 366
-        v = d_rep_set.d_type_reps[tn][ d_rep_set.d_type_reps[tn].size()-1 ];
-      }else{
-        Assert( false );
+      //check if it is a constant introduced as a representative not existing in the model's equality engine
+      if( !d_rep_set.hasRep( tn, v ) ){
+        if( d_rep_set.d_type_reps.find( tn )!=d_rep_set.d_type_reps.end() && !d_rep_set.d_type_reps[ tn ].empty() ){
+          //see full_model_check.cpp line 366
+          v = d_rep_set.d_type_reps[tn][ d_rep_set.d_type_reps[tn].size()-1 ];
+        }else{
+          Assert( false );
+        }
+        Trace("fmc-model-func") << "No term, assign " << v << std::endl;
       }
     }
     v = getRepresentative( v );
     if( curr.isNull() ){
+      Trace("fmc-model-func") << "base : " << v << std::endl;
       curr = v;
     }else{
       //make the condition
@@ -706,11 +703,14 @@ Node FirstOrderModelFmc::getFunctionValue(Node op, const char* argPrefix ) {
         }else if ( !isStar(cond[j]) &&  //handle the case where there are 0 or 1 ground eqc of this type
                    d_rep_set.d_type_reps.find( tn )!=d_rep_set.d_type_reps.end() && d_rep_set.d_type_reps[ tn ].size()>1 ){
           Node c = getUsedRepresentative( cond[j] );
+          c = getRepresentative( c );
           children.push_back( NodeManager::currentNM()->mkNode( EQUAL, vars[j], c ) );
         }
       }
       Assert( !children.empty() );
       Node cc = children.size()==1 ? children[0] : NodeManager::currentNM()->mkNode( AND, children );
+
+      Trace("fmc-model-func") << "condition : " << cc << ", value : " << v << std::endl;
       curr = NodeManager::currentNM()->mkNode( ITE, cc, v, curr );
     }
   }
@@ -744,167 +744,6 @@ bool FirstOrderModelFmc::isInRange( Node v, Node i ) {
     return v==i;
   }
 }
-
-
-FirstOrderModelQInt::FirstOrderModelQInt(QuantifiersEngine * qe, context::Context* c, std::string name) :
-FirstOrderModel(qe, c, name) {
-
-}
-
-void FirstOrderModelQInt::processInitialize( bool ispre ) {
-  if( !ispre ){
-    Trace("qint-debug") << "Process initialize" << std::endl;
-    for( std::map<Node, QIntDef * >::iterator it = d_models.begin(); it != d_models.end(); ++it ) {
-      Node op = it->first;
-      TypeNode tno = op.getType();
-      Trace("qint-debug") << "  Init " << op << " " << tno << std::endl;
-      for( unsigned i=0; i<tno.getNumChildren(); i++) {
-        //make sure a representative of the type exists
-        if( !d_rep_set.hasType( tno[i] ) ){
-          Node e = getSomeDomainElement( tno[i] );
-          Trace("qint-debug") << "  * Initialize type " << tno[i] << ", add ";
-          Trace("qint-debug") << e << " " << e.getType() << std::endl;
-          //d_rep_set.add( e );
-        }
-      }
-    }
-  }
-}
-
-Node FirstOrderModelQInt::getFunctionValue(Node op, const char* argPrefix ) {
-  Trace("qint-debug") << "Get function value for " << op << std::endl;
-  TypeNode type = op.getType();
-  std::vector< Node > vars;
-  for( size_t i=0; i<type.getNumChildren()-1; i++ ){
-    std::stringstream ss;
-    ss << argPrefix << (i+1);
-    Node b = NodeManager::currentNM()->mkBoundVar( ss.str(), type[i] );
-    vars.push_back( b );
-  }
-  Node boundVarList = NodeManager::currentNM()->mkNode(kind::BOUND_VAR_LIST, vars);
-  Node curr = d_models[op]->getFunctionValue( this, vars );
-  Node fv = NodeManager::currentNM()->mkNode(kind::LAMBDA, boundVarList, curr);
-  Trace("qint-debug") << "Return " << fv << std::endl;
-  return fv;
-}
-
-Node FirstOrderModelQInt::getCurrentUfModelValue( Node n, std::vector< Node > & args, bool partial ) {
-  Debug("qint-debug") << "get curr uf value " << n << std::endl;
-  return d_models[n]->evaluate( this, args );
-}
-
-void FirstOrderModelQInt::processInitializeModelForTerm(Node n) {
-  Debug("qint-debug") << "process init " << n << " " << n.getKind() << std::endl;
-
-  if( n.getKind()==APPLY_UF || n.getKind()==VARIABLE || n.getKind()==SKOLEM ){
-    Node op = n.getKind()==APPLY_UF ? n.getOperator() : n;
-    if( d_models.find(op)==d_models.end()) {
-      Debug("qint-debug") << "init model for " << op << std::endl;
-      d_models[op] = new QIntDef;
-    }
-  }
-}
-
-Node FirstOrderModelQInt::getUsedRepresentative( Node n ) {
-  if( hasTerm( n ) ){
-    if( n.getType().isBoolean() ){
-      return areEqual(n, d_true) ? d_true : d_false;
-    }else{
-      return getRepresentative( n );
-    }
-  }else{
-    Trace("qint-debug") << "Get rep " << n << " " << n.getType() << std::endl;
-    Assert( d_rep_set.hasType( n.getType() ) && !d_rep_set.d_type_reps[n.getType()].empty() );
-    return d_rep_set.d_type_reps[n.getType()][0];
-  }
-}
-
-void FirstOrderModelQInt::processInitializeQuantifier( Node q )  {
-  if( d_var_order.find( q )==d_var_order.end() ){
-    d_var_order[q] = new QuantVarOrder( q );
-    d_var_order[q]->debugPrint("qint-var-order");
-    Trace("qint-var-order") << std::endl;
-  }
-}
-unsigned FirstOrderModelQInt::getOrderedNumVars( Node q ) {
-  //return q[0].getNumChildren();
-  return d_var_order[q]->getNumVars();
-}
-
-TypeNode FirstOrderModelQInt::getOrderedVarType( Node q, int i ) {
-  //return q[0][i].getType();
-  return d_var_order[q]->getVar( i ).getType();
-}
-
-int FirstOrderModelQInt::getOrderedVarNumToVarNum( Node q, int i ) {
-  return getVariableId( q, d_var_order[q]->getVar( i ) );
-}
-
-bool FirstOrderModelQInt::isLessThan( Node v1, Node v2 ) {
-  Assert( !v1.isNull() );
-  Assert( !v2.isNull() );
-  if( v1.getType().isSort() ){
-    Assert( getRepId( v1 )!=-1 );
-    Assert( getRepId( v2 )!=-1 );
-    int rid1 = d_rep_id[v1];
-    int rid2 = d_rep_id[v2];
-    return rid1<rid2;
-  }else{
-    return false;
-  }
-}
-
-Node FirstOrderModelQInt::getMin( Node v1, Node v2 ) {
-  return isLessThan( v1, v2 ) ? v1 : v2;
-}
-
-Node FirstOrderModelQInt::getMax( Node v1, Node v2 ) {
-  return isLessThan( v1, v2 ) ? v2 : v1;
-}
-
-Node FirstOrderModelQInt::getMaximum( TypeNode tn ) {
-  return d_max[tn];
-}
-
-Node FirstOrderModelQInt::getNext( TypeNode tn, Node v ) {
-  if( v.isNull() ){
-    return d_min[tn];
-  }else{
-    Assert( getRepId( v )!=-1 );
-    int rid = d_rep_id[v];
-    if( rid==(int)(d_rep_set.d_type_reps[tn].size()-1) ){
-      Assert( false );
-      return Node::null();
-    }else{
-      return d_rep_set.d_type_reps[tn][ rid+1 ];
-    }
-  }
-}
-Node FirstOrderModelQInt::getPrev( TypeNode tn, Node v ) {
-  if( v.isNull() ){
-    Assert( false );
-    return Node::null();
-  }else{
-    Assert( getRepId( v )!=-1 );
-    int rid = d_rep_id[v];
-    if( rid==0 ){
-      return Node::null();
-    }else{
-      return d_rep_set.d_type_reps[tn][ rid-1 ];
-    }
-  }
-}
-
-bool FirstOrderModelQInt::doMeet( Node l1, Node u1, Node l2, Node u2, Node& lr, Node& ur ) {
-  Trace("qint-debug2") << "doMeet " << l1 << "..." << u1 << " with " << l2 << "..." << u2 << std::endl;
-  Assert( !u1.isNull() );
-  Assert( !u2.isNull() );
-  lr = l1.isNull() ? l2 : ( l2.isNull() ? l1 : getMax( l1, l2 ) );
-  ur = getMin( u1, u2 );
-  //return lr==ur || lr.isNull() || isLessThan( lr, ur );
-  return lr.isNull() || isLessThan( lr, ur );
-}
-
 
 
 

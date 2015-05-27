@@ -43,16 +43,16 @@ d_quantEngine( qe ), d_f( f ){
       if( isSimpleTrigger( d_nodes[0] ) ){
         d_mg = new InstMatchGeneratorSimple( f, d_nodes[0] );
       }else{
-        d_mg = InstMatchGenerator::mkInstMatchGenerator( d_nodes[0], qe );
+        d_mg = InstMatchGenerator::mkInstMatchGenerator( f, d_nodes[0], qe );
         d_mg->setActiveAdd(true);
       }
     }else{
-      d_mg = new InstMatchGeneratorMulti( f, d_nodes, qe, matchOption );
+      d_mg = new InstMatchGeneratorMulti( f, d_nodes, qe );
       //d_mg = InstMatchGenerator::mkInstMatchGenerator( d_nodes, qe );
       //d_mg->setActiveAdd();
     }
   }else{
-    d_mg = InstMatchGenerator::mkInstMatchGenerator( d_nodes, qe );
+    d_mg = InstMatchGenerator::mkInstMatchGenerator( f, d_nodes, qe );
     d_mg->setActiveAdd(true);
   }
   if( d_nodes.size()==1 ){
@@ -264,7 +264,7 @@ Node Trigger::getIsUsableTrigger( Node n, Node f, bool pol, bool hasPol ) {
           for( std::map< Node, Node >::iterator it = m.begin(); it!=m.end(); ++it ){
             if( !it->first.isNull() && it->first.getKind()==INST_CONSTANT ){
               Node veq;
-              if( QuantArith::isolate( it->first, m, veq, n.getKind() ) ){
+              if( QuantArith::isolate( it->first, m, veq, n.getKind() )!=0 ){
                 int vti = veq[0]==it->first ? 1 : 0;
                 if( isUsableTrigger(veq[vti], f) && !nodeContainsVar( veq[vti], veq[vti==0 ? 1 : 0]) ){
                   rtr = veq;
@@ -317,6 +317,9 @@ bool Trigger::isSimpleTrigger( Node n ){
       if( n[i].getKind()!=INST_CONSTANT && quantifiers::TermDb::hasInstConstAttr(n[i]) ){
         return false;
       }
+    }
+    if( options::purifyDtTriggers() && n.getKind()==APPLY_SELECTOR_TOTAL ){
+      return false;
     }
     return true;
   }else{
@@ -385,6 +388,8 @@ bool Trigger::collectPatTerms2( QuantifiersEngine* qe, Node f, Node n, std::map<
   }
 }
 
+
+
 bool Trigger::isBooleanTermTrigger( Node n ) {
   if( n.getKind()==ITE ){
     //check for boolean term converted to ITE
@@ -412,6 +417,38 @@ bool Trigger::isPureTheoryTrigger( Node n ) {
     }
     return true;
   }
+}
+
+bool Trigger::isLocalTheoryExt( Node n, std::vector< Node >& vars, std::vector< Node >& patTerms ) {
+  if( !n.getType().isBoolean() && n.getKind()==APPLY_UF ){
+    if( std::find( patTerms.begin(), patTerms.end(), n )==patTerms.end() ){
+      bool hasVar = false;
+      for( unsigned i=0; i<n.getNumChildren(); i++ ){
+        if( n[i].getKind()==INST_CONSTANT ){
+          hasVar = true;
+          if( std::find( vars.begin(), vars.end(), n[i] )==vars.end() ){
+            vars.push_back( n[i] );
+          }else{
+            //do not allow duplicate variables
+            return false;
+          }
+        }else{
+          //do not allow nested function applications
+          return false;
+        }
+      }
+      if( hasVar ){
+        patTerms.push_back( n );
+      }
+    }
+  }else{
+    for( unsigned i=0; i<n.getNumChildren(); i++ ){
+      if( !isLocalTheoryExt( n[i], vars, patTerms ) ){
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 void Trigger::collectPatTerms( QuantifiersEngine* qe, Node f, Node n, std::vector< Node >& patTerms, int tstrt, std::vector< Node >& exclude, bool filterInst ){
@@ -516,7 +553,7 @@ Node Trigger::getInversion( Node n, Node x ) {
   return Node::null();
 }
 
-InstMatchGenerator* Trigger::getInstMatchGenerator( Node n ) {
+InstMatchGenerator* Trigger::getInstMatchGenerator( Node q, Node n ) {
   if( n.getKind()==INST_CONSTANT ){
     return NULL;
   }else{

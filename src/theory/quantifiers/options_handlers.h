@@ -29,16 +29,16 @@ namespace quantifiers {
 static const std::string instWhenHelp = "\
 Modes currently supported by the --inst-when option:\n\
 \n\
-full (default)\n\
+full-last-call (default)\n\
++ Alternate running instantiation rounds at full effort and last\n\
+  call.  In other words, interleave instantiation and theory combination.\n\
+\n\
+full\n\
 + Run instantiation round at full effort, before theory combination.\n\
 \n\
 full-delay \n\
 + Run instantiation round at full effort, before theory combination, after\n\
   all other theories have finished.\n\
-\n\
-full-last-call\n\
-+ Alternate running instantiation rounds at full effort and last\n\
-  call.  In other words, interleave instantiation and theory combination.\n\
 \n\
 last-call\n\
 + Run instantiation at last call effort, after theory combination and\n\
@@ -88,18 +88,12 @@ default \n\
 none \n\
 + Disable model-based quantifier instantiation.\n\
 \n\
-instgen \n\
-+ Use instantiation algorithm that mimics Inst-Gen calculus. \n\
-\n\
 gen-ev \n\
 + Use model-based quantifier instantiation algorithm from CADE 24 finite\n\
   model finding paper based on generalizing evaluations.\n\
 \n\
 fmc-interval \n\
 + Same as default, but with intervals for models of integer functions.\n\
-\n\
-interval \n\
-+ Use algorithm that abstracts domain elements as intervals. \n\
 \n\
 abs \n\
 + Use abstract MBQI algorithm (uses disjoint sets). \n\
@@ -190,8 +184,21 @@ uf-dt-size \n\
 default | dt-size \n\
 + Default, enforce fairness using size theory operator.\n\
 \n\
+dt-height-bound \n\
++ Enforce fairness by height bound predicate.\n\
+\n\
 none \n\
 + Do not enforce fairness. \n\
+\n\
+";
+static const std::string termDbModeHelp = "\
+Modes for term database, supported by --term-db-mode:\n\
+\n\
+all  \n\
++ Quantifiers module considers all ground terms.\n\
+\n\
+relevant \n\
++ Quantifiers module considers only ground terms connected to current assertions. \n\
 \n\
 ";
 
@@ -264,14 +271,10 @@ inline MbqiMode stringToMbqiMode(std::string option, std::string optarg, SmtEngi
     return MBQI_GEN_EVAL;
   } else if(optarg == "none") {
     return MBQI_NONE;
-  } else if(optarg == "instgen") {
-    return MBQI_INST_GEN;
   } else if(optarg == "default" || optarg ==  "fmc") {
     return MBQI_FMC;
   } else if(optarg == "fmc-interval") {
     return MBQI_FMC_INTERVAL;
-  } else if(optarg == "interval") {
-    return MBQI_INTERVAL;
   } else if(optarg == "abs") {
     return MBQI_ABS;
   } else if(optarg == "trust") {
@@ -379,6 +382,8 @@ inline CegqiFairMode stringToCegqiFairMode(std::string option, std::string optar
     return CEGQI_FAIR_UF_DT_SIZE;
   } else if(optarg == "default" || optarg == "dt-size") {
     return CEGQI_FAIR_DT_SIZE;
+  } else if(optarg == "dt-height-bound" ){
+    return CEGQI_FAIR_DT_HEIGHT_PRED;
   } else if(optarg == "none") {
     return CEGQI_FAIR_NONE;
   } else if(optarg ==  "help") {
@@ -387,6 +392,20 @@ inline CegqiFairMode stringToCegqiFairMode(std::string option, std::string optar
   } else {
     throw OptionException(std::string("unknown option for --cegqi-fair: `") +
                           optarg + "'.  Try --cegqi-fair help.");
+  }
+}
+
+inline TermDbMode stringToTermDbMode(std::string option, std::string optarg, SmtEngine* smt) throw(OptionException) {
+  if(optarg == "all" ) {
+    return TERM_DB_ALL;
+  } else if(optarg == "relevant") {
+    return TERM_DB_RELEVANT;
+  } else if(optarg ==  "help") {
+    puts(termDbModeHelp.c_str());
+    exit(1);
+  } else {
+    throw OptionException(std::string("unknown option for --term-db-mode: `") +
+                          optarg + "'.  Try --term-db-mode help.");
   }
 }
 

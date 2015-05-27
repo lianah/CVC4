@@ -44,38 +44,31 @@ private:
   /** number of instantiations */
   int d_numInstantiations;
   int d_baseDecLevel;
-  /** number of restarts */
-  int d_numRestarts;
-
-  KEEP_STATISTIC(TimerStat, d_theoryTime, "theory::quantifiers::theoryTime");
 
   eq::EqualityEngine* d_masterEqualityEngine;
-
+private:
+  void computeCareGraph();  
 public:
   TheoryQuantifiers(context::Context* c, context::UserContext* u, OutputChannel& out, Valuation valuation, const LogicInfo& logicInfo);
   ~TheoryQuantifiers();
 
   void setMasterEqualityEngine(eq::EqualityEngine* eq);
-
   void addSharedTerm(TNode t);
   void notifyEq(TNode lhs, TNode rhs);
   void preRegisterTerm(TNode n);
   void presolve();
   void check(Effort e);
-  void propagate(Effort level);
   Node getNextDecisionRequest();
   Node getValue(TNode n);
   void collectModelInfo( TheoryModel* m, bool fullModel );
   void shutdown() { }
   std::string identify() const { return std::string("TheoryQuantifiers"); }
-  bool flipDecision();
   void setUserAttribute(const std::string& attr, Node n, std::vector<Node> node_values, std::string str_value);
   eq::EqualityEngine* getMasterEqualityEngine() { return d_masterEqualityEngine; }
   bool ppDontRewriteSubterm(TNode atom) { return atom.getKind() == kind::FORALL || atom.getKind() == kind::EXISTS; }
 private:
   void assertUniversal( Node n );
   void assertExistential( Node n );
-  bool restart();
 };/* class TheoryQuantifiers */
 
 }/* CVC4::theory::quantifiers namespace */

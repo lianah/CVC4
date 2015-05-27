@@ -31,14 +31,18 @@ option dumpModels --dump-models bool :default false :link --produce-models
  output models after every SAT/INVALID/UNKNOWN response
 option proof produce-proofs --proof bool :default false :predicate CVC4::smt::proofEnabledBuild CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
  turn on proof generation
-option checkProofs check-proofs --check-proofs bool :link --proof :link-smt produce-proofs :predicate CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
+option checkProofs check-proofs --check-proofs bool :link --proof :link-smt produce-proofs :predicate CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h" :read-write
  after UNSAT/VALID, machine-check the generated proof
 option dumpProofs --dump-proofs bool :default false :link --proof
  output proofs after every UNSAT/VALID response
 option dumpInstantiations --dump-instantiations bool :default false
  output instantiations of quantified formulas after every UNSAT/VALID response
+option dumpSynth --dump-synth bool :default false
+ output solution for synthesis conjectures after every UNSAT/VALID response
 option unsatCores produce-unsat-cores --produce-unsat-cores bool :predicate CVC4::smt::proofEnabledBuild CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
  turn on unsat core generation
+option checkUnsatCores check-unsat-cores --check-unsat-cores bool :link --produce-unsat-cores :link-smt produce-unsat-cores :read-write
+ after UNSAT/VALID, produce and check an unsat core (expensive)
 option dumpUnsatCores --dump-unsat-cores bool :default false :link --produce-unsat-cores :link-smt produce-unsat-cores :predicate CVC4::smt::beforeSearch :predicate-include "smt/options_handlers.h"
  output unsat cores after every UNSAT/VALID response
 
@@ -87,14 +91,18 @@ option - regular-output-channel argument :handler CVC4::smt::setRegularOutputCha
 option - diagnostic-output-channel argument :handler CVC4::smt::setDiagnosticOutputChannel :handler-include "smt/options_handlers.h"
  set the diagnostic output channel of the solver
 
-common-option cumulativeMillisecondLimit tlimit --tlimit=MS "unsigned long"
+common-option cumulativeMillisecondLimit tlimit --tlimit=MS "unsigned long" :handler CVC4::smt::tlimitHandler :handler-include "smt/options_handlers.h"
  enable time limiting (give milliseconds)
-common-option perCallMillisecondLimit  tlimit-per --tlimit-per=MS "unsigned long"
+common-option perCallMillisecondLimit  tlimit-per --tlimit-per=MS "unsigned long" :handler CVC4::smt::tlimitPerHandler :handler-include "smt/options_handlers.h"
  enable time limiting per query (give milliseconds)
-common-option cumulativeResourceLimit rlimit --rlimit=N "unsigned long"
+common-option cumulativeResourceLimit rlimit --rlimit=N "unsigned long" :handler CVC4::smt::rlimitHandler :handler-include "smt/options_handlers.h"
  enable resource limiting (currently, roughly the number of SAT conflicts)
-common-option perCallResourceLimit reproducible-resource-limit --rlimit-per=N "unsigned long"
+common-option perCallResourceLimit reproducible-resource-limit --rlimit-per=N "unsigned long" :handler CVC4::smt::rlimitPerHandler :handler-include "smt/options_handlers.h"
  enable resource limiting per query
+common-option hardLimit hard-limit --hard-limit bool :default false
+ the resource limit is hard potentially leaving the smtEngine in an unsafe state (should be destroyed and rebuild after resourcing out)
+common-option cpuTime cpu-time --cpu-time bool :default false
+ measures CPU time if set to true and wall time if false (default false)
 
 expert-option rewriteApplyToConst rewrite-apply-to-const --rewrite-apply-to-const bool :default false
  eliminate function applications, rewriting e.g. f(5) to a new symbol f_5

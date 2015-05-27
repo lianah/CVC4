@@ -32,6 +32,7 @@
 
 #include "theory/theory_model.h"
 #include "theory/arrays/theory_arrays_rewriter.h"
+#include "theory/quantifiers/term_database.h"
 
 using namespace std;
 
@@ -42,7 +43,10 @@ namespace smt2 {
 static string smtKindString(Kind k) throw();
 
 static void printBvParameterizedOp(std::ostream& out, TNode n) throw();
+static void printFpParameterizedOp(std::ostream& out, TNode n) throw();
 
+static void toStreamRational(std::ostream& out, const Rational& r, bool decimal) throw();
+  
 void Smt2Printer::toStream(std::ostream& out, TNode n,
                            int toDepth, bool types, size_t dag) const throw() {
   if(dag != 0) {
@@ -140,6 +144,7 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
       case REAL_TYPE: out << "Real"; break;
       case INTEGER_TYPE: out << "Int"; break;
       case STRING_TYPE: out << "String"; break;
+      case ROUNDINGMODE_TYPE: out << "RoundingMode"; break;
       default:
         // fall back on whatever operator<< does on underlying type; we
         // might luck out and be SMT-LIB v2 compliant
@@ -148,6 +153,12 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
       break;
     case kind::BITVECTOR_TYPE:
       out << "(_ BitVec " << n.getConst<BitVectorSize>().size << ")";
+      break;
+    case kind::FLOATINGPOINT_TYPE:
+      out << "(_ FloatingPoint "
+	  << n.getConst<FloatingPointSize>().exponent() << " "
+	  << n.getConst<FloatingPointSize>().significand()
+	  << ")";
       break;
     case kind::CONST_BITVECTOR: {
       const BitVector& bv = n.getConst<BitVector>();
@@ -163,6 +174,20 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
       // }
       break;
     }
+    case kind::CONST_FLOATINGPOINT:
+      out << n.getConst<FloatingPoint>().getLiteral();
+      break;
+    case kind::CONST_ROUNDINGMODE:
+      switch (n.getConst<RoundingMode>()) {
+      case roundNearestTiesToEven : out << "roundNearestTiesToEven"; break;
+      case roundNearestTiesToAway : out << "roundNearestTiesToAway"; break;
+      case roundTowardPositive : out << "roundTowardPositive"; break;
+      case roundTowardNegative : out << "roundTowardNegative"; break;
+      case roundTowardZero : out << "roundTowardZero"; break;
+      default :
+	Unreachable("Invalid value of rounding mode constant (%d)",n.getConst<RoundingMode>());
+      }
+      break;
     case kind::CONST_BOOLEAN:
       // the default would print "1" or "0" for bool, that's not correct
       // for our purposes
@@ -175,36 +200,38 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
       out << smtKindString(n.getConst<Chain>().getOperator());
       break;
     case kind::CONST_RATIONAL: {
-      Rational r = n.getConst<Rational>();
-      if(r < 0) {
-        if(r.isIntegral()) {
-          out << "(- " << -r << ')';
-        } else {
-          out << "(- (/ " << (-r).getNumerator() << ' ' << (-r).getDenominator() << "))";
-        }
-      } else {
-        if(r.isIntegral()) {
-          out << r;
-        } else {
-          out << "(/ " << r.getNumerator() << ' ' << r.getDenominator() << ')';
-        }
-      }
+      const Rational& r = n.getConst<Rational>();
+      toStreamRational(out, r, false);
+      // Rational r = n.getConst<Rational>();
+      // if(r < 0) {
+      //   if(r.isIntegral()) {
+      //     out << "(- " << -r << ')';
+      //   } else {
+      //     out << "(- (/ " << (-r).getNumerator() << ' ' << (-r).getDenominator() << "))";
+      //   }
+      // } else {
+      //   if(r.isIntegral()) {
+      //     out << r;
+      //   } else {
+      //     out << "(/ " << r.getNumerator() << ' ' << r.getDenominator() << ')';
+      //   }
+      // }
       break;
     }
 
     case kind::CONST_STRING: {
-      const String& s = n.getConst<String>();
+      //const std::vector<unsigned int>& s = n.getConst<String>().getVec();
+      std::string s = n.getConst<String>().toString();
       out << '"';
       for(size_t i = 0; i < s.size(); ++i) {
-        char c = String::convertUnsignedIntToChar(s[i]);
+        //char c = String::convertUnsignedIntToChar(s[i]);
+        char c = s[i];
         if(c == '"') {
-          if(d_variant == z3str_variant || d_variant == smt2_0_variant) {
+          if(d_variant == smt2_0_variant) {
             out << "\\\"";
           } else {
             out << "\"\"";
           }
-        } else if(c == '\\' && (d_variant == z3str_variant || d_variant == smt2_0_variant)) {
-          out << "\\\\";
         } else {
           out << c;
         }
@@ -448,7 +475,49 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
   case kind::SET_TYPE:
   case kind::SINGLETON: out << smtKindString(k) << " "; break;
 
-   // datatypes
+    // fp theory
+  case kind::FLOATINGPOINT_FP:
+  case kind::FLOATINGPOINT_EQ:
+  case kind::FLOATINGPOINT_ABS:
+  case kind::FLOATINGPOINT_NEG:
+  case kind::FLOATINGPOINT_PLUS:
+  case kind::FLOATINGPOINT_SUB:
+  case kind::FLOATINGPOINT_MULT:
+  case kind::FLOATINGPOINT_DIV:
+  case kind::FLOATINGPOINT_FMA:
+  case kind::FLOATINGPOINT_SQRT:
+  case kind::FLOATINGPOINT_REM:
+  case kind::FLOATINGPOINT_RTI:
+  case kind::FLOATINGPOINT_MIN:
+  case kind::FLOATINGPOINT_MAX:
+  case kind::FLOATINGPOINT_LEQ:
+  case kind::FLOATINGPOINT_LT:
+  case kind::FLOATINGPOINT_GEQ:
+  case kind::FLOATINGPOINT_GT:
+  case kind::FLOATINGPOINT_ISN:
+  case kind::FLOATINGPOINT_ISSN:
+  case kind::FLOATINGPOINT_ISZ:
+  case kind::FLOATINGPOINT_ISINF:
+  case kind::FLOATINGPOINT_ISNAN:
+  case kind::FLOATINGPOINT_ISNEG:
+  case kind::FLOATINGPOINT_ISPOS:
+  case kind::FLOATINGPOINT_TO_REAL:
+    out << smtKindString(k) << ' '; break;
+
+  case kind::FLOATINGPOINT_TO_FP_IEEE_BITVECTOR:
+  case kind::FLOATINGPOINT_TO_FP_FLOATINGPOINT:
+  case kind::FLOATINGPOINT_TO_FP_REAL:
+  case kind::FLOATINGPOINT_TO_FP_SIGNED_BITVECTOR:
+  case kind::FLOATINGPOINT_TO_FP_UNSIGNED_BITVECTOR:
+  case kind::FLOATINGPOINT_TO_FP_GENERIC:
+  case kind::FLOATINGPOINT_TO_UBV:
+  case kind::FLOATINGPOINT_TO_SBV:
+    printFpParameterizedOp(out, n);
+    out << ' ';
+    stillNeedToPrintParams = false;
+    break;
+
+    // datatypes
   case kind::APPLY_TYPE_ASCRIPTION: {
       TypeNode t = TypeNode::fromType(n.getOperator().getConst<AscriptionType>().getType());
       if(t.getKind() == kind::TYPE_CONSTANT &&
@@ -456,8 +525,14 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
          n[0].getType().isInteger()) {
         // Special case, in model output integer constants that should be
         // Real-sorted are wrapped in a type ascription.  Handle that here.
-        toStream(out, n[0], -1, false);
-        out << ".0";
+
+	// Note: This is Tim making a guess about Morgan's Code.
+	Assert(n[0].getKind() == kind::CONST_RATIONAL);	
+	toStreamRational(out, n[0].getConst<Rational>(), true);
+
+        //toStream(out, n[0], -1, false);
+        //out << ".0";
+	
         return;
       }
       out << "(as ";
@@ -515,9 +590,14 @@ void Smt2Printer::toStream(std::ostream& out, TNode n,
   case kind::INST_PATTERN:
     break;
   case kind::INST_PATTERN_LIST:
-    // TODO user patterns
     for(unsigned i=0; i<n.getNumChildren(); i++) {
-      out << ":pattern " << n[i];
+      if( n[i].getKind()==kind::INST_ATTRIBUTE ){
+        if( n[i][0].getAttribute(theory::FunDefAttribute()) ){
+          out << ":fun-def";
+        }
+      }else{
+        out << ":pattern " << n[i];
+      }
     }
     return;
     break;
@@ -657,6 +737,46 @@ static string smtKindString(Kind k) throw() {
   case kind::SET_TYPE: return "Set";
   case kind::SINGLETON: return "singleton";
   case kind::INSERT: return "insert";
+
+    // fp theory
+  case kind::FLOATINGPOINT_FP: return "fp";
+  case kind::FLOATINGPOINT_EQ: return "fp.eq";
+  case kind::FLOATINGPOINT_ABS: return "fp.abs";
+  case kind::FLOATINGPOINT_NEG: return "fp.neg";
+  case kind::FLOATINGPOINT_PLUS: return "fp.add";
+  case kind::FLOATINGPOINT_SUB: return "fp.sub";
+  case kind::FLOATINGPOINT_MULT: return "fp.mul";
+  case kind::FLOATINGPOINT_DIV: return "fp.div";
+  case kind::FLOATINGPOINT_FMA: return "fp.fma";
+  case kind::FLOATINGPOINT_SQRT: return "fp.sqrt";
+  case kind::FLOATINGPOINT_REM: return "fp.rem";
+  case kind::FLOATINGPOINT_RTI: return "fp.roundToIntegral";
+  case kind::FLOATINGPOINT_MIN: return "fp.min";
+  case kind::FLOATINGPOINT_MAX: return "fp.max";
+
+  case kind::FLOATINGPOINT_LEQ: return "fp.leq";
+  case kind::FLOATINGPOINT_LT: return "fp.lt";
+  case kind::FLOATINGPOINT_GEQ: return "fp.geq";
+  case kind::FLOATINGPOINT_GT: return "fp.gt";
+
+  case kind::FLOATINGPOINT_ISN: return "fp.isNormal";
+  case kind::FLOATINGPOINT_ISSN: return "fp.isSubnormal";
+  case kind::FLOATINGPOINT_ISZ: return "fp.isZero";  
+  case kind::FLOATINGPOINT_ISINF: return "fp.isInfinite";
+  case kind::FLOATINGPOINT_ISNAN: return "fp.isNaN";
+  case kind::FLOATINGPOINT_ISNEG: return "fp.isNegative";
+  case kind::FLOATINGPOINT_ISPOS: return "fp.isPositive";
+
+  case kind::FLOATINGPOINT_TO_FP_IEEE_BITVECTOR: return "to_fp";
+  case kind::FLOATINGPOINT_TO_FP_FLOATINGPOINT: return "to_fp";
+  case kind::FLOATINGPOINT_TO_FP_REAL: return "to_fp";
+  case kind::FLOATINGPOINT_TO_FP_SIGNED_BITVECTOR: return "to_fp";
+  case kind::FLOATINGPOINT_TO_FP_UNSIGNED_BITVECTOR: return "to_fp_unsigned";
+  case kind::FLOATINGPOINT_TO_FP_GENERIC: return "to_fp_unsigned";
+  case kind::FLOATINGPOINT_TO_UBV: return "fp.to_ubv";
+  case kind::FLOATINGPOINT_TO_SBV: return "fp.to_sbv";
+  case kind::FLOATINGPOINT_TO_REAL: return "fp.to_real";
+
   default:
     ; /* fall through */
   }
@@ -702,6 +822,58 @@ static void printBvParameterizedOp(std::ostream& out, TNode n) throw() {
   }
   out << ")";
 }
+
+static void printFpParameterizedOp(std::ostream& out, TNode n) throw() {
+  out << "(_ ";
+  switch(n.getKind()) {
+  case kind::FLOATINGPOINT_TO_FP_IEEE_BITVECTOR:
+    //out << "to_fp_bv "
+    out << "to_fp "
+        << n.getOperator().getConst<FloatingPointToFPIEEEBitVector>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPIEEEBitVector>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_FP_FLOATINGPOINT:
+    //out << "to_fp_fp "
+    out << "to_fp "
+        << n.getOperator().getConst<FloatingPointToFPFloatingPoint>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPFloatingPoint>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_FP_REAL:
+    //out << "to_fp_real "
+    out << "to_fp "
+        << n.getOperator().getConst<FloatingPointToFPReal>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPReal>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_FP_SIGNED_BITVECTOR:
+    //out << "to_fp_signed "
+    out << "to_fp "
+        << n.getOperator().getConst<FloatingPointToFPSignedBitVector>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPSignedBitVector>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_FP_UNSIGNED_BITVECTOR:
+    out << "to_fp_unsigned "
+        << n.getOperator().getConst<FloatingPointToFPUnsignedBitVector>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPUnsignedBitVector>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_FP_GENERIC:
+    out << "to_fp "
+        << n.getOperator().getConst<FloatingPointToFPGeneric>().t.exponent() << ' '
+        << n.getOperator().getConst<FloatingPointToFPGeneric>().t.significand();
+    break;
+  case kind::FLOATINGPOINT_TO_UBV:
+    out << "fp.to_ubv "
+        << n.getOperator().getConst<FloatingPointToUBV>().bvs.size;
+    break;
+  case kind::FLOATINGPOINT_TO_SBV:
+    out << "fp.to_sbv "
+        << n.getOperator().getConst<FloatingPointToSBV>().bvs.size;
+    break;
+  default:
+    out << n.getKind();
+  }
+  out << ")";
+}
+
 
 template <class T>
 static bool tryToStream(std::ostream& out, const Command* c) throw();
@@ -794,7 +966,8 @@ void Smt2Printer::toStream(std::ostream& out, const CommandStatus* s) const thro
 
   if(tryToStream<CommandSuccess>(out, s, d_variant) ||
      tryToStream<CommandFailure>(out, s, d_variant) ||
-     tryToStream<CommandUnsupported>(out, s, d_variant)) {
+     tryToStream<CommandUnsupported>(out, s, d_variant) ||
+     tryToStream<CommandInterrupted>(out, s, d_variant)) {
     return;
   }
 
@@ -884,7 +1057,9 @@ void Smt2Printer::toStream(std::ostream& out, const Model& m, const Command* c) 
       out << "(define-fun " << n << " () "
           << n.getType() << " ";
       if(val.getType().isInteger() && n.getType().isReal() && !n.getType().isInteger()) {
-        out << val << ".0";
+	//toStreamReal(out, val, true);
+	toStreamRational(out, val.getConst<Rational>(), true);
+	//out << val << ".0";	
       } else {
         out << val;
       }
@@ -1036,6 +1211,61 @@ static void toStream(std::ostream& out, const DefineFunctionCommand* c) throw() 
   }
   out << ") " << type << " " << formula << ")";
 }
+
+static void toStreamRational(std::ostream& out, const Rational& r, bool decimal) throw() {
+  bool neg = r.sgn() < 0;
+  
+  // TODO:
+  // We are currently printing (- (/ 5 3))
+  // instead of (/ (- 5) 3) which is what is in the SMT-LIB value in the theory definition.
+  // Before switching, I'll keep to what was there and send an email.
+
+  // Tim: Apologies for the ifs on one line but in this case they are cleaner.
+  
+  if (neg) { out << "(- "; }
+  
+  if(r.isIntegral()) {
+    if (neg) {
+      out << (-r);
+    }else {
+      out << r;
+    }
+    if (decimal) { out << ".0"; }
+  }else{
+    out << "(/ ";
+    if(neg) {
+      Rational abs_r = (-r);
+      out << abs_r.getNumerator();
+      if(decimal) { out << ".0"; }
+      out << ' ' << abs_r.getDenominator();
+      if(decimal) { out << ".0"; }
+    }else{
+      out << r.getNumerator();
+      if(decimal) { out << ".0"; }
+      out << ' ' << r.getDenominator();
+      if(decimal) { out << ".0"; }
+    }
+    out << ')';
+  }
+
+  if (neg) { out << ')';}
+
+  // if(r < 0) {
+  //   Rational abs_r = -r;
+  //   if(r.isIntegral()) {
+  //     out << "(- " << abs_r << ')';
+  //   } else {
+  //     out << "(- (/ " << (-r).getNumerator() << ' ' << (-r).getDenominator() << "))";
+  //   }
+  // } else {
+  //   if(r.isIntegral()) {
+  //         out << r;
+  //       } else {
+  //         out << "(/ " << r.getNumerator() << ' ' << r.getDenominator() << ')';
+  //       }
+  //     }
+}
+
 
 static void toStream(std::ostream& out, const DeclareTypeCommand* c) throw() {
   out << "(declare-sort " << c->getSymbol() << " " << c->getArity() << ")";
@@ -1206,6 +1436,10 @@ static void toStream(std::ostream& out, const CommandSuccess* s, Variant v) thro
   if(Command::printsuccess::getPrintSuccess(out)) {
     out << "success" << endl;
   }
+}
+
+static void toStream(std::ostream& out, const CommandInterrupted* s, Variant v) throw() {
+  out << "interrupted" << endl;
 }
 
 static void toStream(std::ostream& out, const CommandUnsupported* s, Variant v) throw() {

@@ -1,5 +1,5 @@
-SUBDIRS = . arith precedence uf uflra uflia bv arrays aufbv auflia datatypes quantifiers rewriterules lemmas push-pop preprocess tptp unconstrained decision fmf strings sets parser
-DIST_SUBDIRS = $(SUBDIRS) #. arith precedence uf uflra uflia bv arrays aufbv auflia datatypes quantifiers rewriterules lemmas push-pop preprocess tptp unconstrained decision fmf strings sets
+SUBDIRS = . arith precedence uf uflra uflia bv arrays aufbv auflia datatypes quantifiers rewriterules lemmas push-pop preprocess tptp unconstrained decision fmf strings sets parser sygus
+DIST_SUBDIRS = $(SUBDIRS)
 
 # don't override a BINARY imported from a personal.mk
 @mk_if@eq ($(BINARY),)
@@ -61,10 +61,14 @@ SMT2_TESTS = \
 	simplification_bug4.smt2 \
 	parallel-let.smt2 \
 	get-value-incremental.smt2 \
+	get-value-reals.smt2 \
+	get-value-ints.smt2 \
+	get-value-reals-ints.smt2 \
 	hung13sdk_output1.smt2 \
 	hung10_itesdk_output2.smt2 \
 	hung10_itesdk_output1.smt2 \
-	hung13sdk_output2.smt2
+	hung13sdk_output2.smt2 \
+	declare-funs.smt2
 
 # Regression tests for PL inputs
 CVC_TESTS = \
@@ -166,7 +170,11 @@ BUG_TESTS = \
 	bug578.smt2 \
 	bug585.cvc \
 	bug586.cvc \
-	bug590.smt2
+	bug590.smt2 \
+	bug593.smt2 \
+	bug595.cvc \
+	bug596.cvc \
+	bug596b.cvc
 
 TESTS = $(SMT_TESTS) $(SMT2_TESTS) $(CVC_TESTS) $(TPTP_TESTS) $(BUG_TESTS)
 

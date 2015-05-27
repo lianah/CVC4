@@ -33,7 +33,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "proof/proof_manager.h"
 #include "proof/sat_proof.h"
 
-using namespace Minisat;
+using namespace CVC4::Minisat;
 using namespace CVC4;
 using namespace CVC4::prop;
 
@@ -482,6 +482,7 @@ Lit Solver::pickBranchLit()
     Lit nextLit;
 
 #ifdef CVC4_REPLAY
+
     nextLit = MinisatSatSolver::toMinisatLit(proxy->getNextReplayDecision());
 
     if (nextLit != lit_Undef) {
@@ -512,7 +513,12 @@ Lit Solver::pickBranchLit()
     if(nextLit != lit_Undef) {
       Assert(value(var(nextLit)) == l_Undef, "literal to decide already has value");
       decisions++;
-      return nextLit;
+      Var next = var(nextLit);
+      if(polarity[next] & 0x2) {
+        return mkLit(next, polarity[next] & 0x1);
+      } else {
+        return nextLit;
+      }
     }
 
     Var next = var_Undef;
@@ -1593,7 +1599,7 @@ CRef Solver::updateLemmas() {
   Debug("minisat::lemmas") << "Solver::updateLemmas() begin" << std::endl;
 
   // Avoid adding lemmas indefinitely without resource-out
-  spendResource();
+  proxy->spendResource();
 
   CRef conflict = CRef_Undef;
 
@@ -1709,4 +1715,16 @@ CRef Solver::updateLemmas() {
   Debug("minisat::lemmas") << "Solver::updateLemmas() end" << std::endl;
 
   return conflict;
+}
+
+inline bool Solver::withinBudget() const {
+  Assert (proxy);
+  // spendResource sets async_interrupt or throws UnsafeInterruptException
+  // depending on whether hard-limit is enabled
+  proxy->spendResource();
+
+  bool within_budget =  !asynch_interrupt &&
+    (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
+    (propagation_budget < 0 || propagations < (uint64_t)propagation_budget);
+  return within_budget;
 }

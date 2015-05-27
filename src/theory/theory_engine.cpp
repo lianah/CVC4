@@ -26,6 +26,7 @@
 #include "expr/node_builder.h"
 #include "options/options.h"
 #include "util/lemma_output_channel.h"
+#include "util/resource_manager.h"
 
 #include "theory/theory.h"
 #include "theory/theory_engine.h"
@@ -73,7 +74,7 @@ void TheoryEngine::finishInit() {
   if (d_logicInfo.isQuantified()) {
     d_quantEngine->finishInit();
     Assert(d_masterEqualityEngine == 0);
-    d_masterEqualityEngine = new eq::EqualityEngine(d_masterEENotify,getSatContext(), "theory::master");
+    d_masterEqualityEngine = new eq::EqualityEngine(d_masterEENotify,getSatContext(), "theory::master", false);
 
     for(TheoryId theoryId = theory::THEORY_FIRST; theoryId != theory::THEORY_LAST; ++ theoryId) {
       if (d_theoryTable[theoryId]) {
@@ -92,19 +93,10 @@ void TheoryEngine::finishInit() {
 
 void TheoryEngine::eqNotifyNewClass(TNode t){
   d_quantEngine->addTermToDatabase( t );
-  if( d_logicInfo.isQuantified() && options::quantConflictFind() ){
-    d_quantEngine->getConflictFind()->newEqClass( t );
-  }
 }
 
 void TheoryEngine::eqNotifyPreMerge(TNode t1, TNode t2){
-  //TODO: add notification to efficient E-matching
-  if( d_logicInfo.isQuantified() ){
-    //d_quantEngine->getEfficientEMatcher()->merge( t1, t2 );
-    if( options::quantConflictFind() ){
-      d_quantEngine->getConflictFind()->merge( t1, t2 );
-    }
-  }
+
 }
 
 void TheoryEngine::eqNotifyPostMerge(TNode t1, TNode t2){
@@ -151,6 +143,7 @@ TheoryEngine::TheoryEngine(context::Context* context,
   d_true(),
   d_false(),
   d_interrupted(false),
+  d_resourceManager(NodeManager::currentResourceManager()),
   d_inPreregister(false),
   d_factsAsserted(context, false),
   d_preRegistrationVisitor(this, context),
@@ -343,8 +336,7 @@ void TheoryEngine::dumpAssertions(const char* tag) {
  * @param effort the effort level to use
  */
 void TheoryEngine::check(Theory::Effort effort) {
-
-  d_propEngine->checkTime();
+  // spendResource();
 
   // Reset the interrupt flag
   d_interrupted = false;
@@ -387,6 +379,13 @@ void TheoryEngine::check(Theory::Effort effort) {
         printAssertions("theory::assertions");
       }
 
+      if(Theory::fullEffort(effort)) {
+        Trace("theory::assertions::fulleffort") << endl;
+        if (Trace.isOn("theory::assertions::fulleffort")) {
+          printAssertions("theory::assertions::fulleffort");
+        }
+      }
+        
       // Note that we've discharged all the facts
       d_factsAsserted = false;
 
@@ -418,12 +417,6 @@ void TheoryEngine::check(Theory::Effort effort) {
       if(d_logicInfo.isQuantified()) {
         // quantifiers engine must pass effort last call check
         d_quantEngine->check(Theory::EFFORT_LAST_CALL);
-        // if we have given up, then possibly flip decision
-        if(options::flipDecision()) {
-          if(d_incomplete && !d_inConflict && !needCheck()) {
-            ((theory::quantifiers::TheoryQuantifiers*) d_theoryTable[THEORY_QUANTIFIERS])->flipDecision();
-          }
-        }
         // if returning incomplete or SAT, we have ensured that the model in the quantifiers engine has been built
       } else if(options::produceModels()) {
         // must build model at this point
@@ -435,7 +428,8 @@ void TheoryEngine::check(Theory::Effort effort) {
       }
     }
 
-    Debug("theory") << "TheoryEngine::check(" << effort << "): done, we are " << (d_inConflict ? "unsat" : "sat") << (d_lemmasAdded ? " with new lemmas" : " with no new lemmas") << endl;
+    Debug("theory") << "TheoryEngine::check(" << effort << "): done, we are " << (d_inConflict ? "unsat" : "sat") << (d_lemmasAdded ? " with new lemmas" : " with no new lemmas");
+    Debug("theory") << ", need check = " << needCheck() << endl;
 
     if(!d_inConflict && Theory::fullEffort(effort) && d_masterEqualityEngine != NULL && !d_lemmasAdded) {
       AlwaysAssert(d_masterEqualityEngine->consistent());
@@ -855,6 +849,7 @@ struct preprocess_stack_element {
 Node TheoryEngine::preprocess(TNode assertion) {
 
   Trace("theory::preprocess") << "TheoryEngine::preprocess(" << assertion << ")" << endl;
+  // spendResource();
 
   // Do a topological sort of the subexpressions and substitute them
   vector<preprocess_stack_element> toVisit;
@@ -968,8 +963,8 @@ void TheoryEngine::assertToTheory(TNode assertion, TNode originalAssertion, theo
   Trace("theory::assertToTheory") << "TheoryEngine::assertToTheory(" << assertion << ", " << toTheoryId << ", " << fromTheoryId << ")" << endl;
 
   Assert(toTheoryId != fromTheoryId);
-  if(! d_logicInfo.isTheoryEnabled(toTheoryId) &&
-     toTheoryId != THEORY_SAT_SOLVER) {
+  if(toTheoryId != THEORY_SAT_SOLVER &&
+     ! d_logicInfo.isTheoryEnabled(toTheoryId)) {
     stringstream ss;
     ss << "The logic was specified as " << d_logicInfo.getLogicString()
        << ", which doesn't include " << toTheoryId
@@ -1091,7 +1086,7 @@ void TheoryEngine::assertFact(TNode literal)
 {
   Trace("theory") << "TheoryEngine::assertFact(" << literal << ")" << endl;
 
-  d_propEngine->checkTime();
+  // spendResource();
 
   // If we're in conflict, nothing to do
   if (d_inConflict) {
@@ -1154,7 +1149,7 @@ bool TheoryEngine::propagate(TNode literal, theory::TheoryId theory) {
 
   Debug("theory::propagate") << "TheoryEngine::propagate(" << literal << ", " << theory << ")" << endl;
 
-  d_propEngine->checkTime();
+  // spendResource();
 
   if(Dump.isOn("t-propagations")) {
     Dump("t-propagations") << CommentCommand("negation of theory propagation: expect valid")
@@ -1201,6 +1196,7 @@ theory::EqualityStatus TheoryEngine::getEqualityStatus(TNode a, TNode b) {
 }
 
 Node TheoryEngine::getModelValue(TNode var) {
+  if (var.isConst()) return var;  // FIXME: HACK!!!
   Assert(d_sharedTerms.isShared(var));
   return theoryOf(Theory::theoryOf(var.getType()))->getModelValue(var);
 }
@@ -1220,6 +1216,14 @@ Node TheoryEngine::ensureLiteral(TNode n) {
 void TheoryEngine::printInstantiations( std::ostream& out ) {
   if( d_quantEngine ){
     d_quantEngine->printInstantiations( out );
+  }
+}
+
+void TheoryEngine::printSynthSolution( std::ostream& out ) {
+  if( d_quantEngine ){
+    d_quantEngine->printSynthSolution( out );
+  }else{
+    out << "Internal error : synth solution not available when quantifiers are not present." << std::endl;
   }
 }
 
@@ -1377,7 +1381,7 @@ void TheoryEngine::ensureLemmaAtoms(const std::vector<TNode>& atoms, theory::The
 
 theory::LemmaStatus TheoryEngine::lemma(TNode node, bool negated, bool removable, bool preprocess, theory::TheoryId atomsTo) {
   // For resource-limiting (also does a time check).
-  spendResource();
+  // spendResource();
 
   // Do we need to check atoms
   if (atomsTo != theory::THEORY_LAST) {
@@ -1562,7 +1566,7 @@ bool TheoryEngine::donePPSimpITE(std::vector<Node>& assertions){
         Chat() << "..ite simplifier did quite a bit of work.. " << nm->poolSize() << endl;
         Chat() << "....node manager contains " << nm->poolSize() << " nodes before cleanup" << endl;
         d_iteUtilities->clear();
-        Rewriter::garbageCollect();
+        Rewriter::clearCaches();
         d_iteRemover.garbageCollect();
         nm->reclaimZombiesUntil(options::zombieHuntThreshold());
         Chat() << "....node manager contains " << nm->poolSize() << " nodes after cleanup" << endl;
@@ -1750,4 +1754,8 @@ std::pair<bool, Node> TheoryEngine::entailmentCheck(theory::TheoryOfMode mode, T
   Assert(seffects == NULL || tid == seffects->getTheoryId());
 
   return th->entailmentCheck(lit, params, seffects);
+}
+
+void TheoryEngine::spendResource() {
+  d_resourceManager->spendResource();
 }

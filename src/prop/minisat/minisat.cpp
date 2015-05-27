@@ -32,7 +32,8 @@ MinisatSatSolver::MinisatSatSolver() :
   d_context(NULL)
 {}
 
-MinisatSatSolver::~MinisatSatSolver() {
+MinisatSatSolver::~MinisatSatSolver() throw()
+{
   delete d_minisat;
 }
 
@@ -57,11 +58,6 @@ SatLiteral MinisatSatSolver::toSatLiteral(Minisat::Lit lit) {
 
   return SatLiteral(SatVariable(Minisat::var(lit)),
                     Minisat::sign(lit));
-}
-
-SatValue MinisatSatSolver::toSatLiteralValue(bool res) {
-  if(res) return SAT_VALUE_TRUE;
-  else return SAT_VALUE_FALSE;
 }
 
 SatValue MinisatSatSolver::toSatLiteralValue(Minisat::lbool res) {
@@ -182,10 +178,6 @@ SatValue MinisatSatSolver::solve() {
   return toSatLiteralValue(d_minisat->solve());
 }
 
-bool MinisatSatSolver::spendResource() {
-  d_minisat->spendResource();
-  return !d_minisat->withinBudget();
-}
 
 void MinisatSatSolver::interrupt() {
   d_minisat->interrupt();
