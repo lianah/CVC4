@@ -500,17 +500,14 @@ Command* Parser::nextCommand() throw(ParserException, UnsafeInterruptException) 
       dynamic_cast<QuitCommand*>(cmd) == NULL) {
     // don't count set-option commands as to not get stuck in an infinite
     // loop of resourcing out
-    //d_resourceManager->spendResource(options::parseStep());
-    // FIXME: until we figure out checking options into the parser
-    d_resourceManager->spendResource(0);
+    d_resourceManager->spendResource(d_exprManager->getOptions()[options::parseStep]);
   }
   return cmd;
 }
 
 Expr Parser::nextExpression() throw(ParserException, UnsafeInterruptException) {
   Debug("parser") << "nextExpression()" << std::endl;
-  // d_resourceManager->spendResource(options::parseStep());
-  d_resourceManager->spendResource(0);
+  d_resourceManager->spendResource(d_exprManager->getOptions()[options::parseStep]);
   Expr result;
   if(!done()) {
     try {

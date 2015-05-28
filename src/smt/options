@@ -117,8 +117,8 @@ expert-option decisionStep decision-step --decision-step uint64_t :default 1
 expert-option bitblastStep bitblast-step --bitblast-step uint64_t :default 1
  ammount of resources spent for each bitblast step
  
-#expert-option parseStep parse-step --parse-step uint64_t :default 1
-# ammount of resources spent for each command/expression parsing
+expert-option parseStep parse-step --parse-step uint64_t :default 1
+ ammount of resources spent for each command/expression parsing
  
 expert-option lemmaStep lemma-step --lemma-step uint64_t :default 1
  ammount of resources spent when adding lemmas
