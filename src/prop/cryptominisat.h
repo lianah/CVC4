@@ -38,6 +38,8 @@ public:
   void addClause(SatClause& clause, bool removable, uint64_t proof_id);
   void addXorClause(SatClause& clause, bool rhs, bool removable, uint64_t proof_id);
 
+  bool nativeXor() { return true; }
+  
   SatVariable newVar(bool isTheoryAtom = false, bool preRegister = false, bool canErase = true);
 
   SatVariable trueVar();
@@ -68,14 +70,16 @@ public:
 
   class Statistics {
   public:
-    ReferenceStat<uint64_t> d_statStarts, d_statDecisions;
-    ReferenceStat<uint64_t> d_statRndDecisions, d_statPropagations;
-    ReferenceStat<uint64_t> d_statConflicts, d_statClausesLiterals;
-    ReferenceStat<uint64_t> d_statLearntsLiterals,  d_statMaxLiterals;
-    ReferenceStat<uint64_t> d_statTotLiterals;
-    ReferenceStat<int> d_statEliminatedVars;
+    /* ReferenceStat<uint64_t> d_statStarts, d_statDecisions; */
+    /* ReferenceStat<uint64_t> d_statRndDecisions, d_statPropagations; */
+    /* ReferenceStat<uint64_t> d_statConflicts, d_statClausesLiterals; */
+    /* ReferenceStat<uint64_t> d_statLearntsLiterals,  d_statMaxLiterals; */
+    /* ReferenceStat<uint64_t> d_statTotLiterals; */
+    /* ReferenceStat<int> d_statEliminatedVars; */
     IntStat d_statCallsToSolve;
-    BackedStat<double> d_statSolveTime;
+    IntStat d_xorClausesAdded;
+    IntStat d_clausesAdded;
+    // BackedStat<double> d_statSolveTime;
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();

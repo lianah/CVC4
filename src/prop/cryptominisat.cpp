@@ -39,6 +39,7 @@ void CryptoMinisatSolver::addXorClause(SatClause& clause,
 				       bool removable,
 				       uint64_t proof_id) {
   Debug("sat::cryptominisat") << "Add xor clause " << clause <<" = " << rhs << "\n";
+  ++(d_statistics.d_xorClausesAdded);
   // ensure all sat literals have positive polarity by pushing
   // the negation on the result
   std::vector<CMSat::Var> xor_clause;
@@ -51,6 +52,8 @@ void CryptoMinisatSolver::addXorClause(SatClause& clause,
 
 void CryptoMinisatSolver::addClause(SatClause& clause, bool removable, uint64_t proof_id) {
   Debug("sat::cryptominisat") << "Add clause " << clause <<"\n";
+  ++(d_statistics.d_clausesAdded);
+  
   std::vector<CMSat::Lit> internal_clause;
   toInternalClause(clause, internal_clause);
   d_solver->add_clause(internal_clause); // check return status?
@@ -170,52 +173,58 @@ void CryptoMinisatSolver::toSatClause(std::vector<CMSat::Lit>& clause,
 // Satistics for CryptoMinisatSolver
 
 CryptoMinisatSolver::Statistics::Statistics(const std::string& prefix) :
-  d_statStarts("theory::bv::"+prefix+"bvminisat::starts"),
-  d_statDecisions("theory::bv::"+prefix+"bvminisat::decisions"),
-  d_statRndDecisions("theory::bv::"+prefix+"bvminisat::rnd_decisions"),
-  d_statPropagations("theory::bv::"+prefix+"bvminisat::propagations"),
-  d_statConflicts("theory::bv::"+prefix+"bvminisat::conflicts"),
-  d_statClausesLiterals("theory::bv::"+prefix+"bvminisat::clauses_literals"),
-  d_statLearntsLiterals("theory::bv::"+prefix+"bvminisat::learnts_literals"),
-  d_statMaxLiterals("theory::bv::"+prefix+"bvminisat::max_literals"),
-  d_statTotLiterals("theory::bv::"+prefix+"bvminisat::tot_literals"),
-  d_statEliminatedVars("theory::bv::"+prefix+"bvminisat::eliminated_vars"),
-  d_statCallsToSolve("theory::bv::"+prefix+"bvminisat::calls_to_solve", 0),
-  d_statSolveTime("theory::bv::"+prefix+"bvminisat::solve_time", 0),
+  // d_statStarts("theory::bv::"+prefix+"::cryptominisat::starts"),
+  // d_statDecisions("theory::bv::"+prefix+"::cryptominisat::decisions"),
+  // d_statRndDecisions("theory::bv::"+prefix+"::cryptominisat::rnd_decisions"),
+  // d_statPropagations("theory::bv::"+prefix+"::cryptominisat::propagations"),
+  // d_statConflicts("theory::bv::"+prefix+"::cryptominisat::conflicts"),
+  // d_statClausesLiterals("theory::bv::"+prefix+"::cryptominisat::clauses_literals"),
+  // d_statLearntsLiterals("theory::bv::"+prefix+"::cryptominisat::learnts_literals"),
+  // d_statMaxLiterals("theory::bv::"+prefix+"::cryptominisat::max_literals"),
+  // d_statTotLiterals("theory::bv::"+prefix+"::cryptominisat::tot_literals"),
+  // d_statEliminatedVars("theory::bv::"+prefix+"::cryptominisat::eliminated_vars"),
+  d_statCallsToSolve("theory::bv::"+prefix+"::cryptominisat::calls_to_solve", 0),
+  d_xorClausesAdded("theory::bv::"+prefix+"::cryptominisat::xor_clauses", 0),
+  d_clausesAdded("theory::bv::"+prefix+"::cryptominisat::clauses", 0),
+  // d_statSolveTime("theory::bv::"+prefix+"::cryptominisat::solve_time", 0),
   d_registerStats(!prefix.empty())
 {
   if (!d_registerStats)
     return;
 
-  StatisticsRegistry::registerStat(&d_statStarts);
-  StatisticsRegistry::registerStat(&d_statDecisions);
-  StatisticsRegistry::registerStat(&d_statRndDecisions);
-  StatisticsRegistry::registerStat(&d_statPropagations);
-  StatisticsRegistry::registerStat(&d_statConflicts);
-  StatisticsRegistry::registerStat(&d_statClausesLiterals);
-  StatisticsRegistry::registerStat(&d_statLearntsLiterals);
-  StatisticsRegistry::registerStat(&d_statMaxLiterals);
-  StatisticsRegistry::registerStat(&d_statTotLiterals);
-  StatisticsRegistry::registerStat(&d_statEliminatedVars);
+  // StatisticsRegistry::registerStat(&d_statStarts);
+  // StatisticsRegistry::registerStat(&d_statDecisions);
+  // StatisticsRegistry::registerStat(&d_statRndDecisions);
+  // StatisticsRegistry::registerStat(&d_statPropagations);
+  // StatisticsRegistry::registerStat(&d_statConflicts);
+  // StatisticsRegistry::registerStat(&d_statClausesLiterals);
+  // StatisticsRegistry::registerStat(&d_statLearntsLiterals);
+  // StatisticsRegistry::registerStat(&d_statMaxLiterals);
+  // StatisticsRegistry::registerStat(&d_statTotLiterals);
+  // StatisticsRegistry::registerStat(&d_statEliminatedVars);
   StatisticsRegistry::registerStat(&d_statCallsToSolve);
-  StatisticsRegistry::registerStat(&d_statSolveTime);
+  StatisticsRegistry::registerStat(&d_xorClausesAdded);
+  StatisticsRegistry::registerStat(&d_clausesAdded);
+  // StatisticsRegistry::registerStat(&d_statSolveTime);
 }
 
 CryptoMinisatSolver::Statistics::~Statistics() {
   if (!d_registerStats)
     return;
-  StatisticsRegistry::unregisterStat(&d_statStarts);
-  StatisticsRegistry::unregisterStat(&d_statDecisions);
-  StatisticsRegistry::unregisterStat(&d_statRndDecisions);
-  StatisticsRegistry::unregisterStat(&d_statPropagations);
-  StatisticsRegistry::unregisterStat(&d_statConflicts);
-  StatisticsRegistry::unregisterStat(&d_statClausesLiterals);
-  StatisticsRegistry::unregisterStat(&d_statLearntsLiterals);
-  StatisticsRegistry::unregisterStat(&d_statMaxLiterals);
-  StatisticsRegistry::unregisterStat(&d_statTotLiterals);
-  StatisticsRegistry::unregisterStat(&d_statEliminatedVars);
+  // StatisticsRegistry::unregisterStat(&d_statStarts);
+  // StatisticsRegistry::unregisterStat(&d_statDecisions);
+  // StatisticsRegistry::unregisterStat(&d_statRndDecisions);
+  // StatisticsRegistry::unregisterStat(&d_statPropagations);
+  // StatisticsRegistry::unregisterStat(&d_statConflicts);
+  // StatisticsRegistry::unregisterStat(&d_statClausesLiterals);
+  // StatisticsRegistry::unregisterStat(&d_statLearntsLiterals);
+  // StatisticsRegistry::unregisterStat(&d_statMaxLiterals);
+  // StatisticsRegistry::unregisterStat(&d_statTotLiterals);
+  // StatisticsRegistry::unregisterStat(&d_statEliminatedVars);
   StatisticsRegistry::unregisterStat(&d_statCallsToSolve);
-  StatisticsRegistry::unregisterStat(&d_statSolveTime);
+  StatisticsRegistry::unregisterStat(&d_xorClausesAdded);
+  StatisticsRegistry::unregisterStat(&d_clausesAdded);
+  // StatisticsRegistry::unregisterStat(&d_statSolveTime);
 }
 
 void CryptoMinisatSolver::Statistics::init(CMSat::SATSolver* solver){
