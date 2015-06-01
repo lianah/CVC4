@@ -250,10 +250,10 @@ public:
 class EagerBitblaster : public TBitblaster<Node> {
   typedef __gnu_cxx::hash_set<TNode, TNodeHashFunction> TNodeSet;
   // sat solver used for bitblasting and associated CnfStream
-  prop::BVSatSolverInterface*        d_satSolver;
-  BitblastingRegistrar*              d_bitblastingRegistrar;
-  context::Context*                  d_nullContext;
-  prop::CnfStream*                   d_cnfStream;
+  prop::SatSolver*        d_satSolver;
+  BitblastingRegistrar*   d_bitblastingRegistrar;
+  context::Context*       d_nullContext;
+  prop::CnfStream*        d_cnfStream;
 
   theory::bv::TheoryBV* d_bv;
   TNodeSet d_bbAtoms;

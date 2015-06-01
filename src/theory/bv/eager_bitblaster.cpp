@@ -22,7 +22,7 @@
 #include "theory/bv/theory_bv.h"
 #include "prop/cnf_stream.h"
 #include "prop/sat_solver_factory.h"
-
+#include "prop/sat_solver.h"
 
 using namespace CVC4;
 using namespace CVC4::theory;
@@ -40,12 +40,29 @@ EagerBitblaster::EagerBitblaster(TheoryBV* theory_bv)
 {
   d_bitblastingRegistrar = new BitblastingRegistrar(this); 
   d_nullContext = new context::Context();
+  switch(options::bvSatSolver()) {
+   case SAT_SOLVER_MINISAT: {
+    prop::BVSatSolverInterface* minisat = prop::SatSolverFactory::createMinisat(d_nullContext,
+ 									  "EagerBitblaster");
+    MinisatEmptyNotify* notify = new MinisatEmptyNotify();
+    minisat->setNotify(notify);
+    d_satSolver = minisat;
+    break;
+  }
+  case SAT_SOLVER_CRYPTOMINISAT:
+    d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
+    break;
+  case SAT_SOLVER_RISS:
+    d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
+    break;
+  case SAT_SOLVER_GLUCOSE:
+    d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
+    break;
+  default:
+    Unreachable("Unknown SAT solver type");
+  }
 
-  d_satSolver = prop::SatSolverFactory::createMinisat(d_nullContext, "EagerBitblaster");
   d_cnfStream = new prop::TseitinCnfStream(d_satSolver, d_bitblastingRegistrar, d_nullContext);
-  
-  MinisatEmptyNotify* notify = new MinisatEmptyNotify();
-  d_satSolver->setNotify(notify);
 }
 
 EagerBitblaster::~EagerBitblaster() {

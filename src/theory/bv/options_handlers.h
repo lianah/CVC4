@@ -153,6 +153,102 @@ inline void setBitblastAig(std::string option, bool arg, SmtEngine* smt) throw(O
   }
 }
 
+static const std::string bvSatSolverHelp = "\
+Sat solvers currently supported by the --bv-sat-solver option:\n\
+\n\
+minisat (default)\n\
+\n\
+cryptominisat\n\
+\n\
+riss\n\
+\n\
+glucose\n\
+";
+
+inline SatSolverMode stringToSatSolver(std::string option,
+				       std::string optarg,
+				       SmtEngine* smt) throw(OptionException) {
+  if(optarg == "minisat") {
+    return SAT_SOLVER_MINISAT;
+  } else if(optarg == "cryptominisat") {
+
+    if (options::incrementalSolving() &&
+        options::incrementalSolving.wasSetByUser()) {
+      throw OptionException(std::string("Cryptominsat does not support incremental mode. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+
+    if (options::bitblastMode() == BITBLAST_MODE_LAZY &&
+        options::bitblastMode.wasSetByUser()) {
+      throw OptionException(std::string("Cryptominsat does not support lazy bit-blsating. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+    if (!options::bitvectorToBool.wasSetByUser()) {
+      options::bitvectorToBool.set(true);
+    }
+
+    if (!options::bvAbstraction.wasSetByUser() &&
+        !options::skolemizeArguments.wasSetByUser()) {
+      options::bvAbstraction.set(true);
+      options::skolemizeArguments.set(true); 
+    }
+    return SAT_SOLVER_CRYPTOMINISAT;
+  } else if(optarg == "riss") {
+
+    if (options::incrementalSolving() &&
+        options::incrementalSolving.wasSetByUser()) {
+      throw OptionException(std::string("Riss does not support incremental mode. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+
+    if (options::bitblastMode() == BITBLAST_MODE_LAZY &&
+        options::bitblastMode.wasSetByUser()) {
+      throw OptionException(std::string("Riss does not support lazy bit-blsating. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+    if (!options::bitvectorToBool.wasSetByUser()) {
+      options::bitvectorToBool.set(true);
+    }
+
+    if (!options::bvAbstraction.wasSetByUser() &&
+        !options::skolemizeArguments.wasSetByUser()) {
+      options::bvAbstraction.set(true);
+      options::skolemizeArguments.set(true); 
+    }
+    return SAT_SOLVER_RISS;
+  }else if(optarg == "glucose") {
+
+    if (options::incrementalSolving() &&
+        options::incrementalSolving.wasSetByUser()) {
+      throw OptionException(std::string("Glucose does not support incremental mode. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+
+    if (options::bitblastMode() == BITBLAST_MODE_LAZY &&
+        options::bitblastMode.wasSetByUser()) {
+      throw OptionException(std::string("Glucose does not support lazy bit-blsating. \n\
+                                         Try --bv-sat-solver=minisat"));
+    }
+    if (!options::bitvectorToBool.wasSetByUser()) {
+      options::bitvectorToBool.set(true);
+    }
+
+    if (!options::bvAbstraction.wasSetByUser() &&
+        !options::skolemizeArguments.wasSetByUser()) {
+      options::bvAbstraction.set(true);
+      options::skolemizeArguments.set(true); 
+    }
+    return SAT_SOLVER_GLUCOSE;
+  } else if(optarg == "help") {
+    puts(bvSatSolverHelp.c_str());
+    exit(1);
+  } else {
+    throw OptionException(std::string("unknown option for --bv-sat-solver: `") +
+                          optarg + "'.  Try --bv-sat-solver=help.");
+  }
+}
+ 
+ 
 }/* CVC4::theory::bv namespace */
 }/* CVC4::theory namespace */
 }/* CVC4 namespace */

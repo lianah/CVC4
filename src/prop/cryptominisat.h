@@ -21,105 +21,50 @@
 #pragma once
 
 #include "prop/sat_solver.h"
-#include "prop/sat_solver_registry.h"
 #include <cryptominisat4/cryptominisat.h>
-#include "context/cdo.h"
 
 namespace CVC4 {
 namespace prop {
 
-class BVCryptoMinisatSatSolver : public BVSatSolverInterface, public context::ContextNotifyObj {
+class CryptoMinisatSolver : public SatSolver {
 
 private:
-
-  class MinisatNotify : public BVMinisat::Notify {
-    BVSatSolverInterface::Notify* d_notify;
-  public:
-    MinisatNotify(BVSatSolverInterface::Notify* notify)
-    : d_notify(notify)
-    {}
-    bool notify(BVMinisat::Lit lit) {
-      return d_notify->notify(toSatLiteral(lit));
-    }
-    void notify(BVMinisat::vec<BVMinisat::Lit>& clause) {
-      SatClause satClause;
-      toSatClause(clause, satClause);
-      d_notify->notify(satClause);
-    }
-
-    void safePoint() {
-      d_notify->safePoint(); 
-    }
-  };
-
-  BVMinisat::SimpSolver* d_minisat;
-  MinisatNotify* d_minisatNotify;
-
-  unsigned d_assertionsCount;
-  context::CDO<unsigned> d_assertionsRealCount;
-  context::CDO<unsigned> d_lastPropagation;
-
-protected:
-
-  void contextNotifyPop();
-
+  CMSat::SATSolver* d_solver;
+  unsigned d_numVariables;
 public:
-
-  BVMinisatSatSolver() :
-    ContextNotifyObj(NULL, false),
-    d_assertionsRealCount(NULL, (unsigned)0),
-    d_lastPropagation(NULL, (unsigned)0),
-    d_statistics("")
-  { Unreachable(); }
-  BVMinisatSatSolver(context::Context* mainSatContext, const std::string& name = "");
-  ~BVMinisatSatSolver() throw(AssertionException);
-
-  void setNotify(Notify* notify);
+  CryptoMinisatSolver(const std::string& name = "");
+  ~CryptoMinisatSolver() throw(AssertionException);
 
   void addClause(SatClause& clause, bool removable, uint64_t proof_id);
-
-  SatValue propagate();
+  void addXorClause(SatClause& clause, bool rhs, bool removable, uint64_t proof_id);
 
   SatVariable newVar(bool isTheoryAtom = false, bool preRegister = false, bool canErase = true);
 
-  SatVariable trueVar() { return d_minisat->trueVar(); }
-  SatVariable falseVar() { return d_minisat->falseVar(); }
+  SatVariable trueVar();
+  SatVariable falseVar();
 
   void markUnremovable(SatLiteral lit);
-
-  bool spendResource();
 
   void interrupt();
   
   SatValue solve();
   SatValue solve(long unsigned int&);
-  void getUnsatCore(SatClause& unsatCore);
-
   SatValue value(SatLiteral l);
   SatValue modelValue(SatLiteral l);
 
-  void unregisterVar(SatLiteral lit);
-  void renewVar(SatLiteral lit, int level = -1);
   unsigned getAssertionLevel() const;
 
 
   // helper methods for converting from the internal Minisat representation
 
-  static SatVariable     toSatVariable(BVMinisat::Var var);
-  static BVMinisat::Lit    toMinisatLit(SatLiteral lit);
-  static SatLiteral      toSatLiteral(BVMinisat::Lit lit);
+  static SatVariable toSatVariable(CMSat::Var var);
+  static CMSat::Lit toInternalLit(SatLiteral lit);
+  static SatLiteral toSatLiteral(CMSat::Lit lit);
   static SatValue toSatLiteralValue(bool res);
-  static SatValue toSatLiteralValue(BVMinisat::lbool res);
+  static SatValue toSatLiteralValue(CMSat::lbool res);
 
-  static void  toMinisatClause(SatClause& clause, BVMinisat::vec<BVMinisat::Lit>& minisat_clause);
-  static void  toSatClause    (BVMinisat::vec<BVMinisat::Lit>& clause, SatClause& sat_clause);
-  void addMarkerLiteral(SatLiteral lit);
-
-  void explain(SatLiteral lit, std::vector<SatLiteral>& explanation);
-
-  SatValue assertAssumption(SatLiteral lit, bool propagate);
-  
-  void popAssumption();
+  static void  toInternalClause(SatClause& clause, std::vector<CMSat::Lit>& internal_clause);
+  static void  toSatClause (std::vector<CMSat::Lit>& clause, SatClause& sat_clause);
 
   class Statistics {
   public:
@@ -134,7 +79,7 @@ public:
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();
-    void init(BVMinisat::SimpSolver* minisat);
+    void init(CMSat::SATSolver* cryptominisat);
   };
 
   Statistics d_statistics;

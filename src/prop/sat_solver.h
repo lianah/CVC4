@@ -177,4 +177,4 @@ inline std::ostream& operator <<(std::ostream& out, prop::SatValue val) {
 }/* CVC4::prop namespace */
 }/* CVC4 namespace */
 
-#endif /* __CVC4__PROP__SAT_MODULE_H */
+#endif /* __CVC4__PROP__SAT_SOLVER_H */
