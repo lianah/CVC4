@@ -64,10 +64,10 @@ EagerBitblaster::EagerBitblaster(TheoryBV* theory_bv)
     d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
     break;
   case SAT_SOLVER_RISS:
-    d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
+    d_satSolver = prop::SatSolverFactory::createRiss("EagerBitblaster");
     break;
   case SAT_SOLVER_GLUCOSE:
-    d_satSolver = prop::SatSolverFactory::createCryptoMinisat("EagerBitblaster");
+    d_satSolver = prop::SatSolverFactory::createGlucose("EagerBitblaster");
     break;
   default:
     Unreachable("Unknown SAT solver type");
@@ -202,7 +202,7 @@ Node EagerBitblaster::getModelFromSatSolver(TNode a, bool fullModel) {
     prop::SatValue bit_value;
     if (d_cnfStream->hasLiteral(bits[i])) {
       prop::SatLiteral bit = d_cnfStream->getLiteral(bits[i]);
-      bit_value = d_satSolver->value(bit);
+      bit_value = d_satSolver->value(bit); 
       Assert (bit_value != prop::SAT_VALUE_UNKNOWN);
     } else {
       if (!fullModel) return Node();

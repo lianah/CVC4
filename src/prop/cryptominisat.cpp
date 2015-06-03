@@ -24,9 +24,21 @@ using namespace prop;
 CryptoMinisatSolver::CryptoMinisatSolver(const std::string& name)
 : d_solver(new CMSat::SATSolver())
 , d_numVariables(0)
+, d_okay(true)
 , d_statistics(name)
 {
-  d_statistics.init(d_solver); 
+  d_statistics.init(d_solver);
+  d_solver->log_to_file("/nas/lianah/cvc4/kkt.dimacs");
+
+  d_true = newVar();
+  d_false = newVar();
+
+  std::vector<CMSat::Lit> clause(1);
+  clause[0] = CMSat::Lit(d_true, false);
+  d_solver->add_clause(clause);
+  
+  clause[0] = CMSat::Lit(d_false, true);
+  d_solver->add_clause(clause);
 }
 
 
@@ -39,7 +51,14 @@ void CryptoMinisatSolver::addXorClause(SatClause& clause,
 				       bool removable,
 				       uint64_t proof_id) {
   Debug("sat::cryptominisat") << "Add xor clause " << clause <<" = " << rhs << "\n";
+
+  if (!d_okay) {
+    Debug("sat::cryptominisat") << "Solver unsat: not adding clause.\n";
+    return;
+  }
+
   ++(d_statistics.d_xorClausesAdded);
+  
   // ensure all sat literals have positive polarity by pushing
   // the negation on the result
   std::vector<CMSat::Var> xor_clause;
@@ -47,16 +66,24 @@ void CryptoMinisatSolver::addXorClause(SatClause& clause,
     xor_clause.push_back(toInternalLit(clause[i]).var());
     rhs ^= clause[i].isNegated();
   }
-  d_solver->add_xor_clause(xor_clause, rhs); // check return status?
+  bool res = d_solver->add_xor_clause(xor_clause, rhs);
+  d_okay &= res; 
 }
 
 void CryptoMinisatSolver::addClause(SatClause& clause, bool removable, uint64_t proof_id) {
   Debug("sat::cryptominisat") << "Add clause " << clause <<"\n";
+
+  if (!d_okay) {
+    Debug("sat::cryptominisat") << "Solver unsat: not adding clause.\n";
+    return;
+  }
+
   ++(d_statistics.d_clausesAdded);
   
   std::vector<CMSat::Lit> internal_clause;
   toInternalClause(clause, internal_clause);
-  d_solver->add_clause(internal_clause); // check return status?
+  bool res = d_solver->add_clause(internal_clause);
+  d_okay &= res; 
 }
 
 SatVariable  CryptoMinisatSolver::newVar(bool isTheoryAtom, bool preRegister, bool canErase){
@@ -67,19 +94,11 @@ SatVariable  CryptoMinisatSolver::newVar(bool isTheoryAtom, bool preRegister, bo
 }
 
 SatVariable CryptoMinisatSolver::trueVar() {
-  SatVariable v = newVar();
-  std::vector<CMSat::Lit> clause;
-  clause.push_back(CMSat::Lit(v, false));
-  d_solver->add_clause(clause);
-  return v;
+  return d_true;
 }
 
 SatVariable CryptoMinisatSolver::falseVar() {
-  SatVariable v = newVar();
-  std::vector<CMSat::Lit> clause;
-  clause.push_back(CMSat::Lit(v, true));
-  d_solver->add_clause(clause);
-  return v;
+  return d_false;
 }
 
 void CryptoMinisatSolver::markUnremovable(SatLiteral lit) {

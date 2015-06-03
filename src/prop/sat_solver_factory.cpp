@@ -15,6 +15,7 @@
  **/
 
 #include "prop/cryptominisat.h"
+#include "prop/glucose.h"
 #include "prop/sat_solver_factory.h"
 #include "prop/minisat/minisat.h"
 #include "prop/bvminisat/bvminisat.h"
@@ -37,7 +38,7 @@ namespace prop {
   }
   
   SatSolver* SatSolverFactory::createGlucose(const std::string& name) {
-    return NULL;
+    return new GlucoseSolver(name);
   }
   
   

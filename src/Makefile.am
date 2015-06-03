@@ -102,6 +102,8 @@ libcvc4_la_SOURCES = \
 	prop/sat_solver_factory.cpp \
 	prop/cryptominisat.h \
 	prop/cryptominisat.cpp \
+	prop/glucose.h \
+	prop/glucose.cpp \
 	smt/smt_engine.cpp \
 	smt/smt_engine_check_proof.cpp \
 	smt/smt_engine.h \
