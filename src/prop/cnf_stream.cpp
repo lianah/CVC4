@@ -295,7 +295,8 @@ SatLiteral TseitinCnfStream::handleXor(TNode xorNode) {
 
   SatLiteral xorLit = newLiteral(xorNode);
 
-  if (d_satSolver->nativeXor()) {
+  if (d_satSolver->nativeXor() &&
+      options::bvNativeXor()) {
     SatClause clause(3);
     clause[0] = a;
     clause[1] = b;
@@ -598,13 +599,14 @@ void TseitinCnfStream::convertAndAssertOr(TNode node, bool negated, ProofRule pr
 }
 
 void TseitinCnfStream::convertAndAssertXor(TNode node, bool negated, ProofRule proof_id) {
-  if (d_satSolver->nativeXor()) {
-    SatLiteral p = toCNF(node[0], false);
-    SatLiteral q = toCNF(node[1], false);
+  if (d_satSolver->nativeXor() &&
+      options::bvNativeXor()) {
+    SatLiteral p = toCNF(node[0]);
+    SatLiteral q = toCNF(node[1]);
     SatClause clause(2);
     clause[0] = p;
     clause[1] = q;
-    assertXorClause(node, negated, clause, proof_id);
+    assertXorClause(node, !negated, clause, proof_id);
     return;
   }
   

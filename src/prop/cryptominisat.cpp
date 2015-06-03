@@ -44,7 +44,7 @@ void CryptoMinisatSolver::addXorClause(SatClause& clause,
   // the negation on the result
   std::vector<CMSat::Var> xor_clause;
   for (unsigned i = 0; i < clause.size(); ++i) {
-    xor_clause.push_back(clause[i].getSatVariable());
+    xor_clause.push_back(toInternalLit(clause[i]).var());
     rhs ^= clause[i].isNegated();
   }
   d_solver->add_xor_clause(xor_clause, rhs); // check return status?

@@ -33,7 +33,6 @@ void BitblastingRegistrar::preRegister(Node n) {
   // since the bv solver is responsible for building a model
   if (n.isVar() && n.getType().isBoolean()) {
     if (d_bitblaster->hasBBTerm(n)) return;
-    Debug("bitvector-bitblast") << "Bitblasting node " << n <<"\n";
     std::vector<Node> bits(1);
     bits[0] = n;
     d_bitblaster->storeBBTerm(n, bits);
