@@ -1,0 +1,1 @@
+./configure debug --with-antlr-dir=/users/lianah/cvc4/lianah/antlr-3.4 ANTLR=/users/lianah/cvc4/lianah/antlr-3.4/bin/antlr3 CPPFLAGS="-I/nas/lianah/lib/include" LDFLAGS="-L/nas/lianah/lib/lib" LIBS=-lcryptominisat4 LD_LIBRARY_PATH=/nas/lianah/lib/lib

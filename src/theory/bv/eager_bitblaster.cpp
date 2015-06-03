@@ -29,8 +29,20 @@ using namespace CVC4::theory;
 using namespace CVC4::theory::bv; 
 
 void BitblastingRegistrar::preRegister(Node n) {
+  // we treat Boolean variables differently
+  // since the bv solver is responsible for building a model
+  if (n.isVar() && n.getType().isBoolean()) {
+    if (d_bitblaster->hasBBTerm(n)) return;
+    Debug("bitvector-bitblast") << "Bitblasting node " << n <<"\n";
+    std::vector<Node> bits(1);
+    bits[0] = n;
+    d_bitblaster->storeBBTerm(n, bits);
+    d_bitblaster->d_variables.insert(n);
+    return;
+  }
+  
   d_bitblaster->bbAtom(n); 
-};
+}
 
 EagerBitblaster::EagerBitblaster(TheoryBV* theory_bv)
   : TBitblaster<Node>()
@@ -85,7 +97,12 @@ void EagerBitblaster::bbFormula(TNode node) {
 void EagerBitblaster::bbAtom(TNode node) {
   node = node.getKind() == kind::NOT?  node[0] : node;
   if (node.getKind() == kind::BITVECTOR_BITOF)
-    return; 
+    return;
+
+  if (node.isVar() && node.getType().isBoolean()) {
+   d_variables.insert(node);
+   return;
+  }
   if (hasBBAtom(node)) {
     return;
   }
@@ -196,6 +213,15 @@ Node EagerBitblaster::getModelFromSatSolver(TNode a, bool fullModel) {
     Integer bit_int = bit_value == prop::SAT_VALUE_TRUE ? Integer(1) : Integer(0);
     value = value * 2 + bit_int;
   }
+
+  if (a.getType().isBoolean()) {
+    Assert ( value == Integer(1) ||
+	     value == Integer(0));
+	    
+    Node res = (value == Integer(1) ? utils::mkTrue() : utils::mkFalse());
+    return res;
+  }
+  
   return utils::mkConst(BitVector(bits.size(), value));
 }
 
@@ -214,7 +240,14 @@ void EagerBitblaster::collectModelInfo(TheoryModel* m, bool fullModel) {
         Debug("bitvector-model") << "EagerBitblaster::collectModelInfo (assert (= "
                                  << var << " "
                                  << const_value << "))\n";
-        m->assertEquality(var, const_value, true);
+	// for eager bit-blasting we need to provide  models for
+	// boolean variables too
+	if (var.getType().isBoolean()) {
+	  m->assertPredicate(var, const_value == utils::mkTrue() ? true : false);
+	}
+	else {
+	  m->assertEquality(var, const_value, true);
+	}
       }
     }
   }

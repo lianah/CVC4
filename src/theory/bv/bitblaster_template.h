@@ -246,6 +246,7 @@ public:
   void safePoint() {}
 };
 
+class BitblastingRegistrar;
 
 class EagerBitblaster : public TBitblaster<Node> {
   typedef __gnu_cxx::hash_set<TNode, TNodeHashFunction> TNodeSet;
@@ -276,6 +277,7 @@ public:
   bool assertToSat(TNode node, bool propagate = true);
   bool solve();
   void collectModelInfo(TheoryModel* m, bool fullModel);
+  friend class BitblastingRegistrar;
 };
 
 class BitblastingRegistrar: public prop::Registrar {

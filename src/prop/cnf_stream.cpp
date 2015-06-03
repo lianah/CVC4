@@ -257,7 +257,9 @@ SatLiteral CnfStream::convertAtom(TNode node) {
 
   bool theoryLiteral = false;
   bool canEliminate = true;
-  bool preRegister = false;
+  //  bool preRegister = false;
+  // FIXME: hacky and sketchy
+  bool preRegister = (options::bitblastMode() == theory::bv::BITBLAST_MODE_EAGER);
 
   // Is this a variable add it to the list
   if (node.isVar()) {
