@@ -492,8 +492,8 @@ public:
   }
 
   ResourceManager* getResourceManager() { return d_resourceManager; }
-  void spendResource() throw(UnsafeInterruptException) {
-    d_resourceManager->spendResource();
+  void spendResource(unsigned ammount) throw(UnsafeInterruptException) {
+    d_resourceManager->spendResource(ammount);
   }
 
   void nmNotifyNewSort(TypeNode tn, uint32_t flags) {
@@ -700,9 +700,9 @@ SmtEngine::SmtEngine(ExprManager* em) throw() :
   d_modelGlobalCommands(),
   d_modelCommands(NULL),
   d_dumpCommands(),
-#ifdef CVC4_PROOF  
+#ifdef CVC4_PROOF
   d_defineCommands(),
-#endif  
+#endif
   d_logic(),
   d_originalOptions(em->getOptions()),
   d_pendingPops(0),
@@ -1083,7 +1083,7 @@ void SmtEngine::setDefaults() {
 
   // by default, symmetry breaker is on only for QF_UF
   if(! options::ufSymmetryBreaker.wasSetByUser()) {
-    bool qf_uf = d_logic.isPure(THEORY_UF) && !d_logic.isQuantified();
+    bool qf_uf = d_logic.isPure(THEORY_UF) && !d_logic.isQuantified() && !options::proof();
     Trace("smt") << "setting uf symmetry breaker to " << qf_uf << endl;
     options::ufSymmetryBreaker.set(qf_uf);
   }
@@ -1168,8 +1168,8 @@ void SmtEngine::setDefaults() {
   if(! options::repeatSimp.wasSetByUser()) {
     bool repeatSimp = !d_logic.isQuantified() &&
                       (d_logic.isTheoryEnabled(THEORY_ARRAY) &&
-		       d_logic.isTheoryEnabled(THEORY_UF) &&
-		       d_logic.isTheoryEnabled(THEORY_BV)) &&
+                      d_logic.isTheoryEnabled(THEORY_UF) &&
+                      d_logic.isTheoryEnabled(THEORY_BV)) &&
                       !options::unsatCores();
     Trace("smt") << "setting repeat simplification to " << repeatSimp << endl;
     options::repeatSimp.set(repeatSimp);
@@ -1713,7 +1713,7 @@ void SmtEngine::defineFunction(Expr func,
       d_defineCommands.push_back(c.clone());
     });
 
-  
+
   // Substitute out any abstract values in formula
   Expr form = d_private->substituteAbstractValues(Node::fromExpr(formula)).toExpr();
 
@@ -1776,7 +1776,7 @@ Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashF
   // or upward pass).
 
   do {
-    spendResource();
+    spendResource(options::preprocessStep());
     n = worklist.top().first;                      // n is the input / original
     Node node = worklist.top().second;             // node is the output / result
     bool childrenPushed = worklist.top().third;
@@ -1912,7 +1912,7 @@ Node SmtEnginePrivate::expandDefinitions(TNode n, hash_map<Node, Node, NodeHashF
 
 void SmtEnginePrivate::removeITEs() {
   d_smt.finalOptionsAreSet();
-  spendResource();
+  spendResource(options::preprocessStep());
   Trace("simplify") << "SmtEnginePrivate::removeITEs()" << endl;
 
   // Remove all of the ITE occurrences and normalize
@@ -1924,7 +1924,7 @@ void SmtEnginePrivate::removeITEs() {
 
 void SmtEnginePrivate::staticLearning() {
   d_smt.finalOptionsAreSet();
-  spendResource();
+  spendResource(options::preprocessStep());
 
   TimerStat::CodeTimer staticLearningTimer(d_smt.d_stats->d_staticLearningTime);
 
@@ -1957,7 +1957,7 @@ static void dumpAssertions(const char* key, const AssertionPipeline& assertionLi
 
 // returns false if it learns a conflict
 bool SmtEnginePrivate::nonClausalSimplify() {
-  spendResource();
+  spendResource(options::preprocessStep());
   d_smt.finalOptionsAreSet();
 
   if(options::unsatCores()) {
@@ -2286,7 +2286,7 @@ void SmtEnginePrivate::bvAbstraction() {
 
 void SmtEnginePrivate::bvToBool() {
   Trace("bv-to-bool") << "SmtEnginePrivate::bvToBool()" << endl;
-  spendResource();
+  spendResource(options::preprocessStep());
   std::vector<Node> new_assertions;
   d_smt.d_theoryEngine->ppBvToBool(d_assertions.ref(), new_assertions);
   for (unsigned i = 0; i < d_assertions.size(); ++ i) {
@@ -2297,13 +2297,13 @@ void SmtEnginePrivate::bvToBool() {
 bool SmtEnginePrivate::simpITE() {
   TimerStat::CodeTimer simpITETimer(d_smt.d_stats->d_simpITETime);
 
-  spendResource();
+  spendResource(options::preprocessStep());
 
   Trace("simplify") << "SmtEnginePrivate::simpITE()" << endl;
 
   unsigned numAssertionOnEntry = d_assertions.size();
   for (unsigned i = 0; i < d_assertions.size(); ++i) {
-    spendResource();
+    spendResource(options::preprocessStep());
     Node result = d_smt.d_theoryEngine->ppSimpITE(d_assertions[i]);
     d_assertions.replace(i, result);
     if(result.isConst() && !result.getConst<bool>()){
@@ -2350,7 +2350,7 @@ void SmtEnginePrivate::compressBeforeRealAssertions(size_t before){
 
 void SmtEnginePrivate::unconstrainedSimp() {
   TimerStat::CodeTimer unconstrainedSimpTimer(d_smt.d_stats->d_unconstrainedSimpTime);
-  spendResource();
+  spendResource(options::preprocessStep());
   Trace("simplify") << "SmtEnginePrivate::unconstrainedSimp()" << endl;
   d_smt.d_theoryEngine->ppUnconstrainedSimp(d_assertions.ref());
 }
@@ -2799,7 +2799,7 @@ void SmtEnginePrivate::doMiplibTrick() {
 // returns false if simplification led to "false"
 bool SmtEnginePrivate::simplifyAssertions()
   throw(TypeCheckingException, LogicException, UnsafeInterruptException) {
-  spendResource();
+  spendResource(options::preprocessStep());
   Assert(d_smt.d_pendingPops == 0);
   try {
     ScopeCounter depth(d_simplifyAssertionsDepth);
@@ -3042,7 +3042,7 @@ bool SmtEnginePrivate::checkForBadSkolems(TNode n, TNode skolem, hash_map<Node, 
 Node SmtEnginePrivate::rewriteBooleanTerms(TNode n) {
   TimerStat::CodeTimer codeTimer(d_smt.d_stats->d_rewriteBooleanTermsTime);
 
-  spendResource();
+  spendResource(options::preprocessStep());
 
   if(d_booleanTermConverter == NULL) {
     // This needs to be initialized _after_ the whole SMT framework is in place, subscribed
@@ -3077,7 +3077,7 @@ Node SmtEnginePrivate::rewriteBooleanTerms(TNode n) {
 
 void SmtEnginePrivate::processAssertions() {
   TimerStat::CodeTimer paTimer(d_smt.d_stats->d_processAssertionsTime);
-  spendResource();
+  spendResource(options::preprocessStep());
   Assert(d_smt.d_fullyInited);
   Assert(d_smt.d_pendingPops == 0);
 
@@ -3087,7 +3087,7 @@ void SmtEnginePrivate::processAssertions() {
   Trace("smt") << "SmtEnginePrivate::processAssertions()" << endl;
 
   Debug("smt") << " d_assertions     : " << d_assertions.size() << endl;
-  
+
   if (d_assertions.size() == 0) {
     // nothing to do
     return;
@@ -3199,7 +3199,7 @@ void SmtEnginePrivate::processAssertions() {
                         << "applying substitutions" << endl;
       for (unsigned i = 0; i < d_assertions.size(); ++ i) {
         Trace("simplify") << "applying to " << d_assertions[i] << endl;
-         spendResource();
+         spendResource(options::preprocessStep());
         d_assertions.replace(i, Rewriter::rewrite(d_topLevelSubstitutions.apply(d_assertions[i])));
         Trace("simplify") << "  got " << d_assertions[i] << endl;
       }
@@ -3385,7 +3385,7 @@ void SmtEnginePrivate::processAssertions() {
           d_iteSkolemMap.erase(toErase.back());
           toErase.pop_back();
         }
-	d_assertions[d_realAssertionsEnd - 1] = Rewriter::rewrite(Node(builder));
+        d_assertions[d_realAssertionsEnd - 1] = Rewriter::rewrite(Node(builder));
       }
       // For some reason this is needed for some benchmarks, such as
       // http://cvc4.cs.nyu.edu/benchmarks/smtlib2/QF_AUFBV/dwp_formulas/try5_small_difret_functions_dwp_tac.re_node_set_remove_at.il.dwp.smt2
@@ -3497,7 +3497,7 @@ void SmtEnginePrivate::addFormula(TNode n, bool inUnsatCore, bool inInput)
     }
     // rewrite rules are by default in the unsat core because
     // they need to be applied until saturation
-    if(options::unsatCores() && 
+    if(options::unsatCores() &&
        n.getKind() == kind::REWRITE_RULE ){
       ProofManager::currentPM()->addUnsatCore(n.toExpr());
     }
@@ -3759,7 +3759,7 @@ Expr SmtEngine::simplify(const Expr& ex) throw(TypeCheckingException, LogicExcep
 }
 
 Expr SmtEngine::expandDefinitions(const Expr& ex) throw(TypeCheckingException, LogicException, UnsafeInterruptException) {
-  d_private->spendResource();
+  d_private->spendResource(options::preprocessStep());
 
   Assert(ex.getExprManager() == d_exprManager);
   SmtScope smts(this);
@@ -4030,8 +4030,8 @@ void SmtEngine::checkUnsatCore() {
   for (; itg != d_defineCommands.end();  ++itg) {
     (*itg)->invoke(&coreChecker);
   }
-	);
-  
+  );
+
   Notice() << "SmtEngine::checkUnsatCore(): pushing core assertions (size == " << core.size() << ")" << endl;
   for(UnsatCore::iterator i = core.begin(); i != core.end(); ++i) {
     Notice() << "SmtEngine::checkUnsatCore(): pushing core member " << *i << endl;

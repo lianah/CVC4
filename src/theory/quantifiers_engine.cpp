@@ -767,7 +767,7 @@ bool QuantifiersEngine::addInstantiation( Node f, InstMatch& m, bool mkRep, bool
 
 bool QuantifiersEngine::addInstantiation( Node f, std::vector< Node >& terms, bool mkRep, bool modEq, bool modInst ) {
   // For resource-limiting (also does a time check).
-  getOutputChannel().safePoint();
+  getOutputChannel().safePoint(options::quantifierStep());
 
   Assert( terms.size()==f[0].getNumChildren() );
   Trace("inst-add-debug") << "Add instantiation: ";
@@ -888,12 +888,14 @@ void QuantifiersEngine::flushLemmas(){
     //take default output channel if none is provided
     d_hasAddedLemma = true;
     for( int i=0; i<(int)d_lemmas_waiting.size(); i++ ){
+      Trace("qe-lemma") << "Lemma : " << d_lemmas_waiting[i] << std::endl;
       getOutputChannel().lemma( d_lemmas_waiting[i], false, true );
     }
     d_lemmas_waiting.clear();
   }
   if( !d_phase_req_waiting.empty() ){
     for( std::map< Node, bool >::iterator it = d_phase_req_waiting.begin(); it != d_phase_req_waiting.end(); ++it ){
+      Trace("qe-lemma") << "Require phase : " << it->first << " -> " << it->second << std::endl;
       getOutputChannel().requirePhase( it->first, it->second );
     }
     d_phase_req_waiting.clear();

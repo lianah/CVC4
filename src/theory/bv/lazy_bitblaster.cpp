@@ -170,7 +170,7 @@ void TLazyBitblaster::bbTerm(TNode node, Bits& bits) {
     return;
   }
 
-  d_bv->spendResource();
+  d_bv->spendResource(options::bitblastStep());
   Debug("bitvector-bitblast") << "Bitblasting node " << node <<"\n";
   ++d_statistics.d_numTerms;
 
@@ -356,12 +356,12 @@ void TLazyBitblaster::MinisatNotify::notify(prop::SatClause& clause) {
   }
 }
 
-void TLazyBitblaster::MinisatNotify::spendResource() {
-  d_bv->spendResource();
+void TLazyBitblaster::MinisatNotify::spendResource(unsigned ammount) {
+  d_bv->spendResource(ammount);
 }
 
-void TLazyBitblaster::MinisatNotify::safePoint() {
-  d_bv->d_out->safePoint();
+void TLazyBitblaster::MinisatNotify::safePoint(unsigned ammount) {
+  d_bv->d_out->safePoint(ammount);
 }
 
 
