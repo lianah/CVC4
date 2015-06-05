@@ -24,13 +24,13 @@ using namespace prop;
 
 RissSolver::RissSolver(const std::string& name)
   : d_config()
-  , d_solver(new RissMinisat::SimpSolver(d_config))
+  , d_solver(new RissMinisat::Solver(d_config))
   , d_statistics(name)
 {
-  if (CVC4::options::produceModels()) {
-    // FIXME: we don't want to freeze everything
-    d_solver->use_elim  = false;
-  }
+  // if (CVC4::options::produceModels()) {
+  //   // FIXME: we don't want to freeze everything
+  //   d_solver->use_elim  = false;
+  // }
   d_statistics.init(d_solver);
   d_true = newVar();
   d_false = newVar();
@@ -71,7 +71,7 @@ SatVariable RissSolver::falseVar() {
 }
 
 void RissSolver::markUnremovable(SatLiteral lit) {
-  d_solver->setFrozen(lit.getSatVariable(), true);
+  // d_solver->setFrozen(lit.getSatVariable(), true);
   return;
 }
 
@@ -94,8 +94,8 @@ SatValue RissSolver::solve(long unsigned int& resource) {
 }
 
 SatValue RissSolver::value(SatLiteral l){
-  Assert (! d_solver->isEliminated(RissMinisat::var(toInternalLit(l))));
-  return toSatLiteralValue(d_solver->value(toInternalLit(l)));
+  //   Assert (! d_solver->isEliminated(RissMinisat::var(toInternalLit(l))));
+  return toSatLiteralValue(d_solver->modelValue(toInternalLit(l)));
 }
 
 SatValue RissSolver::modelValue(SatLiteral l){
@@ -219,7 +219,7 @@ RissSolver::Statistics::~Statistics() {
   // StatisticsRegistry::unregisterStat(&d_statSolveTime);
 }
 
-void RissSolver::Statistics::init(RissMinisat::SimpSolver* solver){
+void RissSolver::Statistics::init(RissMinisat::Solver* solver){
   if (!d_registerStats)
     return;
   // FIXME seems to only have print stats no get stats

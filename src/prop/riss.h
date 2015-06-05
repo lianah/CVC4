@@ -30,7 +30,7 @@ class RissSolver : public SatSolver {
 
 private:
   RissMinisat::CoreConfig d_config;
-  RissMinisat::SimpSolver* d_solver;
+  RissMinisat::Solver* d_solver;
   SatVariable d_true;
   SatVariable d_false;
    
@@ -87,7 +87,7 @@ public:
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();
-    void init(RissMinisat::SimpSolver* glucose);
+    void init(RissMinisat::Solver* glucose);
   };
 
   Statistics d_statistics;
