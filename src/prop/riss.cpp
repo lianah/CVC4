@@ -71,7 +71,7 @@ SatVariable RissSolver::falseVar() {
 }
 
 void RissSolver::markUnremovable(SatLiteral lit) {
-  // d_solver->setFrozen(lit.getSatVariable(), true);
+  d_solver->freezeVariable(lit.getSatVariable(), true);
   return;
 }
 
