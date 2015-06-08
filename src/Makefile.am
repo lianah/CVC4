@@ -216,6 +216,9 @@ libcvc4_la_SOURCES = \
 	theory/bv/bitblast_utils.h \
 	theory/bv/bvintropow2.h \
 	theory/bv/bvintropow2.cpp \
+	theory/bv/multiplier_zoo.h \
+	theory/bv/multiplier_zoo.cpp \
+	theory/bv/generated_encodings.h \
 	theory/idl/idl_model.h \
 	theory/idl/idl_model.cpp \
 	theory/idl/idl_assertion.h \

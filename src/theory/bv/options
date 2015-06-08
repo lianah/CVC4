@@ -65,5 +65,34 @@ expert-option bitvectorQuickXplain --bv-quick-xplain bool :default false
  
 expert-option bvIntroducePow2 --bv-intro-pow2 bool :default false
  introduce bitvector powers of two as a preprocessing pass
+
+# Multiplier Zoo options 
+
+expert-option bvOptimalLess --bv-optimal-less bool :default false
+ bit-blast comparison operators optimally
+
+expert-option mergeCnf --merge-cnf bool :default false
+ merge semantically equivalent cnf vars in generated encodings
+
+expert-option encodingsZoo --encodings-zoo bool :default false
+ use crazy new multiplier encodings
+
+expert-option optimalAdd --optimal-add bool :default false
+ use optimal add
  
+expert-option fullAdderStyle full-adder --full-adder=MODE CVC4::theory::bv::FullAdderEncoding :handler CVC4::theory::bv::stringToFullAdder :default CVC4::theory::bv::TSEITIN_NAIVE_AB_CIRCUIT :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose full-adder style
+
+expert-option add3Style add3-style --add3-style=MODE CVC4::theory::bv::Add3Encoding::Style :handler CVC4::theory::bv::stringToAdd3Style :default CVC4::theory::bv::Add3Encoding::THREE_TO_TWO_THEN_ADD :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose add3-style style
+
+expert-option accumulateStyle accumulate --accumulate=MODE CVC4::theory::bv::AccumulateEncoding::Style :handler CVC4::theory::bv::stringToAccumulateStyle :default CVC4::theory::bv::AccumulateEncoding::LINEAR_FORWARDS :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose accumulate style
+
+expert-option partialProdStyle partial-prod --partial-prod=MODE CVC4::theory::bv::PartialProductEncoding :handler CVC4::theory::bv::stringToPartialProduct :default CVC4::theory::bv::CONVENTIONAL :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose partial-prod style
+
+expert-option reductionStyle reduction --reduction=MODE CVC4::theory::bv::ReductionEncoding :handler CVC4::theory::bv::stringToReduction :default CVC4::theory::bv::WORD_LEVEL :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"
+ choose reduction style
+
 endmodule

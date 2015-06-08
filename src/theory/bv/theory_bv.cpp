@@ -29,6 +29,7 @@
 #include "theory/bv/theory_bv_rewriter.h"
 #include "theory/theory_model.h"
 #include "theory/bv/abstraction.h"
+#include "theory/bv/multiplier_zoo.h"
 
 using namespace CVC4;
 using namespace CVC4::theory;
@@ -37,6 +38,8 @@ using namespace CVC4::context;
 
 using namespace std;
 using namespace CVC4::theory::bv::utils;
+
+CVC4::theory::bv::MultiplyEncoding CVC4::theory::bv::MultiplyEncoding::s_current; 
 
 TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& out, Valuation valuation, const LogicInfo& logicInfo)
   : Theory(THEORY_BV, c, u, out, valuation, logicInfo),
@@ -58,6 +61,37 @@ TheoryBV::TheoryBV(context::Context* c, context::UserContext* u, OutputChannel& 
     d_isCoreTheory(false),
     d_calledPreregister(false)
 {
+  if (options::encodingsZoo()) {
+    FullAdderEncoding fullAdderEncoding = options::fullAdderStyle();
+    Add3Encoding::Style add3Style = options::add3Style();
+    AccumulateEncoding::Style accStyle = options::accumulateStyle();
+    PartialProductEncoding partialProductEncoding = options::partialProdStyle();
+    ReductionEncoding reductionStyle = options::reductionStyle();
+
+
+    size_t carrySelectMin = -1;
+    size_t carrySelectSplit = -1;
+
+    Add2Encoding add2Enc(fullAdderEncoding,
+			 Add2Encoding::RIPPLE_CARRY,
+			 carrySelectMin,
+			 carrySelectSplit);
+
+
+    Add3Encoding add3Enc(add3Style,
+			 fullAdderEncoding,
+			 add2Enc);
+
+    AccumulateEncoding accEncoding(add2Enc, add3Enc, accStyle);
+
+    MultiplyEncoding multStyle(DEFAULT_REC,
+			       partialProductEncoding,
+			       reductionStyle,
+			       accEncoding);
+
+    MultiplyEncoding::setCurrent(multStyle);
+  }  
+
 
   if (options::bitblastMode() == theory::bv::BITBLAST_MODE_EAGER) {
     d_eagerSolver = new EagerBitblastSolver(this);

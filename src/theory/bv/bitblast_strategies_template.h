@@ -21,6 +21,11 @@
 #include "expr/node.h"
 #include "theory/bv/bitblast_utils.h"
 #include "theory/bv/theory_bv_utils.h"
+#include "theory/bv/multiplier_zoo.h"
+#include "prop/cnf_stream.h"
+#include "theory/bv/options.h"
+#include "theory/bv/generated_encodings.h"
+
 #include <ostream>
 #include <cmath>
 namespace CVC4 {
@@ -95,7 +100,12 @@ T DefaultUltBB(TNode node, TBitblaster<T>* bb) {
   bb->bbTerm(node[1], b);
   Assert(a.size() == b.size());
   
-  // construct bitwise comparison 
+  // construct bitwise comparison
+
+
+  if (options::bvOptimalLess())
+    return optimalUltBB(a, b, a.size(), false, bb->getCnfStream());
+
   T res = uLessThanBB(a, b, false);
   return res; 
 }
@@ -135,6 +145,16 @@ T DefaultSltBB(TNode node, TBitblaster<T>* bb){
   bb->bbTerm(node[0], a);
   bb->bbTerm(node[1], b);
   Assert(a.size() == b.size());
+
+  if (options::bvOptimalLess()) {
+    unsigned width = a.size();
+    if(width == 1) {
+      return mkAnd(a[0], mkNot(b[0]));
+    }
+    T ult = optimalUltBB(a, b, width - 1, false, bb->getCnfStream());
+    T res = optimalSignGadget(a[width-1], b[width-1], ult, bb->getCnfStream());
+    return res;
+  }
   
   T res = sLessThanBB(a, b, false); 
   return res;
@@ -361,25 +381,44 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   Assert(res.size() == 0 &&
          node.getKind() == kind::BITVECTOR_MULT);
 
-  // if (node.getNumChildren() == 2) {
-  //   std::vector<T> a;
-  //   std::vector<T> b;
-  //   bb->bbTerm(node[0], a);
-  //   bb->bbTerm(node[1], b);
-  //   unsigned bw = utils::getSize(node);
-  //   unsigned thresh = bw % 2 ? bw/2 : bw/2 - 1;
-  //   bool no_overflow = true; 
-  //   for (unsigned i = thresh; i < bw; ++i) {
-  //     if (a[i] != mkFalse<T> || b[i] != mkFalse<T> ) {
-  //       no_overflow = false; 
-  //     }
-  //   }
-  //   if (no_overflow) {
-  //     shiftAddMultiplier(); 
-  //     return; 
-  //   }
+  if(options::encodingsZoo() && utils::getSize(node) >= 2) {
+    ZooMultBB(node, res, bb);
+    return;
+  }
+  std::vector<T> newres; 
+  bb->bbTerm(node[0], res); 
+  for(unsigned i = 1; i < node.getNumChildren(); ++i) {
+    std::vector<T> current;
+    bb->bbTerm(node[i], current);
+    newres.clear(); 
+
+    shiftAddMultiplier(res, current, newres);
+
+    Assert (newres.size()); 
+    res = newres;
+  }
+  
+  if(Debug.isOn("bitvector-bb")) {
+    Debug("bitvector-bb") << "with bits: " << toString(res)  << "\n";
+  }
+}
+
+template <class T>
+void ZooMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
+  Debug("bitvector") << "theory::bv::ZooMultBB bitblasting "<< node << "\n";
+  Assert(res.size() == 0 &&
+         node.getKind() == kind::BITVECTOR_MULT);
+
+  MultiplyEncoding multStyle = MultiplyEncoding::current();
+
+  Debug("encodings") << "zooMult with multStyle " << std::endl
+		     << "      " << multStyle.reductionStyle << std::endl
+                     << "      " << multStyle.accumulateStyle.style << std::endl
+                     << "      " << multStyle.accumulateStyle.add2Style.fullAdderStyle << std::endl
+		     << "      " << multStyle.accumulateStyle.add2Style.style << std::endl
+                     << "      " << multStyle.accumulateStyle.add3Style.style << std::endl
+                     << "      " << multStyle.partialProductStyle << std::endl;
     
-  // }
   
   std::vector<T> newres; 
   bb->bbTerm(node[0], res); 
@@ -389,7 +428,9 @@ void DefaultMultBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
     newres.clear(); 
     // constructs a simple shift and add multiplier building the result
     // in res
-    shiftAddMultiplier(res, current, newres);
+    newres = multiply(multStyle, current, res, bb->getCnfStream());
+
+    Assert (newres.size()); 
     res = newres;
   }
   if(Debug.isOn("bitvector-bb")) {
@@ -410,8 +451,13 @@ void DefaultPlusBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
   for(unsigned i = 1; i < node.getNumChildren(); ++i) {
     std::vector<T> current;
     bb->bbTerm(node[i], current);
-    newres.clear(); 
-    rippleCarryAdder(res, current, newres, mkFalse<T>());
+    newres.clear();
+    if (options::optimalAdd()) {
+    // if (options::fullAdderStyle() == OPTIMAL) {
+      optimalRippleCarryAdder(res, current, newres, mkFalse<T>(), bb->getCnfStream());
+    } else {
+      rippleCarryAdder(res, current, newres, mkFalse<T>());
+    }
     res = newres; 
   }
   
@@ -434,7 +480,12 @@ void DefaultSubBB (TNode node, std::vector<T>& bits, TBitblaster<T>* bb) {
   // bvsub a b = adder(a, ~b, 1)
   std::vector<T> not_b;
   negateBits(b, not_b);
-  rippleCarryAdder(a, not_b, bits, mkTrue<T>());
+  if (options::optimalAdd()) {
+    //  if (options::fullAdderStyle() == OPTIMAL) {
+    optimalRippleCarryAdder(a, not_b, bits, mkTrue<T>(), bb->getCnfStream());
+  } else {
+    rippleCarryAdder(a, not_b, bits, mkTrue<T>());
+  }
 }
 
 template <class T>
@@ -450,13 +501,17 @@ void DefaultNegBB (TNode node, std::vector<T>& bits, TBitblaster<T>* bb) {
   std::vector<T> not_a;
   negateBits(a, not_a);
   std::vector<T> zero;
-  makeZero(zero, utils::getSize(node)); 
-  
-  rippleCarryAdder(not_a, zero, bits, mkTrue<T>()); 
+  makeZero(zero, utils::getSize(node));
+  if (options::optimalAdd()) {
+    //  if (options::fullAdderStyle() == OPTIMAL) {
+    optimalRippleCarryAdder(not_a, zero, bits, mkTrue<T>(), bb->getCnfStream());
+  } else {
+    rippleCarryAdder(not_a, zero, bits, mkTrue<T>());
+  }
 }
 
 template <class T>
-void uDivModRec(const std::vector<T>& a, const std::vector<T>& b, std::vector<T>& q, std::vector<T>& r, unsigned rec_width) {
+  void uDivModRec(const std::vector<T>& a, const std::vector<T>& b, std::vector<T>& q, std::vector<T>& r, unsigned rec_width, CVC4::prop::CnfStream* cnf) {
   Assert( q.size() == 0 && r.size() == 0);
 
   if(rec_width == 0 || isZero(a)) {
@@ -469,7 +524,7 @@ void uDivModRec(const std::vector<T>& a, const std::vector<T>& b, std::vector<T>
   std::vector<T> a1 = a;
   rshift(a1, 1); 
 
-  uDivModRec(a1, b, q1, r1, rec_width - 1);
+  uDivModRec(a1, b, q1, r1, rec_width - 1, cnf);
   // shift the quotient and remainder (i.e. multiply by two) and add 1 to remainder if a is odd
   lshift(q1, 1);
   lshift(r1, 1);
@@ -483,14 +538,23 @@ void uDivModRec(const std::vector<T>& a, const std::vector<T>& b, std::vector<T>
   
   std::vector<T> r1_shift_add;
   // account for a being odd
-  rippleCarryAdder(r1, zero, r1_shift_add, one_if_odd); 
+  if (options::fullAdderStyle() == OPTIMAL) {
+    optimalRippleCarryAdder(r1, zero, r1_shift_add, one_if_odd, cnf);
+  } else {
+    rippleCarryAdder(r1, zero, r1_shift_add, one_if_odd);
+  }
   // now check if the remainder is greater than b
   std::vector<T> not_b;
   negateBits(b, not_b);
   std::vector<T> r_minus_b;
   T co1;
   // use adder because we need r_minus_b anyway
-  co1 = rippleCarryAdder(r1_shift_add, not_b, r_minus_b, mkTrue<T>()); 
+  if (options::optimalAdd()) {
+    //  if (options::fullAdderStyle() == OPTIMAL) {
+    co1 = optimalRippleCarryAdder(r1_shift_add, not_b, r_minus_b, mkTrue<T>(), cnf);
+  } else {
+    co1 = rippleCarryAdder(r1_shift_add, not_b, r_minus_b, mkTrue<T>());
+  }
   // sign is true if r1 < b
   T sign = mkNot(co1); 
   
@@ -504,7 +568,13 @@ void uDivModRec(const std::vector<T>& a, const std::vector<T>& b, std::vector<T>
   // check if a < b
 
   std::vector<T> a_minus_b;
-  T co2 = rippleCarryAdder(a, not_b, a_minus_b, mkTrue<T>());
+  T co2;
+  if (options::optimalAdd()) {
+    //  if (options::fullAdderStyle() == OPTIMAL) {
+    co2 = optimalRippleCarryAdder(a, not_b, a_minus_b, mkTrue<T>(), cnf);
+  } else {
+    co2 = rippleCarryAdder(a, not_b, a_minus_b, mkTrue<T>());
+  }
   // Node a_lt_b = a_minus_b.back();
   T a_lt_b = mkNot(co2); 
   
@@ -527,7 +597,7 @@ void DefaultUdivBB (TNode node, std::vector<T>& q, TBitblaster<T>* bb) {
   bb->bbTerm(node[1], b);
 
   std::vector<T> r;
-  uDivModRec(a, b, q, r, utils::getSize(node)); 
+  uDivModRec(a, b, q, r, utils::getSize(node), bb->getCnfStream()); 
   // adding a special case for division by 0
   std::vector<T> iszero; 
   for (unsigned i = 0; i < b.size(); ++i) {
@@ -555,7 +625,7 @@ void DefaultUremBB (TNode node, std::vector<T>& rem, TBitblaster<T>* bb) {
   bb->bbTerm(node[1], b);
 
   std::vector<T> q;
-  uDivModRec(a, b, q, rem, utils::getSize(node)); 
+  uDivModRec(a, b, q, rem, utils::getSize(node), bb->getCnfStream()); 
   // adding a special case for division by 0
   std::vector<T> iszero; 
   for (unsigned i = 0; i < b.size(); ++i) {

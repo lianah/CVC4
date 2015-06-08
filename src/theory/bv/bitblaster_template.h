@@ -113,6 +113,8 @@ public:
    */
   Node getTermModel(TNode node, bool fullModel);
   void invalidateModelCache();
+
+  virtual prop::CnfStream* getCnfStream() = 0;
 }; 
 
 
@@ -217,7 +219,8 @@ public:
    * terms cache. 
    * 
    */
-  void clearSolver(); 
+  void clearSolver();
+  prop::CnfStream* getCnfStream() { return d_cnfStream; }
 private:
 
   class Statistics {
@@ -276,6 +279,7 @@ public:
   bool assertToSat(TNode node, bool propagate = true);
   bool solve();
   void collectModelInfo(TheoryModel* m, bool fullModel);
+  prop::CnfStream* getCnfStream() { return d_cnfStream; }
 };
 
 class BitblastingRegistrar: public prop::Registrar {
@@ -318,6 +322,8 @@ public:
   AigBitblaster();
   ~AigBitblaster();
 
+  prop::CnfStream* getCnfStream() { Unreachable(); }
+  
   void makeVariable(TNode node, Bits& bits);
   void bbTerm(TNode node, Bits&  bits);
   void bbAtom(TNode node);
