@@ -23,8 +23,8 @@ using namespace CVC4;
 using namespace prop;
 
 RissSolver::RissSolver(const std::string& name)
-  : d_config()
-  , d_solver(new RissMinisat::Solver(d_config))
+  : d_config("CVC4")
+  , d_solver(new Riss::Solver(&d_config))
   , d_statistics(name)
 {
   // if (CVC4::options::produceModels()) {
@@ -34,8 +34,8 @@ RissSolver::RissSolver(const std::string& name)
   d_statistics.init(d_solver);
   d_true = newVar();
   d_false = newVar();
-  d_solver->addClause(RissMinisat::mkLit(d_true, false));
-  d_solver->addClause(RissMinisat::mkLit(d_false, true));
+  d_solver->addClause(Riss::mkLit(d_true, false));
+  d_solver->addClause(Riss::mkLit(d_false, true));
 }
 
 
@@ -53,7 +53,7 @@ void RissSolver::addClause(SatClause& clause, bool removable, uint64_t proof_id)
   
   ++(d_statistics.d_clausesAdded);
   
-  RissMinisat::vec<RissMinisat::Lit> internal_clause;
+  Riss::vec<Riss::Lit> internal_clause;
   toInternalClause(clause, internal_clause);
   d_solver->addClause(internal_clause); // check return status?
 }
@@ -94,7 +94,7 @@ SatValue RissSolver::solve(long unsigned int& resource) {
 }
 
 SatValue RissSolver::value(SatLiteral l){
-  //   Assert (! d_solver->isEliminated(RissMinisat::var(toInternalLit(l))));
+  //   Assert (! d_solver->isEliminated(Riss::var(toInternalLit(l))));
   return toSatLiteralValue(d_solver->modelValue(toInternalLit(l)));
 }
 
@@ -109,33 +109,33 @@ unsigned RissSolver::getAssertionLevel() const {
 
 // converting from internal sat solver representation
 
-SatVariable RissSolver::toSatVariable(RissMinisat::Var var) {
-  if (var == RissMinisat::Var(-1)) {
+SatVariable RissSolver::toSatVariable(Riss::Var var) {
+  if (var == Riss::Var(-1)) {
     return undefSatVariable;
   }
   return SatVariable(var);
 }
 
-RissMinisat::Lit RissSolver::toInternalLit(SatLiteral lit) {
+Riss::Lit RissSolver::toInternalLit(SatLiteral lit) {
   if (lit == undefSatLiteral) {
-    return RissMinisat::lit_Undef;
+    return Riss::lit_Undef;
   }
-  return RissMinisat::mkLit(lit.getSatVariable(), lit.isNegated());
+  return Riss::mkLit(lit.getSatVariable(), lit.isNegated());
 }
 
-SatLiteral RissSolver::toSatLiteral(RissMinisat::Lit lit) {
-  if (lit == RissMinisat::lit_Undef) {
+SatLiteral RissSolver::toSatLiteral(Riss::Lit lit) {
+  if (lit == Riss::lit_Undef) {
     return undefSatLiteral;
   }
 
-  return SatLiteral(SatVariable(RissMinisat::var(lit)),
-                    RissMinisat::sign(lit));
+  return SatLiteral(SatVariable(Riss::var(lit)),
+                    Riss::sign(lit));
 }
 
-SatValue RissSolver::toSatLiteralValue(RissMinisat::lbool res) {
-  if(res == RissMinisat::lbool((uint8_t)0)/*RissMinisat::l_True*/) return SAT_VALUE_TRUE;
-  if(res == RissMinisat::lbool((uint8_t)2)/*RissMinisat::l_Undef*/) return SAT_VALUE_UNKNOWN;
-  Assert(res == RissMinisat::lbool((uint8_t)1)/*RissMinisat::l_False*/);
+SatValue RissSolver::toSatLiteralValue(Riss::lbool res) {
+  if(res == Riss::lbool((uint8_t)0)/*Riss::l_True*/) return SAT_VALUE_TRUE;
+  if(res == Riss::lbool((uint8_t)2)/*Riss::l_Undef*/) return SAT_VALUE_UNKNOWN;
+  Assert(res == Riss::lbool((uint8_t)1)/*Riss::l_False*/);
   return SAT_VALUE_FALSE;
 }
 
@@ -146,14 +146,14 @@ SatValue RissSolver::toSatLiteralValue(bool res) {
 
 
 void RissSolver::toInternalClause(SatClause& clause,
-                                           RissMinisat::vec<RissMinisat::Lit>& internal_clause) {
+                                           Riss::vec<Riss::Lit>& internal_clause) {
   for (unsigned i = 0; i < clause.size(); ++i) {
     internal_clause.push(toInternalLit(clause[i]));
   }
   Assert(clause.size() == (unsigned)internal_clause.size());
 }
 
-void RissSolver::toSatClause(RissMinisat::vec<RissMinisat::Lit>& clause,
+void RissSolver::toSatClause(Riss::vec<Riss::Lit>& clause,
 				SatClause& sat_clause) {
   for (int i = 0; i < clause.size(); ++i) {
     sat_clause.push_back(toSatLiteral(clause[i]));
@@ -219,7 +219,7 @@ RissSolver::Statistics::~Statistics() {
   // StatisticsRegistry::unregisterStat(&d_statSolveTime);
 }
 
-void RissSolver::Statistics::init(RissMinisat::Solver* solver){
+void RissSolver::Statistics::init(Riss::Solver* solver){
   if (!d_registerStats)
     return;
   // FIXME seems to only have print stats no get stats

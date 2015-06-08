@@ -21,7 +21,7 @@
 #pragma once
 
 #include "prop/sat_solver.h"
-#include <simp/SimpSolver.h>
+#include "riss/core/Solver.h"
 
 namespace CVC4 {
 namespace prop {
@@ -29,8 +29,8 @@ namespace prop {
 class RissSolver : public SatSolver {
 
 private:
-  RissMinisat::CoreConfig d_config;
-  RissMinisat::Solver* d_solver;
+  Riss::CoreConfig d_config;
+  Riss::Solver* d_solver;
   SatVariable d_true;
   SatVariable d_false;
    
@@ -63,14 +63,14 @@ public:
 
   // helper methods for converting from the internal representation
 
-  static SatVariable toSatVariable(RissMinisat::Var var);
-  static RissMinisat::Lit toInternalLit(SatLiteral lit);
-  static SatLiteral toSatLiteral(RissMinisat::Lit lit);
+  static SatVariable toSatVariable(Riss::Var var);
+  static Riss::Lit toInternalLit(SatLiteral lit);
+  static SatLiteral toSatLiteral(Riss::Lit lit);
   static SatValue toSatLiteralValue(bool res);
-  static SatValue toSatLiteralValue(RissMinisat::lbool res);
+  static SatValue toSatLiteralValue(Riss::lbool res);
 
-  static void  toInternalClause(SatClause& clause, RissMinisat::vec<RissMinisat::Lit>& internal_clause);
-  static void  toSatClause (RissMinisat::vec<RissMinisat::Lit>& clause, SatClause& sat_clause);
+  static void  toInternalClause(SatClause& clause, Riss::vec<Riss::Lit>& internal_clause);
+  static void  toSatClause (Riss::vec<Riss::Lit>& clause, SatClause& sat_clause);
 
   class Statistics {
   public:
@@ -87,7 +87,7 @@ public:
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();
-    void init(RissMinisat::Solver* glucose);
+    void init(Riss::Solver* glucose);
   };
 
   Statistics d_statistics;
