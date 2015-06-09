@@ -219,6 +219,7 @@ libcvc4_la_SOURCES = \
 	theory/bv/multiplier_zoo.h \
 	theory/bv/multiplier_zoo.cpp \
 	theory/bv/generated_encodings.h \
+	theory/bv/generated_encodings.cpp \
 	theory/idl/idl_model.h \
 	theory/idl/idl_model.cpp \
 	theory/idl/idl_assertion.h \

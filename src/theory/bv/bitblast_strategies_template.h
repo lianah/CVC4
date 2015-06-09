@@ -452,7 +452,7 @@ void DefaultPlusBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
     std::vector<T> current;
     bb->bbTerm(node[i], current);
     newres.clear();
-    if (options::optimalAdd()) {
+    if (options::bvOptimalAdd()) {
     // if (options::fullAdderStyle() == OPTIMAL) {
       optimalRippleCarryAdder(res, current, newres, mkFalse<T>(), bb->getCnfStream());
     } else {
@@ -480,7 +480,7 @@ void DefaultSubBB (TNode node, std::vector<T>& bits, TBitblaster<T>* bb) {
   // bvsub a b = adder(a, ~b, 1)
   std::vector<T> not_b;
   negateBits(b, not_b);
-  if (options::optimalAdd()) {
+  if (options::bvOptimalAdd()) {
     //  if (options::fullAdderStyle() == OPTIMAL) {
     optimalRippleCarryAdder(a, not_b, bits, mkTrue<T>(), bb->getCnfStream());
   } else {
@@ -502,7 +502,7 @@ void DefaultNegBB (TNode node, std::vector<T>& bits, TBitblaster<T>* bb) {
   negateBits(a, not_a);
   std::vector<T> zero;
   makeZero(zero, utils::getSize(node));
-  if (options::optimalAdd()) {
+  if (options::bvOptimalAdd()) {
     //  if (options::fullAdderStyle() == OPTIMAL) {
     optimalRippleCarryAdder(not_a, zero, bits, mkTrue<T>(), bb->getCnfStream());
   } else {
@@ -549,7 +549,7 @@ template <class T>
   std::vector<T> r_minus_b;
   T co1;
   // use adder because we need r_minus_b anyway
-  if (options::optimalAdd()) {
+  if (options::bvOptimalAdd()) {
     //  if (options::fullAdderStyle() == OPTIMAL) {
     co1 = optimalRippleCarryAdder(r1_shift_add, not_b, r_minus_b, mkTrue<T>(), cnf);
   } else {
@@ -569,7 +569,7 @@ template <class T>
 
   std::vector<T> a_minus_b;
   T co2;
-  if (options::optimalAdd()) {
+  if (options::bvOptimalAdd()) {
     //  if (options::fullAdderStyle() == OPTIMAL) {
     co2 = optimalRippleCarryAdder(a, not_b, a_minus_b, mkTrue<T>(), cnf);
   } else {

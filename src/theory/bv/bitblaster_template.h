@@ -29,6 +29,7 @@
 #include "theory/valuation.h"
 #include "theory/theory_registrar.h"
 #include "util/resource_manager.h"
+#include "theory/bv/options.h"
 
 class Abc_Obj_t_;
 typedef Abc_Obj_t_ Abc_Obj_t;
@@ -322,7 +323,7 @@ public:
   AigBitblaster();
   ~AigBitblaster();
 
-  prop::CnfStream* getCnfStream() { Unreachable(); }
+  prop::CnfStream* getCnfStream() { return NULL; }
   
   void makeVariable(TNode node, Bits& bits);
   void bbTerm(TNode node, Bits&  bits);

@@ -77,7 +77,7 @@ expert-option mergeCnf --merge-cnf bool :default false
 expert-option encodingsZoo --encodings-zoo bool :default false
  use crazy new multiplier encodings
 
-expert-option optimalAdd --optimal-add bool :default false
+expert-option bvOptimalAdd --bv-optimal-add bool :default false
  use optimal add
  
 expert-option fullAdderStyle full-adder --full-adder=MODE CVC4::theory::bv::FullAdderEncoding :handler CVC4::theory::bv::stringToFullAdder :default CVC4::theory::bv::TSEITIN_NAIVE_AB_CIRCUIT :read-write :include "theory/bv/bitblast_mode.h" :handler-include "theory/bv/options_handlers.h"

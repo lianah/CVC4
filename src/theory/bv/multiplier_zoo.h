@@ -42,31 +42,7 @@ template <class T>
 T makeCarry(const FullAdderEncoding &fullAdderStyle,
 	    const T& a, const T& b, const T& c,
 	    CVC4::prop::CnfStream* cnf) {
-  if (fullAdderStyle == DANIEL_COMPACT_CARRY) {
-    T x = mkBitVar<T>();
-
-    T nx = mkNot<T>(x);
-    T na = mkNot<T>(a);
-    T nb = mkNot<T>(b);
-    T nc = mkNot<T>(c);
-
-    NodeManager* nm = NodeManager::currentNM();
-    
-    cnf->convertAndAssert(nm->mkNode(kind::OR, a, b, nx),
-			  false, false, RULE_INVALID, TNode::null());
-    cnf->convertAndAssert(nm->mkNode(kind::OR, a, nb, c, nx),
-			  false, false, RULE_INVALID, TNode::null());
-    cnf->convertAndAssert(nm->mkNode(kind::OR, a, nb, nc, x),
-			  false, false, RULE_INVALID, TNode::null());
-    cnf->convertAndAssert(nm->mkNode(kind::OR, na, b, c, nx),
-			  false, false, RULE_INVALID, TNode::null());
-    cnf->convertAndAssert(nm->mkNode(kind::OR, na, b, nc, x),
-			  false, false, RULE_INVALID, TNode::null());
-    cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, x),
-			  false, false, RULE_INVALID, TNode::null());
-    return x;
-  }
-  
+  Assert (fullAdderStyle != DANIEL_COMPACT_CARRY);
   return mkOr(mkOr(mkAnd(a,b), mkAnd(a,c)), mkAnd(b, c));
 }
 
@@ -76,115 +52,54 @@ std::pair<T, T> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
 				 const T &b,
 				 const T &c,
 				 prop::CnfStream* cnf) {
-  Unreachable();
-}
-
-template <>
-std::pair<Node, Node> inline fullAdder(const FullAdderEncoding &fullAdderStyle,
-				 const Node &a,
-				 const Node &b,
-				 const Node &c,
-				 prop::CnfStream* cnf) {
-  Node sum, carry;
+  T sum, carry;
   
   switch(fullAdderStyle) {
   case TSEITIN_NAIVE_AB_CIRCUIT:
   case DANIEL_COMPACT_CARRY:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(a, b), c);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_NAIVE_AC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(a, c), b);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_NAIVE_BC_CIRCUIT:
     carry = makeCarry(fullAdderStyle, a, b, c, cnf);
     sum = mkXor(mkXor(b, c), a);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   case TSEITIN_SHARED_AB_CIRCUIT: {
-    Node cross = mkXor(a, b);
+    T cross = mkXor(a, b);
     carry = mkOr(mkAnd(a,b),mkAnd(cross, c));
     sum = mkXor(cross, c);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case TSEITIN_SHARED_AC_CIRCUIT: {
-    Node cross = mkXor(a, c);
+    T cross = mkXor(a, c);
     carry = mkOr(mkAnd(a,c),mkAnd(cross, b));
     sum = mkXor(cross, b);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case TSEITIN_SHARED_BC_CIRCUIT: {
-    Node cross = mkXor(b, c);
+    T cross = mkXor(b, c);
     carry = mkOr(mkAnd(b,c),mkAnd(cross, a));
     sum = mkXor(cross, a);
-    return std::make_pair<Node, Node>(sum, carry);
+    return std::make_pair<T, T>(sum, carry);
   }
   case MINISAT_SUM_AND_CARRY:
   case MINISAT_COMPLETE: {
-      sum = mkBitVar<Node>();
-      carry = mkBitVar<Node>();
-      Node na = mkNot(a);
-      Node nb = mkNot(b);
-      Node nc = mkNot(c);
-      Node ncarry = mkNot(carry);
-      Node nsum = mkNot(sum);
-      
-      NodeManager* nm = NodeManager::currentNM();
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, c, nsum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, nc, sum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, nb, carry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, b, ncarry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, b, nc, nsum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, b, c, sum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, na, nc, carry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, c, ncarry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, nb, nc, nsum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, b, nc, sum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, nb, nc, carry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, b, c, ncarry),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, b, c, nsum),
-			    false, false, RULE_INVALID, TNode::null());
-      cnf->convertAndAssert(nm->mkNode(kind::OR, a, nb, c, sum),
-			    false, false, RULE_INVALID, TNode::null());
-      
-      if (fullAdderStyle == MINISAT_COMPLETE) {
-	cnf->convertAndAssert(nm->mkNode(kind::OR, ncarry, nsum, a),
-			      false, false, RULE_INVALID, TNode::null());
-	cnf->convertAndAssert(nm->mkNode(kind::OR, ncarry, nsum, b),
-			      false, false, RULE_INVALID, TNode::null());
-	cnf->convertAndAssert(nm->mkNode(kind::OR, ncarry, nsum, c),
-			      false, false, RULE_INVALID, TNode::null());
-	cnf->convertAndAssert(nm->mkNode(kind::OR, carry, sum, na),
-			      false, false, RULE_INVALID, TNode::null());
-	cnf->convertAndAssert(nm->mkNode(kind::OR, carry, sum, nb),
-			      false, false, RULE_INVALID, TNode::null());
-	cnf->convertAndAssert(nm->mkNode(kind::OR, carry, sum, nc),
-			      false, false, RULE_INVALID, TNode::null());
-      }
-      return std::make_pair<Node, Node>(sum, carry);
-    }
+    Unreachable("MINISAT_* fullAdders not supported yet");
+  }
   case OPTIMAL: {
-    return optimalFullAdder(a, b, c, cnf);
-    }
+    Unreachable("No optimal full adder yet");
+    // return optimalFullAdder(a, b, c, cnf);
+  }
   default:
     Unreachable("Unknown fullAdder style");    
   }
-  
-}
+ }
 
- 
+
 template <class T>
 std::pair<T,T> inline halfAdder(const HalfAdderEncoding &halfAdderStyle,
 		   const T &a,
@@ -282,7 +197,8 @@ std::vector<T> inline add3 (const Add3Encoding &add3Style,
     }
 
   case Add3Encoding::OPTIMAL_ADD3: {
-    result = add3OptimalGadget(a, b, c, cnf);
+    Unreachable("No optimal add3 yet");
+    // result = add3OptimalGadget(a, b, c, cnf);
     break;
   }
   default :
@@ -641,39 +557,6 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
 	}
       } else if (multiplyStyle.partialProductStyle == BLOCK5_BY_ADDITION) {
 	Unimplemented(); 
-        /* for (int i = 0; i <= b.size() -5; i += 5) { */
-        /*   grid.push_back(makeIte(b[i+4], */
-	/* 			 makeIte(b[i+3], */
-	/* 				 makeIte(b[i+2], */
-	/* 					 (makeIte(b[i + 1], */
-	/* 						  makeIte(b[i], block[31], block[30]), */
-	/* 						  makeIte(b[i], block[29], block[28]))), */
-	/* 					 makeIte(b[i + 1], */
-	/* 						 makeIte(b[i], block[27], block[26]), */
-	/* 						 makeIte(b[i], block[25], block[24]))),				  */
-	/* 				 makeIte(b[i+2], */
-	/* 					 (makeIte(b[i + 1], */
-	/* 						  makeIte(b[i], block[23], block[22]), */
-	/* 						  makeIte(b[i], block[21], block[20]))), */
-	/* 					 makeIte(b[i + 1], */
-	/* 						 makeIte(b[i], block[19], block[18]), */
-	/* 						 makeIte(b[i], block[17], block[16])))), */
-	/* 			 makeIte(b[i+3], */
-	/* 				 makeIte(b[i+2], */
-	/* 					 (makeIte(b[i + 1], */
-	/* 						  makeIte(b[i], block[15], block[14]), */
-	/* 						  makeIte(b[i], block[13], block[12]))), */
-	/* 					 makeIte(b[i + 1], */
-	/* 						 makeIte(b[i], block[11], block[10]), */
-	/* 						 makeIte(b[i], block[9], block[8]))),				  */
-	/* 				 makeIte(b[i+2], */
-	/* 					 (makeIte(b[i + 1], */
-	/* 						  makeIte(b[i], block[7], block[6]), */
-	/* 						  makeIte(b[i], block[5], block[4]))), */
-	/* 					 makeIte(b[i + 1], */
-	/* 						 makeIte(b[i], block[3], block[2]), */
-	/* 						 makeIte(b[i], block[1], block[0])))))); */
-	/* } */
       } else {
         Unimplemented("other selects work similarly");
       }
@@ -693,56 +576,9 @@ std::vector<T> inline multiply (const MultiplyEncoding &multiplyStyle,
       if (multiplyStyle.partialProductStyle == BLOCK5_BY_CONSTANT_MULTIPLICATION)
         blockSize = 5;
 
-      // FIXME add leftovers to optimalMultConst
-      // Assert (a.size() % blockSize == 0);
-      // Build blocks
-      // each block[i] represents the result of multiplying the constant i by a (IDIOT!!)
-      Assert (a.size() >= 2);
-      blockEntryWidth = a.size();
-      std::vector< std::vector<T> > block(1 << blockSize);
-      block[0] = makeZero<T>(blockEntryWidth);
-      block[1] = a;
-      block[2] = makeLShift(a, 1);
-      block[3] = optimalMultConst3(a, cnf);
-
-      if (blockSize == 2) goto trim2;
-      Assert (a.size() >= 3);      
-
-      block[4] = makeLShift(a, 2);
-      block[5] = optimalMultConst5(a, cnf);
-      block[6] = makeLShift(block[3], 1);
-      block[7] = optimalMultConst7(a, cnf);
-
-      if (blockSize == 3) goto trim2;
-      Unimplemented("Need the multiply by constant function.");
-
-      trim2 :
-      // Select to build grid
-      if (multiplyStyle.partialProductStyle == BLOCK2_BY_CONSTANT_MULTIPLICATION) {
-        for (int i = 0; i <= b.size() -2; i += 2) {
-          // \todo This is not optimal!
-          grid.push_back(makeIte(b[i + 1],
-                                 makeIte(b[i], block[3], block[2]),
-                                 makeIte(b[i], block[1], block[0])));
-        }
-        
-      } else if (multiplyStyle.partialProductStyle == BLOCK3_BY_CONSTANT_MULTIPLICATION) {
-        for (int i = 0; i <= b.size() -3; i += 3) {
-          grid.push_back(makeIte(b[i+2],
-                                 (makeIte(b[i + 1],
-                                         makeIte(b[i], block[7], block[6]),
-                                         makeIte(b[i], block[5], block[4]))),
-                                 makeIte(b[i + 1],
-                                         makeIte(b[i], block[3], block[2]),
-                                         makeIte(b[i], block[1], block[0]))));
-        }
-      } else {
-	Unimplemented("No > 3 block yet");
+      Unimplemented("No block by constant multiplication yet.");
       }
-      
       break;
-    }
-      
     case OPTIMAL_2_BY_2 :
     case OPTIMAL_3_BY_3 :
     case OPTIMAL_4_BY_4 :
