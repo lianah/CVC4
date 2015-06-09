@@ -28,7 +28,7 @@ CryptoMinisatSolver::CryptoMinisatSolver(const std::string& name)
 , d_statistics(name)
 {
   d_statistics.init(d_solver);
-  d_solver->log_to_file("/nas/lianah/cvc4/kkt.dimacs");
+  // d_solver->log_to_file("/nas/lianah/cvc4/kkt.dimacs");
 
   d_true = newVar();
   d_false = newVar();
