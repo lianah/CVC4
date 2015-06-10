@@ -21,15 +21,14 @@
 using namespace CVC4;
 using namespace prop;
 
+#ifdef CVC4_USE_CRYPTOMINISAT
+
 CryptoMinisatSolver::CryptoMinisatSolver(const std::string& name)
 : d_solver(new CMSat::SATSolver())
 , d_numVariables(0)
 , d_okay(true)
 , d_statistics(name)
 {
-  d_statistics.init(d_solver);
-  // d_solver->log_to_file("/nas/lianah/cvc4/kkt.dimacs");
-
   d_true = newVar();
   d_false = newVar();
 
@@ -112,6 +111,7 @@ void CryptoMinisatSolver::interrupt(){
 }
 
 SatValue CryptoMinisatSolver::solve(){
+  TimerStat::CodeTimer codeTimer(d_solveTime);
   ++d_statistics.d_statCallsToSolve;
   return toSatLiteralValue(d_solver->solve());
 }
@@ -192,73 +192,27 @@ void CryptoMinisatSolver::toSatClause(std::vector<CMSat::Lit>& clause,
 // Satistics for CryptoMinisatSolver
 
 CryptoMinisatSolver::Statistics::Statistics(const std::string& prefix) :
-  // d_statStarts("theory::bv::"+prefix+"::cryptominisat::starts"),
-  // d_statDecisions("theory::bv::"+prefix+"::cryptominisat::decisions"),
-  // d_statRndDecisions("theory::bv::"+prefix+"::cryptominisat::rnd_decisions"),
-  // d_statPropagations("theory::bv::"+prefix+"::cryptominisat::propagations"),
-  // d_statConflicts("theory::bv::"+prefix+"::cryptominisat::conflicts"),
-  // d_statClausesLiterals("theory::bv::"+prefix+"::cryptominisat::clauses_literals"),
-  // d_statLearntsLiterals("theory::bv::"+prefix+"::cryptominisat::learnts_literals"),
-  // d_statMaxLiterals("theory::bv::"+prefix+"::cryptominisat::max_literals"),
-  // d_statTotLiterals("theory::bv::"+prefix+"::cryptominisat::tot_literals"),
-  // d_statEliminatedVars("theory::bv::"+prefix+"::cryptominisat::eliminated_vars"),
   d_statCallsToSolve("theory::bv::"+prefix+"::cryptominisat::calls_to_solve", 0),
   d_xorClausesAdded("theory::bv::"+prefix+"::cryptominisat::xor_clauses", 0),
   d_clausesAdded("theory::bv::"+prefix+"::cryptominisat::clauses", 0),
-  // d_statSolveTime("theory::bv::"+prefix+"::cryptominisat::solve_time", 0),
+  d_solveTime("theory::bv::"+prefix+"::cryptominisat::solve_time", 0),
   d_registerStats(!prefix.empty())
 {
   if (!d_registerStats)
     return;
 
-  // StatisticsRegistry::registerStat(&d_statStarts);
-  // StatisticsRegistry::registerStat(&d_statDecisions);
-  // StatisticsRegistry::registerStat(&d_statRndDecisions);
-  // StatisticsRegistry::registerStat(&d_statPropagations);
-  // StatisticsRegistry::registerStat(&d_statConflicts);
-  // StatisticsRegistry::registerStat(&d_statClausesLiterals);
-  // StatisticsRegistry::registerStat(&d_statLearntsLiterals);
-  // StatisticsRegistry::registerStat(&d_statMaxLiterals);
-  // StatisticsRegistry::registerStat(&d_statTotLiterals);
-  // StatisticsRegistry::registerStat(&d_statEliminatedVars);
   StatisticsRegistry::registerStat(&d_statCallsToSolve);
   StatisticsRegistry::registerStat(&d_xorClausesAdded);
   StatisticsRegistry::registerStat(&d_clausesAdded);
-  // StatisticsRegistry::registerStat(&d_statSolveTime);
+  StatisticsRegistry::registerStat(&d_solveTime);
 }
 
 CryptoMinisatSolver::Statistics::~Statistics() {
   if (!d_registerStats)
     return;
-  // StatisticsRegistry::unregisterStat(&d_statStarts);
-  // StatisticsRegistry::unregisterStat(&d_statDecisions);
-  // StatisticsRegistry::unregisterStat(&d_statRndDecisions);
-  // StatisticsRegistry::unregisterStat(&d_statPropagations);
-  // StatisticsRegistry::unregisterStat(&d_statConflicts);
-  // StatisticsRegistry::unregisterStat(&d_statClausesLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statLearntsLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statMaxLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statTotLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statEliminatedVars);
   StatisticsRegistry::unregisterStat(&d_statCallsToSolve);
   StatisticsRegistry::unregisterStat(&d_xorClausesAdded);
   StatisticsRegistry::unregisterStat(&d_clausesAdded);
-  // StatisticsRegistry::unregisterStat(&d_statSolveTime);
+  StatisticsRegistry::unregisterStat(&d_solveTime);
 }
-
-void CryptoMinisatSolver::Statistics::init(CMSat::SATSolver* solver){
-  if (!d_registerStats)
-    return;
-  // FIXME seems to only have print stats no get stats
-  
-  // d_statStarts.setData(minisat->starts);
-  // d_statDecisions.setData(minisat->decisions);
-  // d_statRndDecisions.setData(minisat->rnd_decisions);
-  // d_statPropagations.setData(minisat->propagations);
-  // d_statConflicts.setData(minisat->conflicts);
-  // d_statClausesLiterals.setData(minisat->clauses_literals);
-  // d_statLearntsLiterals.setData(minisat->learnts_literals);
-  // d_statMaxLiterals.setData(minisat->max_literals);
-  // d_statTotLiterals.setData(minisat->tot_literals);
-  // d_statEliminatedVars.setData(minisat->eliminated_vars);
-}
+#endif

@@ -17,9 +17,6 @@
 #include "theory/bv/bv_eager_solver.h"
 #include "theory/bv/bitblaster_template.h"
 #include "theory/bv/options.h"
-#include <cryptominisat4/cryptominisat.h>
-
-using namespace CMSat;
 
 using namespace std;
 using namespace CVC4;

@@ -21,6 +21,9 @@
 #pragma once
 
 #include "prop/sat_solver.h"
+
+#ifdef CVC4_USE_GLUCOSE
+
 #include <simp/SimpSolver.h>
 
 namespace CVC4 {
@@ -73,27 +76,57 @@ public:
 
   class Statistics {
   public:
-    /* ReferenceStat<uint64_t> d_statStarts, d_statDecisions; */
-    /* ReferenceStat<uint64_t> d_statRndDecisions, d_statPropagations; */
-    /* ReferenceStat<uint64_t> d_statConflicts, d_statClausesLiterals; */
-    /* ReferenceStat<uint64_t> d_statLearntsLiterals,  d_statMaxLiterals; */
-    /* ReferenceStat<uint64_t> d_statTotLiterals; */
-    /* ReferenceStat<int> d_statEliminatedVars; */
     IntStat d_statCallsToSolve;
     IntStat d_xorClausesAdded;
     IntStat d_clausesAdded;
-    // BackedStat<double> d_statSolveTime;
+    TimerStat d_solveTime;
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();
-    void init(Glucose::SimpSolver* glucose);
   };
 
   Statistics d_statistics;
 };
+}
+}
 
-}
-}
+#else // CVC4_USE_GLUCOSE
+
+namespace CVC4 {
+namespace prop {
+
+class GlucoseSolver : public SatSolver {
+
+public:
+  GlucoseSolver(const std::string& name = "") { Unreachable(); }
+  /** Assert a clause in the solver. */
+  void addClause(SatClause& clause, bool removable, uint64_t proof_id) {
+    Unreachable();
+  }
+
+  /** Return true if the solver supports native xor resoning */
+  bool nativeXor() { Unreachable(); }
+
+  /** Add a clause corresponding to rhs = l1 xor .. xor ln  */
+  void addXorClause(SatClause& clause, bool rhs, bool removable, uint64_t proof_id) {
+    Unreachable();
+  }
+  
+  SatVariable newVar(bool isTheoryAtom, bool preRegister, bool canErase) { Unreachable(); }
+  SatVariable trueVar() { Unreachable(); }
+  SatVariable falseVar() { Unreachable(); }
+  SatValue solve() { Unreachable(); }
+  SatValue solve(long unsigned int&) { Unreachable(); }
+  void interrupt() { Unreachable(); }
+  SatValue value(SatLiteral l) { Unreachable(); }
+  SatValue modelValue(SatLiteral l) { Unreachable(); }
+  unsigned getAssertionLevel() const { Unreachable(); }
+
+};/* class GlucoseSolver */
+} // CVC4::prop
+} // CVC4
+
+#endif // CVC4_USE_CRYPTOMINISAT
 
 
 
