@@ -126,7 +126,7 @@ public:
 } // CVC4::prop
 } // CVC4
 
-#endif // CVC4_USE_CRYPTOMINISAT
+#endif // CVC4_USE_GLUCOSE
 
 
 

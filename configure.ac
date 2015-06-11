@@ -854,6 +854,31 @@ if test $have_libglucose -eq 1; then
 fi
 AM_CONDITIONAL([CVC4_USE_GLUCOSE], [test $have_libglucose -eq 1])
 
+# Build with libriss
+AC_ARG_WITH([riss],
+  [AS_HELP_STRING([--with-riss],
+     [use the RISS sat solver])], [], [with_riss=])
+have_libriss=0
+if test "$with_riss" = no; then
+  AC_MSG_RESULT([no, riss disabled by user])
+elif test -n "$with_riss"; then
+  AC_MSG_RESULT([yes, riss requested by user])
+  AC_LANG(C++)
+  LIBS="$LIBS -lriss -lcoprocessor -lpthread -lrt"
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM([#include <simp/SimpSolver.h>],
+      [Riss::SimpSolver test()])],
+    [have_libriss=1],
+    [AC_MSG_ERROR([libriss is not installed.])])
+else
+  AC_MSG_RESULT([no, user didn't request riss])
+  with_riss=no
+fi
+if test $have_libriss -eq 1; then
+  CVC4CPPFLAGS="${CVC4CPPFLAGS:+$CVC4CPPFLAGS }-DCVC4_USE_RISS"
+fi
+AM_CONDITIONAL([CVC4_USE_RISS], [test $have_libriss -eq 1])
+
 
 # Check to see if this version/architecture of GNU C++ explicitly
 # instantiates __gnu_cxx::hash<uint64_t> or not.  Some do, some don't.

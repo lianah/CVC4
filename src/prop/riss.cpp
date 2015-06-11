@@ -19,6 +19,8 @@
 #include "prop/riss.h"
 #include "smt/options.h"
 
+#ifdef CVC4_USE_RISS
+
 using namespace CVC4;
 using namespace prop;
 
@@ -44,10 +46,10 @@ RissSolver::~RissSolver() throw(AssertionException) {
 }
 
 void RissSolver::addClause(SatClause& clause, bool removable, uint64_t proof_id) {
-  Debug("sat::glucose") << "Add clause " << clause <<"\n";
+  Debug("sat::riss") << "Add clause " << clause <<"\n";
 
   if (!d_solver->okay()) {
-    Debug("sat::glucose") << "Solver unsat: not adding clause.\n";
+    Debug("sat::riss") << "Solver unsat: not adding clause.\n";
     return;
   }
   
@@ -80,11 +82,13 @@ void RissSolver::interrupt(){
 }
 
 SatValue RissSolver::solve(){
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTime);
   ++d_statistics.d_statCallsToSolve;
   return toSatLiteralValue(d_solver->solve());
 }
 
 SatValue RissSolver::solve(long unsigned int& resource) {
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTime);
   if(resource == 0) {
     d_solver->budgetOff();
   } else {
@@ -94,7 +98,7 @@ SatValue RissSolver::solve(long unsigned int& resource) {
 }
 
 SatValue RissSolver::value(SatLiteral l){
-  //   Assert (! d_solver->isEliminated(Riss::var(toInternalLit(l))));
+  Assert (! d_solver->isEliminated(Riss::var(toInternalLit(l))));
   return toSatLiteralValue(d_solver->modelValue(toInternalLit(l)));
 }
 
@@ -165,73 +169,29 @@ void RissSolver::toSatClause(Riss::vec<Riss::Lit>& clause,
 // Satistics for RissSolver
 
 RissSolver::Statistics::Statistics(const std::string& prefix) :
-  // d_statStarts("theory::bv::"+prefix+"::glucose::starts"),
-  // d_statDecisions("theory::bv::"+prefix+"::glucose::decisions"),
-  // d_statRndDecisions("theory::bv::"+prefix+"::glucose::rnd_decisions"),
-  // d_statPropagations("theory::bv::"+prefix+"::glucose::propagations"),
-  // d_statConflicts("theory::bv::"+prefix+"::glucose::conflicts"),
-  // d_statClausesLiterals("theory::bv::"+prefix+"::glucose::clauses_literals"),
-  // d_statLearntsLiterals("theory::bv::"+prefix+"::glucose::learnts_literals"),
-  // d_statMaxLiterals("theory::bv::"+prefix+"::glucose::max_literals"),
-  // d_statTotLiterals("theory::bv::"+prefix+"::glucose::tot_literals"),
-  // d_statEliminatedVars("theory::bv::"+prefix+"::glucose::eliminated_vars"),
-  d_statCallsToSolve("theory::bv::"+prefix+"::glucose::calls_to_solve", 0),
-  d_xorClausesAdded("theory::bv::"+prefix+"::glucose::xor_clauses", 0),
-  d_clausesAdded("theory::bv::"+prefix+"::glucose::clauses", 0),
-  // d_statSolveTime("theory::bv::"+prefix+"::glucose::solve_time", 0),
+  d_statCallsToSolve("theory::bv::"+prefix+"::riss::calls_to_solve", 0),
+  d_xorClausesAdded("theory::bv::"+prefix+"::riss::xor_clauses", 0),
+  d_clausesAdded("theory::bv::"+prefix+"::riss::clauses", 0),
+  d_solveTime("theory::bv::"+prefix+"::riss::solve_time"),
   d_registerStats(!prefix.empty())
 {
   if (!d_registerStats)
     return;
 
-  // StatisticsRegistry::registerStat(&d_statStarts);
-  // StatisticsRegistry::registerStat(&d_statDecisions);
-  // StatisticsRegistry::registerStat(&d_statRndDecisions);
-  // StatisticsRegistry::registerStat(&d_statPropagations);
-  // StatisticsRegistry::registerStat(&d_statConflicts);
-  // StatisticsRegistry::registerStat(&d_statClausesLiterals);
-  // StatisticsRegistry::registerStat(&d_statLearntsLiterals);
-  // StatisticsRegistry::registerStat(&d_statMaxLiterals);
-  // StatisticsRegistry::registerStat(&d_statTotLiterals);
-  // StatisticsRegistry::registerStat(&d_statEliminatedVars);
   StatisticsRegistry::registerStat(&d_statCallsToSolve);
   StatisticsRegistry::registerStat(&d_xorClausesAdded);
   StatisticsRegistry::registerStat(&d_clausesAdded);
-  // StatisticsRegistry::registerStat(&d_statSolveTime);
+  StatisticsRegistry::registerStat(&d_solveTime);
 }
 
 RissSolver::Statistics::~Statistics() {
   if (!d_registerStats)
     return;
-  // StatisticsRegistry::unregisterStat(&d_statStarts);
-  // StatisticsRegistry::unregisterStat(&d_statDecisions);
-  // StatisticsRegistry::unregisterStat(&d_statRndDecisions);
-  // StatisticsRegistry::unregisterStat(&d_statPropagations);
-  // StatisticsRegistry::unregisterStat(&d_statConflicts);
-  // StatisticsRegistry::unregisterStat(&d_statClausesLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statLearntsLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statMaxLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statTotLiterals);
-  // StatisticsRegistry::unregisterStat(&d_statEliminatedVars);
+
   StatisticsRegistry::unregisterStat(&d_statCallsToSolve);
   StatisticsRegistry::unregisterStat(&d_xorClausesAdded);
   StatisticsRegistry::unregisterStat(&d_clausesAdded);
-  // StatisticsRegistry::unregisterStat(&d_statSolveTime);
+  StatisticsRegistry::unregisterStat(&d_solveTime);
 }
 
-void RissSolver::Statistics::init(Riss::Solver* solver){
-  if (!d_registerStats)
-    return;
-  // FIXME seems to only have print stats no get stats
-  
-  // d_statStarts.setData(minisat->starts);
-  // d_statDecisions.setData(minisat->decisions);
-  // d_statRndDecisions.setData(minisat->rnd_decisions);
-  // d_statPropagations.setData(minisat->propagations);
-  // d_statConflicts.setData(minisat->conflicts);
-  // d_statClausesLiterals.setData(minisat->clauses_literals);
-  // d_statLearntsLiterals.setData(minisat->learnts_literals);
-  // d_statMaxLiterals.setData(minisat->max_literals);
-  // d_statTotLiterals.setData(minisat->tot_literals);
-  // d_statEliminatedVars.setData(minisat->eliminated_vars);
-}
+#endif // CVC4_USE_RISS

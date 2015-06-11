@@ -21,7 +21,10 @@
 #pragma once
 
 #include "prop/sat_solver.h"
-#include "riss/core/Solver.h"
+
+#ifdef CVC4_USE_RISS
+
+#include <riss/core/Solver.h>
 
 namespace CVC4 {
 namespace prop {
@@ -96,6 +99,43 @@ public:
 }
 }
 
+#else // CVC4_USE_RISS
+
+namespace CVC4 {
+namespace prop {
+
+class RissSolver : public SatSolver {
+
+public:
+  RissSolver(const std::string& name = "") { Unreachable(); }
+  /** Assert a clause in the solver. */
+  void addClause(SatClause& clause, bool removable, uint64_t proof_id) {
+    Unreachable();
+  }
+
+  /** Return true if the solver supports native xor resoning */
+  bool nativeXor() { Unreachable(); }
+
+  /** Add a clause corresponding to rhs = l1 xor .. xor ln  */
+  void addXorClause(SatClause& clause, bool rhs, bool removable, uint64_t proof_id) {
+    Unreachable();
+  }
+  
+  SatVariable newVar(bool isTheoryAtom, bool preRegister, bool canErase) { Unreachable(); }
+  SatVariable trueVar() { Unreachable(); }
+  SatVariable falseVar() { Unreachable(); }
+  SatValue solve() { Unreachable(); }
+  SatValue solve(long unsigned int&) { Unreachable(); }
+  void interrupt() { Unreachable(); }
+  SatValue value(SatLiteral l) { Unreachable(); }
+  SatValue modelValue(SatLiteral l) { Unreachable(); }
+  unsigned getAssertionLevel() const { Unreachable(); }
+
+};/* class RissSolver */
+} // CVC4::prop
+} // CVC4
+
+#endif // CVC4_USE_RISS
 
 
 
