@@ -22,6 +22,7 @@
 
 #include "prop/sat_solver.h"
 #include "riss/core/Solver.h"
+#include "coprocessor/Coprocessor.h"
 
 namespace CVC4 {
 namespace prop {
@@ -30,6 +31,7 @@ class RissSolver : public SatSolver {
 
 private:
   Riss::CoreConfig d_config;
+  Coprocessor::CP3Config d_CP3Config;
   Riss::Solver* d_solver;
   SatVariable d_true;
   SatVariable d_false;

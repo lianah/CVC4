@@ -19,14 +19,21 @@
 #include "prop/riss.h"
 #include "smt/options.h"
 
+
+#include "theory/bv/options.h"
+
 using namespace CVC4;
 using namespace prop;
 
 RissSolver::RissSolver(const std::string& name)
-  : d_config("CVC4")
+  : d_config( CVC4::options::satcmds() )
+  , d_CP3Config(CVC4::options::satcmds() )
   , d_solver(new Riss::Solver(&d_config))
   , d_statistics(name)
 {
+  // tell solver about preprocessor object
+  d_solver->setPreprocessor(&d_CP3Config);
+  
   // if (CVC4::options::produceModels()) {
   //   // FIXME: we don't want to freeze everything
   //   d_solver->use_elim  = false;
