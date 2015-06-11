@@ -82,13 +82,13 @@ void GlucoseSolver::interrupt(){
 }
 
 SatValue GlucoseSolver::solve(){
-  TimerStat::CodeTimer codeTimer(d_solveTime);
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTime);
   ++d_statistics.d_statCallsToSolve;
   return toSatLiteralValue(d_solver->solve());
 }
 
 SatValue GlucoseSolver::solve(long unsigned int& resource) {
-  TimerStat::CodeTimer codeTimer(d_solveTime);
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTime);
   if(resource == 0) {
     d_solver->budgetOff();
   } else {
@@ -173,7 +173,7 @@ GlucoseSolver::Statistics::Statistics(const std::string& prefix) :
   d_statCallsToSolve("theory::bv::"+prefix+"::glucose::calls_to_solve", 0),
   d_xorClausesAdded("theory::bv::"+prefix+"::glucose::xor_clauses", 0),
   d_clausesAdded("theory::bv::"+prefix+"::glucose::clauses", 0),
-  d_solveTime("theory::bv::"+prefix+"::glucose::solve_time", 0),
+  d_solveTime("theory::bv::"+prefix+"::glucose::solve_time"),
   d_registerStats(!prefix.empty())
 {
   if (!d_registerStats)

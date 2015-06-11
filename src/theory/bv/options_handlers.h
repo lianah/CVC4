@@ -46,6 +46,36 @@ inline void abcEnabledBuild(std::string option, std::string value, SmtEngine* sm
 #endif /* CVC4_USE_ABC */
 }
 
+inline void satSolverEnabledBuild(std::string option,
+				  SatSolverMode solver,
+				  SmtEngine* smt) throw(OptionException) {
+#ifndef CVC4_USE_CRYPTOMINISAT
+  if(solver == SAT_SOLVER_CRYPTOMINISAT) {
+    std::stringstream ss;
+    ss << "option `" << option << "' requires an cryptominisat-enabled build of CVC4; this binary was not built with cryptominisat support";
+    throw OptionException(ss.str());
+  }
+#endif /* CVC4_USE_CRYPTOMINISAT */
+
+#ifndef CVC4_USE_GLUCOSE
+  if(solver == SAT_SOLVER_GLUCOSE) {
+    std::stringstream ss;
+    ss << "option `" << option << "' requires an glucose-enabled build of CVC4; this binary was not built with glucose support";
+    throw OptionException(ss.str());
+  }
+#endif /* CVC4_USE_GLUCOSE */
+  
+#ifndef CVC4_USE_RISS
+  if(solver == SAT_SOLVER_RISS) {
+    std::stringstream ss;
+    ss << "option `" << option << "' requires an riss-enabled build of CVC4; this binary was not built with riss support";
+    throw OptionException(ss.str());
+  }
+#endif /* CVC4_USE_RISS */
+
+}
+ 
+ 
 static const std::string bitblastingModeHelp = "\
 Bit-blasting modes currently supported by the --bitblast option:\n\
 \n\

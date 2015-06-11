@@ -113,7 +113,7 @@ AC_ARG_WITH([build],
 if test -z "${with_build+set}"; then
   with_build=production
 fi
-if test -z "${enable_optimized+set}" -a -z "${enable_debug_symbols+set}" -a -z "${enable_assertions+set}" -a -z "${enable_tracing+set}" -a -z "${enable_dumping+set}" -a -z "${enable_muzzle+set}" -a -z "${enable_coverage+set}" -a -z "${enable_profiling+set}" -a -z "${enable_statistics+set}" -a -z "${enable_replay+set}" -a -z "${with_gmp+set}" -a -z "${with_cln+set}" -a -z "${with_glpk+set}" -a -z "${with_abc+set}"; then
+if test -z "${enable_optimized+set}" -a -z "${enable_debug_symbols+set}" -a -z "${enable_assertions+set}" -a -z "${enable_tracing+set}" -a -z "${enable_dumping+set}" -a -z "${enable_muzzle+set}" -a -z "${enable_coverage+set}" -a -z "${enable_profiling+set}" -a -z "${enable_statistics+set}" -a -z "${enable_replay+set}" -a -z "${with_gmp+set}" -a -z "${with_cln+set}" -a -z "${with_glpk+set}" -a -z "${with_abc+set}" -a -z "${with_cryptominisat+set}"; then
   custom_build_profile=no
 else
   custom_build_profile=yes
@@ -215,6 +215,11 @@ fi
 if test -n "${with_abc+set}"; then
   if test "$with_abc" = yes; then
     btargs="$btargs abc"
+  fi
+fi
+if test -n "${with_cryptominisat+set}"; then
+  if test "$with_cryptominisat" = yes; then
+    btargs="$btargs cryptominisat"
   fi
 fi
 AC_MSG_RESULT([$with_build])
@@ -772,6 +777,50 @@ fi
 AM_CONDITIONAL([CVC4_USE_ABC], [test $have_libabc -eq 1])
 AC_SUBST([ABC_LDFLAGS])
 AC_SUBST([ABC_LIBS])
+
+dnl AC_ARG_WITH(
+dnl   [cryptominisat],
+dnl   AS_HELP_STRING(
+dnl     [--with-cryptominisat],
+dnl     [use CRYPTOMINISAT sat solver]
+dnl   ),
+dnl   [case "$withval" in
+dnl    y|ye|yes|Y|YE|YES) cvc4_use_cryptominisat=1 ;;
+dnl    n|no|N|NO) cvc4_use_cryptominisat=0 ;;
+dnl    esac
+dnl   ]
+dnl )
+
+# Build with libcryptominisat
+AC_ARG_WITH([cryptominisat],
+  [AS_HELP_STRING([--with-cryptominisat],
+     [use the CRYPTOMINISAT sat solver])], [], [with_cryptominisat=])
+have_libcryptominisat=0
+if test "$with_cryptominisat" = no; then
+  AC_MSG_RESULT([no, cryptominisat disabled by user])
+elif test -n "$with_cryptominisat"; then
+  AC_MSG_RESULT([yes, cryptominisat requested by user])
+  AC_LANG(C++)
+  SAVED_LDFLAGS=$LDFLAGS
+  LDFLAGS="$LDFLAGS -lcryptominisat4"
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM([#include <cryptominisat4/cryptominisat.h>],
+      [CMSat::SATSolver test()])],
+    [LIBS="$LIBS -lcryptominisat4"] [have_libcryptominisat=1],
+    # [AC_MSG_ERROR([compiled damn thing.])],
+    [AC_MSG_ERROR([libcryptominisat is not installed.])])
+  LDFLAGS=$SAVED_LDFLAGS
+else
+  AC_MSG_RESULT([no, user didn't request cryptominisat])
+  with_cryptominisat=no
+fi
+if test $have_libcryptominisat -eq 1; then
+  CVC4CPPFLAGS="${CVC4CPPFLAGS:+$CVC4CPPFLAGS }-DCVC4_USE_CRYPTOMINISAT"
+fi
+AM_CONDITIONAL([CVC4_USE_CRYPTOMINISAT], [test $have_libcryptominisat -eq 1])
+# AC_SUBST([CRYPTOMINISAT_LDFLAGS])
+# AC_SUBST([CRYPTOMINISAT_LIBS])
+
 
 # Check to see if this version/architecture of GNU C++ explicitly
 # instantiates __gnu_cxx::hash<uint64_t> or not.  Some do, some don't.

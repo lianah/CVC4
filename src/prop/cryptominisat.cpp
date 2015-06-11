@@ -111,7 +111,7 @@ void CryptoMinisatSolver::interrupt(){
 }
 
 SatValue CryptoMinisatSolver::solve(){
-  TimerStat::CodeTimer codeTimer(d_solveTime);
+  TimerStat::CodeTimer codeTimer(d_statistics.d_solveTime);
   ++d_statistics.d_statCallsToSolve;
   return toSatLiteralValue(d_solver->solve());
 }
@@ -195,7 +195,7 @@ CryptoMinisatSolver::Statistics::Statistics(const std::string& prefix) :
   d_statCallsToSolve("theory::bv::"+prefix+"::cryptominisat::calls_to_solve", 0),
   d_xorClausesAdded("theory::bv::"+prefix+"::cryptominisat::xor_clauses", 0),
   d_clausesAdded("theory::bv::"+prefix+"::cryptominisat::clauses", 0),
-  d_solveTime("theory::bv::"+prefix+"::cryptominisat::solve_time", 0),
+  d_solveTime("theory::bv::"+prefix+"::cryptominisat::solve_time"),
   d_registerStats(!prefix.empty())
 {
   if (!d_registerStats)
