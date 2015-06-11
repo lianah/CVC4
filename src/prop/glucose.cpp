@@ -33,7 +33,6 @@ GlucoseSolver::GlucoseSolver(const std::string& name)
     // FIXME: we don't want to freeze everything
     d_solver->use_elim  = false;
   }
-  d_statistics.init(d_solver);
   d_true = newVar();
   d_false = newVar();
   d_solver->addClause(Glucose::mkLit(d_true, false));
