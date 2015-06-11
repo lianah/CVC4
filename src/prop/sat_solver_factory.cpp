@@ -14,10 +14,11 @@
  ** SAT Solver.
  **/
 
-// #include "prop/cryptominisat.h"
+#include "prop/cryptominisat.h"
+#include "prop/riss.h"
+#include "prop/glucose.h"
 #include "prop/sat_solver_factory.h"
 #include "prop/minisat/minisat.h"
-#include "prop/riss.h"
 #include "prop/bvminisat/bvminisat.h"
 
 
@@ -30,7 +31,7 @@ namespace prop {
   }
   
   SatSolver* SatSolverFactory::createCryptoMinisat(const std::string& name) {
-    return NULL; // new CryptoMinisatSolver(name);
+    return new CryptoMinisatSolver(name);
   }
   
   SatSolver* SatSolverFactory::createRiss(const std::string& name) {
@@ -38,7 +39,7 @@ namespace prop {
   }
   
   SatSolver* SatSolverFactory::createGlucose(const std::string& name) {
-    return NULL; // new GlucoseSolver(name);
+    return new GlucoseSolver(name);
   }
   
   
