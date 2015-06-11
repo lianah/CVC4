@@ -21,19 +21,24 @@
 
 #ifdef CVC4_USE_RISS
 
+#include "theory/bv/options.h"
+
 using namespace CVC4;
 using namespace prop;
 
 RissSolver::RissSolver(const std::string& name)
-  : d_config("CVC4")
+  : d_config( CVC4::options::rissCommands() )
+  , d_CP3Config(CVC4::options::rissCommands() )
   , d_solver(new Riss::Solver(&d_config))
   , d_statistics(name)
 {
+  // tell solver about preprocessor object
+  d_solver->setPreprocessor(&d_CP3Config);
+  
   // if (CVC4::options::produceModels()) {
   //   // FIXME: we don't want to freeze everything
   //   d_solver->use_elim  = false;
   // }
-  d_statistics.init(d_solver);
   d_true = newVar();
   d_false = newVar();
   d_solver->addClause(Riss::mkLit(d_true, false));
@@ -98,7 +103,6 @@ SatValue RissSolver::solve(long unsigned int& resource) {
 }
 
 SatValue RissSolver::value(SatLiteral l){
-  Assert (! d_solver->isEliminated(Riss::var(toInternalLit(l))));
   return toSatLiteralValue(d_solver->modelValue(toInternalLit(l)));
 }
 

@@ -866,8 +866,8 @@ elif test -n "$with_riss"; then
   AC_LANG(C++)
   LIBS="$LIBS -lriss -lcoprocessor -lpthread -lrt"
   AC_LINK_IFELSE(
-    [AC_LANG_PROGRAM([#include <simp/SimpSolver.h>],
-      [Riss::SimpSolver test()])],
+    [AC_LANG_PROGRAM([#include <riss/core/Solver.h>],
+      [Riss::CoreConfig test()])],
     [have_libriss=1],
     [AC_MSG_ERROR([libriss is not installed.])])
 else

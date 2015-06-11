@@ -25,6 +25,7 @@
 #ifdef CVC4_USE_RISS
 
 #include <riss/core/Solver.h>
+#include <coprocessor/Coprocessor.h>
 
 namespace CVC4 {
 namespace prop {
@@ -33,6 +34,7 @@ class RissSolver : public SatSolver {
 
 private:
   Riss::CoreConfig d_config;
+  Coprocessor::CP3Config d_CP3Config;
   Riss::Solver* d_solver;
   SatVariable d_true;
   SatVariable d_false;
@@ -77,20 +79,13 @@ public:
 
   class Statistics {
   public:
-    /* ReferenceStat<uint64_t> d_statStarts, d_statDecisions; */
-    /* ReferenceStat<uint64_t> d_statRndDecisions, d_statPropagations; */
-    /* ReferenceStat<uint64_t> d_statConflicts, d_statClausesLiterals; */
-    /* ReferenceStat<uint64_t> d_statLearntsLiterals,  d_statMaxLiterals; */
-    /* ReferenceStat<uint64_t> d_statTotLiterals; */
-    /* ReferenceStat<int> d_statEliminatedVars; */
     IntStat d_statCallsToSolve;
     IntStat d_xorClausesAdded;
     IntStat d_clausesAdded;
-    // BackedStat<double> d_statSolveTime;
+    TimerStat d_solveTime;
     bool d_registerStats;
     Statistics(const std::string& prefix);
     ~Statistics();
-    void init(Riss::Solver* glucose);
   };
 
   Statistics d_statistics;
