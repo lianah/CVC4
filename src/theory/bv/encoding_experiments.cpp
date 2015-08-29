@@ -757,6 +757,8 @@ void printTermEncodingSharing(Kind k, std::vector<TBitblaster<Node>::TermBBStrat
 }
 
 
+void printDiffOne(std::string name, unsigned bitwidth);
+
 // TODO: refactor this to take expression it is bit-blasting to ensure the common alphabet matches exactly
 void printTermEncoding(Kind k, TBitblaster<Node>::TermBBStrategy e, std::string name,
 		       unsigned n, bool auxiliaries = false, bool truncated = true) {
@@ -1694,6 +1696,8 @@ void CVC4::runEncodingExperiment(Options& opts) {
   unsigned num_fixed = opts[options::encodingNumFixed];
   unsigned width = opts[options::encodingBitwidth];
 
+
+  printDiffOne("diff_one", width);
   
   /**** Generating CNF encoding files for operations ****/
 
@@ -1744,7 +1748,7 @@ void CVC4::runEncodingExperiment(Options& opts) {
   /********* Equivalence Check Mult ****************/
 
 
-  checkZooMultipliers(opts); 
+  // checkZooMultipliers(opts); 
   
 
 
@@ -1839,4 +1843,47 @@ void CVC4::runEncodingExperiment(Options& opts) {
   // sampleAssignments(num_fixed, width*3, &ec_optimal, true);
   // ec_default.print(std::cout);
   // ec_optimal.print(std::cout);
+}
+
+
+/**
+  Generate the encoding for the difference of two bit-vectors to be one.
+ */
+void printDiffOne(std::string name, unsigned bitwidth) {
+  std::ostringstream os;
+  os << name << "_" << bitwidth;
+  name = os.str();
+  ofstream outfile;
+  outfile.open ((name+".cnf").c_str());
+
+  EncodingBitblaster eb(new context::Context(), name);
+  Node a = utils::mkVar("a", bitwidth);
+  Node b = utils::mkVar("b", bitwidth);
+  Node diff = utils::mkNode(kind::BITVECTOR_SUB, a, b);
+  Node diff_one = utils::mkNode(kind::EQUAL, diff, utils::mkConst(bitwidth, 1u));
+  
+  eb.bbAtom(diff_one);
+
+  EncodingBitblaster::Bits all_bits, bits;
+  eb.getBBTerm(a, bits);
+  all_bits.insert(all_bits.end(), bits.begin(), bits.end());
+  eb.getBBTerm(b, bits);
+  all_bits.insert(all_bits.end(), bits.begin(), bits.end());
+
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  Assert (cnf->hasLiteral(diff_one));
+  all_bits.push_back(diff_one);
+
+  outfile << "c " << eb.getName() << std::endl;
+  outfile << "c i ";
+  for (unsigned i = 0; i < all_bits.size(); ++i) {
+    CVC4::prop::SatLiteral var = cnf->getLiteral(all_bits[i]);
+    Assert (!var.isNegated());
+    outfile << var <<" ";
+  }
+  outfile << "0" << std::endl;    
+
+  eb.printCnfMapping(outfile);
+  eb.printProblemClauses(outfile);
+  outfile.close();
 }

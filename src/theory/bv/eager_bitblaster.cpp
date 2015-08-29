@@ -143,7 +143,8 @@ bool EagerBitblaster::solve() {
   //   Rewriter::garbageCollect();
   //   nm->reclaimZombiesUntil(options::zombieHuntThreshold());
   // }
-  return CVC4::prop::SAT_VALUE_TRUE == d_satSolver->solve();
+  CVC4::prop::SatValue res = d_satSolver->solve();
+  return CVC4::prop::SAT_VALUE_TRUE == res;
 }
 
 

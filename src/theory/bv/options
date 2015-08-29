@@ -101,6 +101,10 @@ expert-option bvBlock2MultOpt --bv-mult-block2-opt bool :default false
 
 expert-option mergeCnf --merge-cnf bool :default false
  merge semantically equivalent cnf vars in generated encodings
+
+expert-option encodingCache --encoding-cache bool :default false
+ cache optimal FAs and do constant simplifications
+ 
  
 expert-option encodingsZoo --encodings-zoo bool :default false
  use crazy new multiplier encodings

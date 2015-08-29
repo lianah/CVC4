@@ -23,10 +23,57 @@ std::pair<Node, Node> CVC4::theory::bv::optimalFullAdder(const Node a, const Nod
 							 const Node cin,
 							 CVC4::prop::CnfStream* cnf) {
 
+
+  if (options::encodingCache()) {
+
+    if (cnf->hasFA(a, b, cin)) {
+      return cnf->getCachedFA(a, b, cin);
+    }
+    
+    // check for constants
+
+    unsigned num_false = 0;
+    std::vector<Node> non_const;
+    if (a == mkFalse<Node>()) {
+      ++num_false;
+    } else {
+      non_const.push_back(a);
+    }
+
+    if (b == mkFalse<Node>()) {
+      ++num_false;
+    } else {
+      non_const.push_back(b);
+    }
+  
+    if (cin  == mkFalse<Node>()) {
+      ++num_false;
+    } else {
+      non_const.push_back(cin);
+    }
+
+    if (num_false == 3) {
+      return std::make_pair(mkFalse<Node>(), mkFalse<Node>());
+    }
+    if (num_false == 2) {
+      Assert (non_const.size() == 1);
+      return std::make_pair(non_const[0], mkFalse<Node>());
+    }
+    if (num_false == 1) {
+      Assert (non_const.size() == 2);
+      Node sum = mkXor(non_const[0], non_const[1]);
+      Node cout = mkAnd(non_const[0], non_const[1]);
+      return std::make_pair(sum, cout);
+    }
+  }
+  
+  
   NodeManager* nm = NodeManager::currentNM();
   Node s = nm->mkSkolem("sum", nm->booleanType());
   Node cout = nm->mkSkolem("carry", nm->booleanType());
 
+  cnf->cacheFA(a, b, cin, s, cout);
+  
   if (options::mergeCnf()) {
     Node cout_expr = mkOr(mkAnd(a, b),
 			  mkAnd(mkXor(a, b),
@@ -36,6 +83,8 @@ std::pair<Node, Node> CVC4::theory::bv::optimalFullAdder(const Node a, const Nod
     cnf->mergeInMap(cout_expr, cout);
     cnf->mergeInMap(sum_expr, s);
   }
+
+  
   Node na = nm->mkNode(kind::NOT, a);
   Node nb = nm->mkNode(kind::NOT, b);
   Node ncin = nm->mkNode(kind::NOT, cin);

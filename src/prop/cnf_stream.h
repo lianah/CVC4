@@ -39,6 +39,11 @@ namespace prop {
 
 class PropEngine;
 
+typedef std::pair < Node, std::pair< Node, Node> > Triple;
+typedef std::pair < Node,  Node> FAResult;
+typedef std::map<Triple, FAResult> FASet;
+
+
 /**
  * Comments for the behavior of the whole class... [??? -Chris]
  * @author Tim King <taking@cs.nyu.edu>
@@ -67,6 +72,7 @@ protected:
   /** Map from literals to nodes */
   LiteralToNodeMap d_literalToNodeMap;
 
+  FASet d_fullAdderCache; 
   /**
    * True if the lit-to-Node map should be kept for all lits, not just
    * theory lits.  This is true if e.g. replay logging is on, which
@@ -200,6 +206,12 @@ public:
    */
   virtual ~CnfStream() {
   }
+
+  void printCacheInfo();
+  
+  void cacheFA(TNode a, TNode b, TNode carry, TNode sum, TNode carry_out);
+  bool hasFA(TNode a, TNode b, TNode carry);
+  FAResult getCachedFA(TNode a, TNode b, TNode carry);
 
   /**
    * Converts and asserts a formula.

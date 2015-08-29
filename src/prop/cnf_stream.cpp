@@ -32,6 +32,7 @@
 #include "proof/sat_proof.h"
 #include "prop/minisat/minisat.h"
 #include "smt/smt_engine_scope.h"
+#include "theory/rewriter.h"
 #include <queue>
 
 using namespace std;
@@ -51,11 +52,69 @@ CnfStream::CnfStream(SatSolver *satSolver, Registrar* registrar, context::Contex
   d_booleanVariables(context),
   d_nodeToLiteralMap(context),
   d_literalToNodeMap(context),
+  d_fullAdderCache(),
   d_fullLitToNodeMap(fullLitToNodeMap),
   d_convertAndAssertCounter(0),
   d_registrar(registrar),
   d_assertionTable(context),
   d_removable(false) {
+}
+
+
+bool CnfStream::hasFA(TNode a, TNode b, TNode carry) {
+  Triple fa = std::make_pair(a, std::make_pair(b, carry));
+  return d_fullAdderCache.find(fa) != d_fullAdderCache.end();
+}
+
+FAResult CnfStream::getCachedFA(TNode a, TNode b, TNode carry) {
+  Triple fa = std::make_pair(a, std::make_pair(b, carry));
+  return d_fullAdderCache.find(fa)->second;
+}
+
+void CnfStream::cacheFA(TNode a, TNode b, TNode carry, TNode sum, TNode carry_out) {
+  Triple fa = std::make_pair(a, std::make_pair(b, carry));
+  FAResult res = std::make_pair(sum, carry_out);
+  d_fullAdderCache[fa] = res;
+}
+
+
+void CnfStream::printCacheInfo() {
+  std::cout << "Size of FA cache " << d_fullAdderCache.size() << std::endl;
+  std::cout << "Size of d_nodeToLit " << d_nodeToLiteralMap.size() << std::endl;
+
+  std::set<Node> subexpr;
+  for (FASet::const_iterator it = d_fullAdderCache.begin(); it != d_fullAdderCache.end(); ++it) {
+    Triple fa = it->first;
+    TNode a = fa.first;
+    TNode b = fa.second.first;
+    TNode c = fa.second.second;
+
+    std::cout << "FA " << a <<", " << b << ", " << c << std::endl;
+    
+    NodeManager* nm = NodeManager::currentNM();
+    
+    Node a_and_b = CVC4::theory::Rewriter::rewrite(nm->mkNode(kind::AND, a, b));
+    Node a_xor_b = CVC4::theory::Rewriter::rewrite(nm->mkNode(kind::XOR, a, b));
+    Node a_xor_b_and_cin = CVC4::theory::Rewriter::rewrite(nm->mkNode(kind::AND, nm->mkNode(kind::XOR, a, b), c));
+    Node cout = CVC4::theory::Rewriter::rewrite(nm->mkNode(kind::OR, a_and_b, a_xor_b_and_cin));
+    Node sum = CVC4::theory::Rewriter::rewrite(nm->mkNode(kind::XOR, a_xor_b, c));
+
+    subexpr.insert(a_and_b);
+    subexpr.insert(a_xor_b);
+    subexpr.insert(a_xor_b_and_cin);
+    subexpr.insert(cout);
+    subexpr.insert(sum);
+  }
+
+  unsigned count = 0;
+  for (std::set<Node>::const_iterator it = subexpr.begin(); it != subexpr.end(); ++it) {
+    if (d_nodeToLiteralMap.find(*it) != d_nodeToLiteralMap.end()) {
+      ++count;
+      std::cout << "  " << *it << std::endl;
+    }
+  }
+  
+  std::cout << "Cache duplicates " << count << std::endl;
 }
 
 TseitinCnfStream::TseitinCnfStream(SatSolver* satSolver, Registrar* registrar, context::Context* context, bool fullLitToNodeMap) :
