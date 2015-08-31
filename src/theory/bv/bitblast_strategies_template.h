@@ -572,7 +572,8 @@ template <class T>
   
   std::vector<T> r1_shift_add;
   // account for a being odd
-  if (options::fullAdderStyle() == OPTIMAL) {
+  if (options::optimalAdd()) {
+    //  if (options::fullAdderStyle() == OPTIMAL) {
     optimalRippleCarryAdder(r1, zero, r1_shift_add, one_if_odd, cnf);
   } else {
     rippleCarryAdder(r1, zero, r1_shift_add, one_if_odd);
@@ -1001,7 +1002,7 @@ T OptimalSleBB(TNode node, TBitblaster<T>* bb){
 ************************/
 template <class T>
 void OptimalPlusBB (TNode node, std::vector<T>& res, TBitblaster<T>* bb) {
-  Debug("bitvector-bb") << "theory::bv::DefaultPlusBB bitblasting " << node << "\n";
+  Debug("bitvector-bb") << "theory::bv::OptimalPlusBB bitblasting " << node << "\n";
   Assert(node.getKind() == kind::BITVECTOR_PLUS &&
          res.size() == 0);
 
