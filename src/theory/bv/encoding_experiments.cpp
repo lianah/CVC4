@@ -14,6 +14,7 @@
 **/
 
 #include "theory/bv/encoding_experiments.h"
+#include "theory/bv/generated_encodings.h"
 #include "expr/node.h"
 #include "theory/bv/theory_bv_utils.h"
 #include "theory/bv/bitblaster_template.h"
@@ -30,6 +31,7 @@ using namespace CVC4;
 using namespace CVC4::prop;
 using namespace CVC4::theory;
 using namespace CVC4::theory::bv;
+using namespace CVC4::theory::bv::utils;
 
 CVC4::theory::bv::MultiplyEncoding CVC4::theory::bv::MultiplyEncoding::s_current; 
 
@@ -1349,6 +1351,405 @@ void makeBase8FullAddOptimal(std::ostream&out) {
   eb.printProblemClauses(out);
 }
 
+void makeMaxGadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "MaxGadget");
+  out << "c " << eb.getName()  << std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  
+  Node a_max = nm->mkSkolem("a_max", nm->booleanType());
+  Node b_max = nm->mkSkolem("b_max", nm->booleanType());
+  
+  //Node max = nm->mkSkolem("max", nm->booleanType());
+
+  std::pair<Node, std::pair<Node, Node> > res = theory::bv::optimalMaxGadgetSpec(a, b, a_max, b_max, eb.getCnfStream());
+
+  Node max = res.first;
+  Node a_max_out = res.second.first;
+  Node b_max_out = res.second.second;
+  
+  eb.getCnfStream()->ensureLiteral(max);
+  eb.getCnfStream()->ensureLiteral(a_max_out);
+  eb.getCnfStream()->ensureLiteral(b_max_out);
+      
+  out << "c i " << eb.getCnfStream()->getLiteral(a) << " "
+      << eb.getCnfStream()->getLiteral(b) << " "
+      << eb.getCnfStream()->getLiteral(a_max) << " "
+      << eb.getCnfStream()->getLiteral(b_max) << " "
+      << eb.getCnfStream()->getLiteral(a_max_out) << " "
+      << eb.getCnfStream()->getLiteral(b_max_out) << " "
+      << eb.getCnfStream()->getLiteral(max);
+  
+  out << "0"<< std::endl;
+  CVC4::prop::SatLiteral max_lit = eb.getCnfStream()->getLiteral(max);
+  CVC4::prop::SatLiteral a_max_lit = eb.getCnfStream()->getLiteral(a_max_out);
+    CVC4::prop::SatLiteral b_max_lit = eb.getCnfStream()->getLiteral(b_max_out);
+  out << "c " << max_lit << " : max" << std::endl;
+  out << "c " << a_max_lit << " : a_max_out" << std::endl;
+    out << "c " << b_max_lit << " : b_max_out" << std::endl;
+    
+  NodeSet inputs;
+  inputs.insert(a);
+  inputs.insert(b);
+  inputs.insert(a_max);
+  inputs.insert(b_max);
+  inputs.insert(a_max_out);
+  inputs.insert(b_max_out);
+  inputs.insert(max);
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+void makeSMaxGadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "MaxSignGadget");
+  out << "c " << eb.getName()  << std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  
+  std::pair<Node, std::pair<Node, Node> > res = theory::bv::optimalSMaxGadgetSpec(a, b, eb.getCnfStream());
+
+  Node max = res.first;
+  Node a_max_out = res.second.first;
+  Node b_max_out = res.second.second;
+  
+  eb.getCnfStream()->ensureLiteral(max);
+  eb.getCnfStream()->ensureLiteral(a_max_out);
+  eb.getCnfStream()->ensureLiteral(b_max_out);
+      
+  out << "c i " << eb.getCnfStream()->getLiteral(a) << " "
+      << eb.getCnfStream()->getLiteral(b) << " "
+      << eb.getCnfStream()->getLiteral(a_max_out) << " "
+      << eb.getCnfStream()->getLiteral(b_max_out) << " "
+      << eb.getCnfStream()->getLiteral(max);
+  
+  out << "0"<< std::endl;
+  CVC4::prop::SatLiteral max_lit = eb.getCnfStream()->getLiteral(max);
+  CVC4::prop::SatLiteral a_max_lit = eb.getCnfStream()->getLiteral(a_max_out);
+  CVC4::prop::SatLiteral b_max_lit = eb.getCnfStream()->getLiteral(b_max_out);
+  out << "c " << max_lit << " : max" << std::endl;
+  out << "c " << a_max_lit << " : a_max_out" << std::endl;
+  out << "c " << b_max_lit << " : b_max_out" << std::endl;
+  
+  NodeSet inputs;
+  inputs.insert(a);
+  inputs.insert(b);
+  inputs.insert(a_max_out);
+  inputs.insert(b_max_out);
+  inputs.insert(max);
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+void makeMax(unsigned bitwidth, std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "Max");
+  out << "c " << eb.getName()  << std::endl;
+  
+  Node a = mkVar(bitwidth);
+  Node b = mkVar(bitwidth);
+
+  std::vector<Node> a_bits;
+  std::vector<Node> b_bits;
+  eb.bbTerm(a, a_bits);
+  eb.bbTerm(b, b_bits);
+
+  std::vector<Node> max_bits;
+  
+  optimalSMax(a_bits, b_bits, max_bits, eb.getCnfStream());
+
+  NodeSet inputs;
+  out << "c i " ;
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral max_lit = eb.getCnfStream()->getLiteral(max_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+    CVC4::prop::SatLiteral b_lit = eb.getCnfStream()->getLiteral(b_bits[i]);
+
+    out << max_lit << " "
+        << b_lit << " "
+        << a_lit<< " ";
+    inputs.insert(a_bits[i]);
+    inputs.insert(b_bits[i]);
+    inputs.insert(max_bits[i]);
+  }
+  
+  out << "0"<< std::endl;
+  
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral max_lit = eb.getCnfStream()->getLiteral(max_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+    CVC4::prop::SatLiteral b_lit = eb.getCnfStream()->getLiteral(b_bits[i]);
+    out << "c " << max_lit << " : max" << i << std::endl;
+    out << "c " << a_lit << " : a" << i << std::endl;
+    out << "c " << b_lit << " : b" << i  << std::endl;
+  }
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+
+void equivalenceCheckSMax(unsigned bitwidth) {
+  context::Context ctx;
+  EncodingBitblaster eb(&ctx, "CheckSMax");
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  
+  Node a = utils::mkVar("a", bitwidth);
+  Node b = utils::mkVar("b", bitwidth);
+  Node ref_max = utils::mkVar("ref_max", bitwidth);
+  Node lt = utils::mkNode(kind::BITVECTOR_SLT, a, b);
+  Node a_max = mkNode(kind::EQUAL, ref_max, a);
+  Node b_max = mkNode(kind::EQUAL, ref_max, b);
+  Node ref_max_assert = mkNode(kind::ITE, lt, b_max,
+                                              a_max);
+  
+  cnf->convertAndAssert(ref_max_assert,
+                        false, false, RULE_INVALID, TNode::null());
+  eb.bbAtom(lt);
+  eb.bbAtom(a_max);
+  eb.bbAtom(b_max);
+
+  std::vector<Node> a_bits;
+  std::vector<Node> b_bits;
+  std::vector<Node> ref_max_bits;
+  std::vector<Node> max_bits;
+
+  eb.bbTerm(a, a_bits);
+  eb.bbTerm(b, b_bits);
+  eb.bbTerm(ref_max, ref_max_bits);
+
+  optimalSMax(a_bits, b_bits, max_bits, cnf);
+
+  NodeBuilder<> nb(kind::AND);
+
+  for(unsigned i = 0 ; i < max_bits.size(); ++i) {
+    nb << utils::mkNode(kind::IFF, ref_max_bits[i], max_bits[i]);
+  }
+
+  Node assertion = nb;
+
+  cnf->convertAndAssert(utils::mkNode(kind::NOT, assertion),
+                        false, false, RULE_INVALID, TNode::null());
+
+  bool res = eb.solve();
+
+  if (res) {
+    std::cout << "NOT EQUIVALENT MAX" << std::endl;
+    std::cout << "Model from max "<< std::endl;
+    std::cout <<"  "<< a <<": "
+              << eb.getModelFromSatSolver(a, false) << std::endl;
+    std::cout <<"  "<< b <<": "
+              << eb.getModelFromSatSolver(b, false) << std::endl;
+    std::cout <<"  max : "
+              << eb.getModelFromSatSolver(max_bits) << std::endl;
+    std::cout <<"  ref_max : "
+              << eb.getModelFromSatSolver(ref_max, false) << std::endl;
+  } else {
+    std::cout << "EQUIVALENT bw"<<bitwidth<< std::endl;
+  }
+}
+
+void makeMinGadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "MinGadget");
+  out << "c " << eb.getName()  << std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  
+  Node a_min = nm->mkSkolem("a_min", nm->booleanType());
+  Node b_min = nm->mkSkolem("b_min", nm->booleanType());
+  
+  //Node min = nm->mkSkolem("min", nm->booleanType());
+
+  std::pair<Node, std::pair<Node, Node> > res = theory::bv::optimalMinGadgetSpec(a, b, a_min, b_min, eb.getCnfStream());
+
+  Node min = res.first;
+  Node a_min_out = res.second.first;
+  Node b_min_out = res.second.second;
+  
+  eb.getCnfStream()->ensureLiteral(min);
+  eb.getCnfStream()->ensureLiteral(a_min_out);
+  eb.getCnfStream()->ensureLiteral(b_min_out);
+      
+  out << "c i " << eb.getCnfStream()->getLiteral(a) << " "
+      << eb.getCnfStream()->getLiteral(b) << " "
+      << eb.getCnfStream()->getLiteral(a_min) << " "
+      << eb.getCnfStream()->getLiteral(b_min) << " "
+      << eb.getCnfStream()->getLiteral(a_min_out) << " "
+      << eb.getCnfStream()->getLiteral(b_min_out) << " "
+      << eb.getCnfStream()->getLiteral(min);
+  
+  out << "0"<< std::endl;
+  CVC4::prop::SatLiteral min_lit = eb.getCnfStream()->getLiteral(min);
+  CVC4::prop::SatLiteral a_min_lit = eb.getCnfStream()->getLiteral(a_min_out);
+    CVC4::prop::SatLiteral b_min_lit = eb.getCnfStream()->getLiteral(b_min_out);
+  out << "c " << min_lit << " : min" << std::endl;
+  out << "c " << a_min_lit << " : a_min_out" << std::endl;
+    out << "c " << b_min_lit << " : b_min_out" << std::endl;
+    
+  NodeSet inputs;
+  inputs.insert(a);
+  inputs.insert(b);
+  inputs.insert(a_min);
+  inputs.insert(b_min);
+  inputs.insert(a_min_out);
+  inputs.insert(b_min_out);
+  inputs.insert(min);
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+void makeSMinGadget(std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "MinSignGadget");
+  out << "c " << eb.getName()  << std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a = nm->mkSkolem("a", nm->booleanType());
+  Node b = nm->mkSkolem("b", nm->booleanType());
+  
+  std::pair<Node, std::pair<Node, Node> > res = theory::bv::optimalSMinGadgetSpec(a, b, eb.getCnfStream());
+
+  Node min = res.first;
+  Node a_min_out = res.second.first;
+  Node b_min_out = res.second.second;
+  
+  eb.getCnfStream()->ensureLiteral(min);
+  eb.getCnfStream()->ensureLiteral(a_min_out);
+  eb.getCnfStream()->ensureLiteral(b_min_out);
+      
+  out << "c i " << eb.getCnfStream()->getLiteral(a) << " "
+      << eb.getCnfStream()->getLiteral(b) << " "
+      << eb.getCnfStream()->getLiteral(a_min_out) << " "
+      << eb.getCnfStream()->getLiteral(b_min_out) << " "
+      << eb.getCnfStream()->getLiteral(min);
+  
+  out << "0"<< std::endl;
+  CVC4::prop::SatLiteral min_lit = eb.getCnfStream()->getLiteral(min);
+  CVC4::prop::SatLiteral a_min_lit = eb.getCnfStream()->getLiteral(a_min_out);
+  CVC4::prop::SatLiteral b_min_lit = eb.getCnfStream()->getLiteral(b_min_out);
+  out << "c " << min_lit << " : min" << std::endl;
+  out << "c " << a_min_lit << " : a_min_out" << std::endl;
+  out << "c " << b_min_lit << " : b_min_out" << std::endl;
+  
+  NodeSet inputs;
+  inputs.insert(a);
+  inputs.insert(b);
+  inputs.insert(a_min_out);
+  inputs.insert(b_min_out);
+  inputs.insert(min);
+  
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+void makeMin(unsigned bitwidth, std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "Min");
+  out << "c " << eb.getName()  << std::endl;
+  
+  Node a = mkVar(bitwidth);
+  Node b = mkVar(bitwidth);
+
+  std::vector<Node> a_bits;
+  std::vector<Node> b_bits;
+  eb.bbTerm(a, a_bits);
+  eb.bbTerm(b, b_bits);
+
+  std::vector<Node> min_bits;
+  
+  optimalSMin(a_bits, b_bits, min_bits, eb.getCnfStream());
+
+  NodeSet inputs;
+  out << "c i " ;
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral min_lit = eb.getCnfStream()->getLiteral(min_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+    CVC4::prop::SatLiteral b_lit = eb.getCnfStream()->getLiteral(b_bits[i]);
+
+    out << min_lit << " "
+        << b_lit << " "
+        << a_lit<< " ";
+    inputs.insert(a_bits[i]);
+    inputs.insert(b_bits[i]);
+    inputs.insert(min_bits[i]);
+  }
+  
+  out << "0"<< std::endl;
+  
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral min_lit = eb.getCnfStream()->getLiteral(min_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+    CVC4::prop::SatLiteral b_lit = eb.getCnfStream()->getLiteral(b_bits[i]);
+    out << "c " << min_lit << " : min" << i << std::endl;
+    out << "c " << a_lit << " : a" << i << std::endl;
+    out << "c " << b_lit << " : b" << i  << std::endl;
+  }
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+
+void equivalenceCheckSMin(unsigned bitwidth) {
+  context::Context ctx;
+  EncodingBitblaster eb(&ctx, "CheckSMin");
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  
+  Node a = utils::mkVar("a", bitwidth);
+  Node b = utils::mkVar("b", bitwidth);
+  Node ref_min = utils::mkVar("ref_min", bitwidth);
+  Node lt = utils::mkNode(kind::BITVECTOR_SLT, a, b);
+  Node a_min = mkNode(kind::EQUAL, ref_min, a);
+  Node b_min = mkNode(kind::EQUAL, ref_min, b);
+  Node ref_min_assert = mkNode(kind::ITE, lt, a_min,
+                                              b_min);
+  
+  cnf->convertAndAssert(ref_min_assert,
+                        false, false, RULE_INVALID, TNode::null());
+  eb.bbAtom(lt);
+  eb.bbAtom(a_min);
+  eb.bbAtom(b_min);
+
+  std::vector<Node> a_bits;
+  std::vector<Node> b_bits;
+  std::vector<Node> ref_min_bits;
+  std::vector<Node> min_bits;
+
+  eb.bbTerm(a, a_bits);
+  eb.bbTerm(b, b_bits);
+  eb.bbTerm(ref_min, ref_min_bits);
+
+  optimalSMin(a_bits, b_bits, min_bits, cnf);
+
+  NodeBuilder<> nb(kind::AND);
+
+  for(unsigned i = 0 ; i < min_bits.size(); ++i) {
+    nb << utils::mkNode(kind::IFF, ref_min_bits[i], min_bits[i]);
+  }
+
+  Node assertion = nb;
+
+  cnf->convertAndAssert(utils::mkNode(kind::NOT, assertion),
+                        false, false, RULE_INVALID, TNode::null());
+
+  bool res = eb.solve();
+
+  if (res) {
+    std::cout << "NOT EQUIVALENT MIN" << std::endl;
+    std::cout << "Model from min "<< std::endl;
+    std::cout <<"  "<< a <<": "
+              << eb.getModelFromSatSolver(a, false) << std::endl;
+    std::cout <<"  "<< b <<": "
+              << eb.getModelFromSatSolver(b, false) << std::endl;
+    std::cout <<"  min : "
+              << eb.getModelFromSatSolver(min_bits) << std::endl;
+    std::cout <<"  ref_min : "
+              << eb.getModelFromSatSolver(ref_min, false) << std::endl;
+  } else {
+    std::cout << "EQUIVALENT bw"<<bitwidth<< std::endl;
+  }
+}
+
+
 void equivalenceCheckerTerm(TBitblaster<Node>::TermBBStrategy e1, std::string name1, 
 			    TBitblaster<Node>::TermBBStrategy e2, std::string name2,
 			    Kind k, unsigned bitwidth, unsigned num_children = 2) {
@@ -1696,8 +2097,19 @@ void CVC4::runEncodingExperiment(Options& opts) {
   unsigned num_fixed = opts[options::encodingNumFixed];
   unsigned width = opts[options::encodingBitwidth];
 
+  
+  // makeMaxGadget(std::cout);
+  // makeSMaxGadget(std::cout);
+  // makeMax(width, std::cout);
+  // equivalenceCheckSMax(width);
 
-  printDiffOne("diff_one", width);
+  //makeMinGadget(std::cout);
+  //makeSMinGadget(std::cout);
+  makeMin(width, std::cout);
+  equivalenceCheckSMin(width);
+
+  
+  //printDiffOne("diff_one", width);
   
   /**** Generating CNF encoding files for operations ****/
 

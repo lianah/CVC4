@@ -3830,3 +3830,303 @@ inline void CVC4::theory::bv::optimalMult4Debug(const std::vector<Node>&a,
   cnf->convertAndAssert(nm->mkNode(kind::OR, x19, utils::mkNot(c[3])),
 			false, false, RULE_INVALID, TNode::null());
 } 
+
+std::pair<Node, std::pair <Node, Node> >
+CVC4::theory::bv::optimalMaxGadgetSpec(const Node a, const Node b,
+                                       const Node a_max, const Node b_max,
+                                       CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalMaxGadgetSpec" <<std::endl;
+  // ensuring that we cannot have a_max && b_max
+  cnf->convertAndAssert(mkOr(mkNot(a_max), mkNot(b_max)), false, false,
+                        RULE_INVALID, TNode::null());
+  
+  Node a_lt_b = mkAnd(mkNot(a), b);
+  Node b_lt_a = mkAnd(mkNot(b), a);
+  
+  Node max = mkIte(a_max, a,
+                   mkIte(b_max, b,
+                         mkIte(a_lt_b, b, a)));
+  Node a_max_out = mkIte(a_max, mkTrue<Node>(),
+                               mkIte(b_max, mkFalse<Node>(),
+                                     mkIte(b_lt_a, mkTrue<Node>(), mkFalse<Node>())));
+  Node b_max_out = mkIte(b_max, mkTrue<Node>(),
+                         mkIte(a_max, mkFalse<Node>(),
+                               mkIte(a_lt_b, mkTrue<Node>(), mkFalse<Node>())));
+  
+  return std::make_pair(max, std::make_pair(a_max_out, b_max_out));
+}
+
+std::pair<Node, std::pair<Node, Node> >
+CVC4::theory::bv::optimalSMaxGadgetSpec(const Node a,
+                                        const Node b,
+                                        CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalSMaxGadgetSpec" <<std::endl;
+  Node a_lt_b = mkAnd(mkNot(b), a);
+  Node b_lt_a = mkAnd(mkNot(a), b);
+
+  Node a_max_out = mkIte(b_lt_a, mkTrue<Node>(), mkFalse<Node>());
+  Node b_max_out = mkIte(a_lt_b, mkTrue<Node>(), mkFalse<Node>());
+  Node max = mkIte(a_lt_b, b, a);
+
+  return std::make_pair(max, std::make_pair(a_max_out, b_max_out));
+}
+
+
+std::pair<Node, std::pair <Node, Node> >
+CVC4::theory::bv::optimalMaxGadget(const Node a, const Node b,
+                                   const Node a_max, const Node b_max,
+                                   CVC4::prop::CnfStream* cnf) {
+ 
+  Debug("encoding-generated") << "optimalMaxGadget" <<std::endl;
+
+  NodeManager* nm = NodeManager::currentNM();
+  Node a_max_out = nm->mkSkolem("a_max", nm->booleanType());
+  Node b_max_out = nm->mkSkolem("b_max", nm->booleanType());
+  Node max = nm->mkSkolem("max", nm->booleanType());
+
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_max), b_max_out), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max), a_max_out), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max_out), utils::mkNot(b_max_out)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a), max, utils::mkNot(b)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a), b_max_out, max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b), utils::mkNot(a_max_out), a_max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b, utils::mkNot(max), a_max_out), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b, a, utils::mkNot(max)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b_max_out, a, utils::mkNot(max)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max_out), a, a_max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, max, utils::mkNot(b_max_out), b_max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a), utils::mkNot(b_max_out), b_max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, max, a_max, utils::mkNot(b)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max_out), max, a_max), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b, utils::mkNot(b_max_out), b_max), 
+                        false, false, RULE_INVALID, TNode::null());
+
+  return std::make_pair(max, std::make_pair(a_max_out, b_max_out));
+}
+
+std::pair<Node, std::pair<Node, Node> >
+CVC4::theory::bv::optimalSMaxGadget(const Node a,
+                                    const Node b,
+                                    CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalSMaxGadget" <<std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a_max_out = nm->mkSkolem("a_max", nm->booleanType());
+  Node b_max_out = nm->mkSkolem("b_max", nm->booleanType());
+  Node max = nm->mkSkolem("max", nm->booleanType());
+  
+
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max_out), utils::mkNot(a)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_max_out), utils::mkNot(b)), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_max_out), a), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(max), a), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_max_out), b), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(max), b), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a), max, b_max_out), 
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_max_out, utils::mkNot(b), max), 
+                        false, false, RULE_INVALID, TNode::null());
+  return std::make_pair(max, std::make_pair(a_max_out, b_max_out));
+}
+
+void CVC4::theory::bv::optimalSMax(const std::vector<Node>& a_bits,
+                                  const std::vector<Node>& b_bits,
+                                  std::vector<Node>& bits,
+                                  CVC4::prop::CnfStream* cnf) {
+  unsigned size = a_bits.size();
+  Assert (bits.size() == 0 &&
+          a_bits.size() == b_bits.size());
+  
+   std::pair<Node, std::pair<Node, Node> > res = optimalSMaxGadget(a_bits[size-1],
+                                                                   b_bits[size-1],
+                                                                   cnf);
+
+  bits.resize(size);
+  bits[size-1] = res.first;
+  
+  if (size == 1) {
+    return;
+  }
+  Node a_max = res.second.first;
+  Node b_max = res.second.second;
+  
+  for (int i = size - 2; i >=0; --i) {
+    Node a = a_bits[i];
+    Node b = b_bits[i];
+    res = optimalMaxGadget(a, b, a_max, b_max, cnf);
+    Node max = res.first;
+    bits[i] = max;
+    // update max values
+    a_max = res.second.first;
+    b_max = res.second.second;
+  }
+}
+
+std::pair<Node, std::pair <Node, Node> >
+CVC4::theory::bv::optimalMinGadgetSpec(const Node a, const Node b,
+                                       const Node a_min, const Node b_min,
+                                       CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalMinGadgetSpec" <<std::endl;
+  // ensuring that we cannot have a_min && b_min
+  cnf->convertAndAssert(mkOr(mkNot(a_min), mkNot(b_min)), false, false,
+                        RULE_INVALID, TNode::null());
+  
+  Node a_lt_b = mkAnd(mkNot(a), b);
+  Node b_lt_a = mkAnd(mkNot(b), a);
+  
+  Node min = mkIte(a_min, a,
+                   mkIte(b_min, b,
+                         mkIte(a_lt_b, a, b)));
+  Node a_min_out = mkIte(a_min, mkTrue<Node>(),
+                               mkIte(b_min, mkFalse<Node>(),
+                                     mkIte(a_lt_b, mkTrue<Node>(), mkFalse<Node>())));
+  Node b_min_out = mkIte(b_min, mkTrue<Node>(),
+                         mkIte(a_min, mkFalse<Node>(),
+                               mkIte(b_lt_a, mkTrue<Node>(), mkFalse<Node>())));
+  
+  return std::make_pair(min, std::make_pair(a_min_out, b_min_out));
+}
+
+std::pair<Node, std::pair<Node, Node> >
+CVC4::theory::bv::optimalSMinGadgetSpec(const Node a,
+                                        const Node b,
+                                        CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalSMinGadgetSpec" <<std::endl;
+  Node a_lt_b = mkAnd(mkNot(b), a);
+  Node b_lt_a = mkAnd(mkNot(a), b);
+
+  Node a_min_out = mkIte(a_lt_b, mkTrue<Node>(), mkFalse<Node>());
+  Node b_min_out = mkIte(b_lt_a, mkTrue<Node>(), mkFalse<Node>());
+  Node min = mkIte(a_lt_b, a, b);
+
+  return std::make_pair(min, std::make_pair(a_min_out, b_min_out));
+}
+
+
+std::pair<Node, std::pair <Node, Node> >
+CVC4::theory::bv::optimalMinGadget(const Node a, const Node b,
+                                   const Node a_min, const Node b_min,
+                                   CVC4::prop::CnfStream* cnf) {
+ 
+  Debug("encoding-generated") << "optimalMinGadget" <<std::endl;
+
+  NodeManager* nm = NodeManager::currentNM();
+  Node a_min_out = nm->mkSkolem("a_min", nm->booleanType());
+  Node b_min_out = nm->mkSkolem("b_min", nm->booleanType());
+  Node min = nm->mkSkolem("min", nm->booleanType());
+
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_min), b_min_out),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_min_out, utils::mkNot(a_min)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_min_out), utils::mkNot(a_min_out)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b), min, utils::mkNot(a)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, min, utils::mkNot(a), b_min_out),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, min, utils::mkNot(b), a_min_out),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b_min, utils::mkNot(b_min_out), utils::mkNot(min)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b_min, utils::mkNot(b), utils::mkNot(b_min_out)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b_min, utils::mkNot(min), a),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_min, utils::mkNot(min), b),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_min, utils::mkNot(a_min_out), utils::mkNot(min)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_min, utils::mkNot(a_min_out), b),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b_min, utils::mkNot(b_min_out), a),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a_min, utils::mkNot(a), utils::mkNot(a_min_out)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(min), b, a),
+                        false, false, RULE_INVALID, TNode::null());
+
+  return std::make_pair(min, std::make_pair(a_min_out, b_min_out));
+}
+
+std::pair<Node, std::pair<Node, Node> >
+CVC4::theory::bv::optimalSMinGadget(const Node a,
+                                    const Node b,
+                                    CVC4::prop::CnfStream* cnf) {
+  Debug("encoding-generated") << "optimalSMinGadget" <<std::endl;
+  NodeManager* nm = NodeManager::currentNM();
+  Node a_min_out = nm->mkSkolem("a_min", nm->booleanType());
+  Node b_min_out = nm->mkSkolem("b_min", nm->booleanType());
+  Node min = nm->mkSkolem("min", nm->booleanType());
+
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_min_out), utils::mkNot(a)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, min, utils::mkNot(a)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(a_min_out), utils::mkNot(b)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, min, utils::mkNot(b)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, utils::mkNot(b_min_out), b),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a, utils::mkNot(a_min_out)),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, a, utils::mkNot(min), b_min_out),
+                        false, false, RULE_INVALID, TNode::null());
+  cnf->convertAndAssert(nm->mkNode(kind::OR, b, a_min_out, utils::mkNot(min)),
+                        false, false, RULE_INVALID, TNode::null());
+
+  return std::make_pair(min, std::make_pair(a_min_out, b_min_out));
+}
+
+void CVC4::theory::bv::optimalSMin(const std::vector<Node>& a_bits,
+                                  const std::vector<Node>& b_bits,
+                                  std::vector<Node>& bits,
+                                  CVC4::prop::CnfStream* cnf) {
+  unsigned size = a_bits.size();
+  Assert (bits.size() == 0 &&
+          a_bits.size() == b_bits.size());
+  
+   std::pair<Node, std::pair<Node, Node> > res = optimalSMinGadget(a_bits[size-1],
+                                                                   b_bits[size-1],
+                                                                   cnf);
+
+  bits.resize(size);
+  bits[size-1] = res.first;
+  
+  if (size == 1) {
+    return;
+  }
+  Node a_min = res.second.first;
+  Node b_min = res.second.second;
+  
+  for (int i = size - 2; i >=0; --i) {
+    Node a = a_bits[i];
+    Node b = b_bits[i];
+    res = optimalMinGadget(a, b, a_min, b_min, cnf);
+    Node min = res.first;
+    bits[i] = min;
+    // update min values
+    a_min = res.second.first;
+    b_min = res.second.second;
+  }
+}

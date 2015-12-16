@@ -440,3 +440,21 @@ Node EncodingBitblaster::getModelFromSatSolver(TNode a, bool fullModel) {
   return utils::mkConst(BitVector(bits.size(), value));
 }
 
+Node EncodingBitblaster::getModelFromSatSolver(const std::vector<Node>& bits) {
+  Integer value(0);
+  for (int i = bits.size() -1; i >= 0; --i) {
+    CVC4::prop::SatValue bit_value;
+    if (d_cnfStream->hasLiteral(bits[i])) {
+      CVC4::prop::SatLiteral bit = d_cnfStream->getLiteral(bits[i]);
+      bit_value = d_satSolver->value(bit);
+      Assert (bit_value != CVC4::prop::SAT_VALUE_UNKNOWN);
+    } else {
+      // unconstrained bits default to false
+      bit_value = CVC4::prop::SAT_VALUE_FALSE;
+    }
+    Integer bit_int = bit_value == CVC4::prop::SAT_VALUE_TRUE ? Integer(1) : Integer(0);
+    value = value * 2 + bit_int;
+  }
+  return utils::mkConst(BitVector(bits.size(), value));
+}
+

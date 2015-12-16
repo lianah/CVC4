@@ -268,7 +268,8 @@ private:
   bool hasValue(TNode a);
  public:
   CVC4::prop::EMinisatSatSolver* getSatSolver() { return d_satSolver; }
-  Node getModelFromSatSolver(TNode a, bool fullModel);  
+  Node getModelFromSatSolver(TNode a, bool fullModel);
+  Node getModelFromSatSolver(const std::vector<Node>& bits);
   /** This class gets callbacks from minisat on propagations */
   class EncodingNotify : public CVC4::prop::EMinisatSatSolver::Notify {
     CVC4::prop::CnfStream* d_cnf_this;

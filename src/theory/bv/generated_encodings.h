@@ -152,6 +152,96 @@ std::vector<T> optimalMultBy3Gadget(const std::vector<T>& a,
   Unreachable();
 }
 
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalMaxGadgetSpec(const T a,
+                                                           const T b,
+                                                           const T a_max,
+                                                           const T b_max,
+                                                           CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalSMaxGadgetSpec(const T a,
+                                                            const T b,
+                                                            CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalMaxGadget(const T a,
+                                                           const T b,
+                                                           const T a_max,
+                                                           const T b_max,
+                                                           CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalSMaxGadget(const T a,
+                                                        const T b,
+                                                        CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+
+template<class T>
+void inline optimalMax(const std::vector<T>& a,
+                       const std::vector<T>& b,
+                       std::vector<T>& bits,
+                       CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalMinGadgetSpec(const T a,
+                                                           const T b,
+                                                           const T a_min,
+                                                           const T b_min,
+                                                           CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalSMinGadgetSpec(const T a,
+                                                            const T b,
+                                                            CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalMinGadget(const T a,
+                                                           const T b,
+                                                           const T a_min,
+                                                           const T b_min,
+                                                           CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+std::pair<T, std::pair<T, T> > inline optimalSMinGadget(const T a,
+                                                        const T b,
+                                                        CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+
+template<class T>
+void inline optimalSMax(const std::vector<T>& a,
+                       const std::vector<T>& b,
+                       std::vector<T>& bits,
+                       CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
+template<class T>
+void inline optimalSMin(const std::vector<T>& a,
+                       const std::vector<T>& b,
+                       std::vector<T>& bits,
+                       CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
  
 template <class T>
 std::pair<T,T> inline optimalFullAdder(const T a, const T b, const T cin,
@@ -450,6 +540,49 @@ void optimalMult4Aux(const std::vector<T>&a,
  
 std::pair<Node, Node> optimalFullAdder(const Node a, const Node b, const Node cin,
 				       CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair <Node, Node> > optimalMaxGadgetSpec(const Node a, const Node b,
+                                                              const Node a_max, const Node b_max,
+                                                              CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair<Node, Node> > optimalSMaxGadgetSpec(const Node a,
+                                                              const Node b,
+                                                              CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair <Node, Node> > optimalMaxGadget(const Node a, const Node b,
+                                                          const Node a_max, const Node b_max,
+                                                          CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair<Node, Node> > optimalSMaxGadget(const Node a,
+                                                          const Node b,
+                                                          CVC4::prop::CnfStream* cnf);
+
+void optimalSMax(const std::vector<Node>& a,
+                const std::vector<Node>& b,
+                std::vector<Node>& bits,
+                CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair <Node, Node> > optimalMinGadgetSpec(const Node a, const Node b,
+                                                              const Node a_min, const Node b_min,
+                                                              CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair<Node, Node> > optimalSMinGadgetSpec(const Node a,
+                                                              const Node b,
+                                                              CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair <Node, Node> > optimalMinGadget(const Node a, const Node b,
+                                                          const Node a_min, const Node b_min,
+                                                          CVC4::prop::CnfStream* cnf);
+
+std::pair<Node, std::pair<Node, Node> > optimalSMinGadget(const Node a,
+                                                          const Node b,
+                                                          CVC4::prop::CnfStream* cnf);
+
+void optimalSMin(const std::vector<Node>& a,
+                 const std::vector<Node>& b,
+                 std::vector<Node>& bits,
+                 CVC4::prop::CnfStream* cnf);
+
 
 template <>
 std::pair<Node, std::pair<Node, Node> >

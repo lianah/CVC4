@@ -133,10 +133,10 @@ int runCvc4(int argc, char* argv[], Options& opts) {
   // Parse the options
   vector<string> filenames = opts.parseOptions(argc, argv);
 
-  // if (opts[options::encodingExperiment]) {
-  //   CVC4::runEncodingExperiment(opts);
-  //   exit(0);
-  // }
+  if (opts[options::encodingExperiment]) {
+    CVC4::runEncodingExperiment(opts);
+    exit(0);
+  }
   
 # ifndef PORTFOLIO_BUILD
   if( opts.wasSetByUser(options::threads) ||
