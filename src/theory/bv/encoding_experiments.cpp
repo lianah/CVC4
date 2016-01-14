@@ -1489,6 +1489,109 @@ void makeMax(unsigned bitwidth, std::ostream& out) {
   eb.printProblemClauses(out);
 }
 
+void makeUnaryEncode(unsigned bitwidth, std::ostream& out) {
+  EncodingBitblaster eb(new context::Context(), "UnaryEncode");
+  out << "c " << eb.getName()  << std::endl;
+  
+  Node a = mkVar(bitwidth);
+
+  std::vector<Node> a_bits;
+  eb.bbTerm(a, a_bits);
+
+  std::vector<Node> unary_bits;
+  
+  optimalUnaryEncode(a_bits, unary_bits, eb.getCnfStream());
+
+  NodeSet inputs;
+  out << "c i " ;
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral unary_lit = eb.getCnfStream()->getLiteral(unary_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+
+    out << unary_lit << " "
+        << a_lit<< " ";
+    inputs.insert(a_bits[i]);
+    inputs.insert(unary_bits[i]);
+  }
+  
+  out << "0"<< std::endl;
+  
+  for (unsigned i = 0; i < bitwidth; ++i) {
+    CVC4::prop::SatLiteral unary_lit = eb.getCnfStream()->getLiteral(unary_bits[i]);
+    CVC4::prop::SatLiteral a_lit = eb.getCnfStream()->getLiteral(a_bits[i]);
+    out << "c " << unary_lit << " : unary" << i << std::endl;
+    out << "c " << a_lit << " : a" << i << std::endl;
+  }
+  eb.printCnfMapping(out, inputs, true);
+  eb.printProblemClauses(out);
+}
+
+
+void equivalenceCheckUnaryEncode(unsigned bitwidth) {
+  context::Context ctx;
+  EncodingBitblaster eb(&ctx, "CheckUnaryEncode");
+  CVC4::prop::CnfStream* cnf = eb.getCnfStream();
+  
+  Node a = utils::mkVar("a", bitwidth);
+  Node ref_unary = utils::mkVar("ref_unary", bitwidth);
+  Node ref_unary = utils::mkConst(BitVector(bitwidth, 0u));
+
+  NodeBuilder<> nb(kind::AND);
+  for (unsigned i = 1; i < bitwidth; ++i) {
+    Node inode = mkConst(BitVector(bitwidth, i));
+    Node sk = mkVar("sk", bitwidth);
+    BitVector val(bitwidth, 0);
+    for (unsigned j = 0; j < i; ++j) {
+      val.setBit(0);
+    }
+    nb << mkNode(kind::ITE, mkNode(kind::EQ, a, inode), val, ite);
+  }
+  
+  
+  cnf->convertAndAssert(ref_unary_assert,
+                        false, false, RULE_INVALID, TNode::null());
+  eb.bbAtom(lt);
+  eb.bbAtom(a_unary);
+  eb.bbAtom(b_unary);
+
+  std::vector<Node> a_bits;
+  std::vector<Node> b_bits;
+  std::vector<Node> ref_unary_bits;
+  std::vector<Node> unary_bits;
+
+  eb.bbTerm(a, a_bits);
+  eb.bbTerm(b, b_bits);
+  eb.bbTerm(ref_unary, ref_unary_bits);
+
+  optimalUnaryEncode(a_bits, unary_bits, cnf);
+
+  NodeBuilder<> nb(kind::AND);
+
+  for(unsigned i = 0 ; i < unary_bits.size(); ++i) {
+    nb << utils::mkNode(kind::IFF, ref_unary_bits[i], unary_bits[i]);
+  }
+
+  Node assertion = nb;
+
+  cnf->convertAndAssert(utils::mkNode(kind::NOT, assertion),
+                        false, false, RULE_INVALID, TNode::null());
+
+  bool res = eb.solve();
+
+  if (res) {
+    std::cout << "NOT EQUIVALENT UNARY" << std::endl;
+    std::cout << "Model from unary "<< std::endl;
+    std::cout <<"  "<< a <<": "
+              << eb.getModelFromSatSolver(a, false) << std::endl;
+    std::cout <<"  unary : "
+              << eb.getModelFromSatSolver(unary_bits) << std::endl;
+    std::cout <<"  ref_unary : "
+              << eb.getModelFromSatSolver(ref_unary, false) << std::endl;
+  } else {
+    std::cout << "EQUIVALENT bw"<<bitwidth<< std::endl;
+  }
+}
+
 
 void equivalenceCheckSMax(unsigned bitwidth) {
   context::Context ctx;

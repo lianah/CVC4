@@ -4130,3 +4130,27 @@ void CVC4::theory::bv::optimalSMin(const std::vector<Node>& a_bits,
     b_min = res.second.second;
   }
 }
+
+void CVC4::theory::bv::optimalUnaryEncode(const std::vector<Node>& a,
+                                          std::vector<Node>& bits,
+                                          CVC4::prop::CnfStream* cnf) {
+  unsigned size = a.size(); 
+  unsigned log2_size = std::ceil(log2(size));
+  bits.push_back(a[0]);
+  
+  for (unsigned i = 1; i < size; ++i) {
+    NodeBuilder<> nb(kind::AND);
+    Integer temp(i);
+    for (unsigned j = 0; j < size; ++j) {
+      if (temp.isBitSet(j))
+        nb << a[j];
+    }
+    Node set_bits = nb;
+    bits.push_back(set_bits);
+  }
+
+  for (int i = size - 2; i >= 0; --i) {
+    bits[i] = mkOr(bits[i-1], bits[i]);
+  }
+  Assert (bits.size() == size());
+}

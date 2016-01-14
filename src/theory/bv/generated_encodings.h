@@ -186,7 +186,7 @@ std::pair<T, std::pair<T, T> > inline optimalSMaxGadget(const T a,
 
 
 template<class T>
-void inline optimalMax(const std::vector<T>& a,
+void inline optimalSMax(const std::vector<T>& a,
                        const std::vector<T>& b,
                        std::vector<T>& bits,
                        CVC4::prop::CnfStream* cnf) {
@@ -226,13 +226,6 @@ std::pair<T, std::pair<T, T> > inline optimalSMinGadget(const T a,
 }
 
 
-template<class T>
-void inline optimalSMax(const std::vector<T>& a,
-                       const std::vector<T>& b,
-                       std::vector<T>& bits,
-                       CVC4::prop::CnfStream* cnf) {
-  Unreachable();
-}
 
 template<class T>
 void inline optimalSMin(const std::vector<T>& a,
@@ -248,6 +241,14 @@ std::pair<T,T> inline optimalFullAdder(const T a, const T b, const T cin,
                                        CVC4::prop::CnfStream* cnf) {
   Unreachable();
 }
+
+template<class T>
+void inline optimalUnaryEncode(const std::vector<T>& a,
+                               std::vector<T>& bits,
+                               CVC4::prop::CnfStream* cnf) {
+  Unreachable();
+}
+
 
 template <class T>
 inline void optimalMult2(const std::vector<T>&a,
@@ -582,6 +583,11 @@ void optimalSMin(const std::vector<Node>& a,
                  const std::vector<Node>& b,
                  std::vector<Node>& bits,
                  CVC4::prop::CnfStream* cnf);
+
+
+void optimalUnaryEncode(const std::vector<Node>& a,
+                        std::vector<Node>& bits,
+                        CVC4::prop::CnfStream* cnf);
 
 
 template <>
