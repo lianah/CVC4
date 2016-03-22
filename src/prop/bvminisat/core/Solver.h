@@ -130,6 +130,7 @@ public:
     lbool   propagateAssumptions();                   // Do BCP over asserted assumptions
     void    popAssumption();                          // Pop an assumption
 
+    void    toDimacs      ();
     void    toDimacs     (FILE* f, const vec<Lit>& assumps);            // Write CNF to file in DIMACS-format.
     void    toDimacs     (const char *file, const vec<Lit>& assumps);
     void    toDimacs     (FILE* f, Clause& c, vec<Var>& map, Var& max);
@@ -484,6 +485,7 @@ inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
 
+inline void     Solver::toDimacs     () { vec<Lit> as; toDimacs(stdout, as); }
 
 //=================================================================================================
 // Debug etc:

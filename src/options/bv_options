@@ -65,5 +65,9 @@ expert-option bitvectorQuickXplain --bv-quick-xplain bool :default false
  
 expert-option bvIntroducePow2 --bv-intro-pow2 bool :default false
  introduce bitvector powers of two as a preprocessing pass
+
+expert-option bvMinisatDumpDimacs --bvminisat-dump-dimacs bool :default false
+ instead of solving the bit-vector minisat dumps the asserted clauses in Dimacs format
+ 
  
 endmodule

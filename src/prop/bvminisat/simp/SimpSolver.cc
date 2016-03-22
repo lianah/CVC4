@@ -121,6 +121,10 @@ Var SimpSolver::newVar(bool sign, bool dvar, bool freeze) {
 
 lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
 {
+    if (options::bvMinisatDumpDimacs()) {
+      toDimacs();
+      return l_Undef;
+    }
     only_bcp = false;
   
     vec<Var> extra_frozen;
